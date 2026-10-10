@@ -15,8 +15,6 @@ export interface NamingParams {
   neutral: boolean;
   /** 희소성 선호: 희소한 이름 우선 / 익숙한 이름 우선 */
   rarity: "any" | "rare" | "common";
-  /** 교육용 한자 밖의 인명용 한자도 후보에 포함 */
-  includeRare: boolean;
 }
 
 type Raw = Record<string, string | string[] | undefined>;
@@ -93,7 +91,6 @@ export function parseNamingParams(raw: Raw): ParseResult {
       globalFriendly: one(raw.glob) === "1",
       neutral: one(raw.neutral) === "1",
       rarity: one(raw.rarity) === "rare" ? "rare" : one(raw.rarity) === "common" ? "common" : "any",
-      includeRare: one(raw.rare) === "1",
     },
   };
 }

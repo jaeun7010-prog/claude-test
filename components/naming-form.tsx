@@ -10,7 +10,6 @@ import { createClient } from "@/lib/supabase/client";
 
 interface SurnameOption {
   hanja: string;
-  meaning: string | null;
   strokes: number;
 }
 
@@ -38,7 +37,7 @@ export function NamingForm() {
     if (s.length === 2) {
       const h = COMMON_SURNAMES[s];
       if (h) {
-        setOptions([{ hanja: h, meaning: null, strokes: 0 }]);
+        setOptions([{ hanja: h, strokes: 0 }]);
         setSurnameHanja(h);
       }
       return;
@@ -47,10 +46,9 @@ export function NamingForm() {
     let cancelled = false;
     supabase
       .from("hanja_dict")
-      .select("hanja, meaning, stroke_count, is_edu")
+      .select("hanja, stroke_count")
       .eq("eum", s)
       .eq("is_name_hanja", true)
-      .order("is_edu", { ascending: false })
       .order("stroke_count", { ascending: true })
       .limit(60)
       .then(({ data, error }) => {
@@ -61,7 +59,6 @@ export function NamingForm() {
         }
         const opts = (data ?? []).map((r) => ({
           hanja: r.hanja as string,
-          meaning: r.meaning as string | null,
           strokes: r.stroke_count as number,
         }));
         setOptions(opts);
@@ -106,9 +103,9 @@ export function NamingForm() {
               {options.length === 0 && <option value="">성을 먼저 입력하세요</option>}
               {options.map((o) => (
                 <option key={o.hanja} value={o.hanja}>
-                  {o.hanja}
-                  {o.strokes ? ` (${o.strokes}획)` : ""}
-                  {o.meaning ? ` · ${o.meaning.slice(0, 24)}` : ""}
+                  {o.strokes
+                    ? `${surname.trim()} (${o.hanja}, ${o.strokes}획)`
+                    : `${surname.trim()} (${o.hanja})`}
                 </option>
               ))}
             </select>
@@ -156,7 +153,7 @@ export function NamingForm() {
             {[
               ["male", "남아"],
               ["female", "여아"],
-              ["neutral", "미정 / 중성적"],
+              ["neutral", "성별 상관없음 (미정)"],
             ].map(([v, label]) => (
               <label key={v} className="flex items-center gap-2">
                 <input type="radio" name="gender" value={v} defaultChecked={v === "neutral"} />
@@ -210,11 +207,11 @@ export function NamingForm() {
         </div>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="glob" value="1" />
-          글로벌 발음 호환 우선 (영어권에서 읽기 쉬운 이름만)
+          외국에서도 발음하기 쉬운 이름
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="neutral" value="1" />
-          젠더 뉴트럴 이름만 (남녀 모두에게 쓰이는 이름)
+          남녀 공용 (중성적인 이름만)
         </label>
         <div className="space-y-2">
           <Label htmlFor="rarity">희소성</Label>
@@ -224,10 +221,6 @@ export function NamingForm() {
             <option value="common">익숙한 이름 우선</option>
           </select>
         </div>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="rare" value="1" />
-          교육용 한자 외의 인명용 한자도 포함 (후보가 넓어지지만 낯선 글자가 늘어납니다)
-        </label>
       </section>
 
       <Button type="submit" size="lg" className="w-full">

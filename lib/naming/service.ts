@@ -5,7 +5,9 @@ import { loadNameSummaries, type NameStatSummary } from "@/lib/stats/name-stats"
 import { analyzeName } from "./analyze";
 import { fetchByEum, fetchPool, fetchSurname } from "./hanja-repo";
 import type { NamingParams } from "./params";
+import { hasAcceptableMeaning } from "./hanja-meaning";
 import { recommendNames, type NameHanja, type Recommendation } from "./recommend";
+import { TREND_MIN } from "./trend";
 
 export type NamingResult =
   | {
@@ -57,16 +59,17 @@ async function runNamingUnsafe(
   const { surname, saju } = base;
   const needed = saju.yongsin.yongsin;
 
-  // 희귀 한자까지 쌍으로 전수 평가하면 너무 느리므로, 교육용 한자 밖의 글자는
-  // 용신 오행이 확인된 것만 후보에 넣는다.
-  const fullPool = await fetchPool(supabase, p.includeRare);
-  const pool = p.includeRare
-    ? fullPool.filter((c) => c.edu || c.element === needed)
-    : fullPool;
+  // 대법원 인명용 한자 전체 (불용한자와 부정적·불분명한 뜻 제외)
+  const pool = await fetchPool(supabase);
   let first = pool;
   let second = pool;
+  const allowSyllables = new Set<string>();
   if (p.dolrimja) {
-    const fixed = await fetchByEum(supabase, p.dolrimja.syllable, p.includeRare);
+    allowSyllables.add(p.dolrimja.syllable);
+    let fixed = await fetchByEum(supabase, p.dolrimja.syllable);
+    // 돌림자는 사용자가 정한 글자이므로 후보를 넓게 두되, 품질 좋은 글자가 있으면 그쪽을 우선한다
+    const good = fixed.filter((c) => hasAcceptableMeaning(c.meaning));
+    if (good.length > 0) fixed = good;
     if (fixed.length === 0) {
       return { ok: false, error: `돌림자 '${p.dolrimja.syllable}'에 해당하는 한자가 없습니다.` };
     }
@@ -77,7 +80,7 @@ async function runNamingUnsafe(
   const wantsStatsFilter = p.neutral || p.rarity !== "any";
   const RESULT_LIMIT = 30;
 
-  const run = (minLuckyGyeok: number) =>
+  const run = (minLuckyGyeok: number, minTrend: number) =>
     recommendNames({
       surname,
       first: p.length === "1" ? [] : first,
@@ -87,14 +90,16 @@ async function runNamingUnsafe(
       requireNeeded: true,
       minLuckyGyeok,
       minGlobalScore: p.globalFriendly ? 70 : 0,
+      minTrend,
+      allowSyllables,
       // 통계로 거를 때는 후보를 넉넉히 뽑는다
       limit: wantsStatsFilter ? 150 : RESULT_LIMIT,
     });
 
-  // 4격이 모두 길수인 이름을 우선하고, 후보가 부족하면 3격 이상으로 완화한다
-  // (희귀 한자 포함 모드는 후보가 많아 느리므로 완화 재시도를 하지 않는다)
-  let recommendations = run(4);
-  if (recommendations.length < 10 && !p.includeRare) recommendations = run(3);
+  // 4격이 모두 길수이고 요즘 어감인 이름을 우선하고, 후보가 부족하면 단계적으로 완화한다
+  let recommendations = run(4, TREND_MIN);
+  if (recommendations.length < 10) recommendations = run(3, TREND_MIN);
+  if (recommendations.length < 10) recommendations = run(3, 0);
 
   // 출생 통계 연동 (희소성 표시 + 젠더 뉴트럴/희소성 필터)
   let stats: Map<string, NameStatSummary> | null = null;

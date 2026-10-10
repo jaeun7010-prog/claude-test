@@ -67,7 +67,6 @@ export async function saveName(formData: FormData) {
       globalFriendly: p.globalFriendly,
       neutral: p.neutral,
       rarity: p.rarity,
-      includeRare: p.includeRare,
       lateNight: p.birth.lateNight,
     },
   });

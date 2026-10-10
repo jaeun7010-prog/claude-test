@@ -169,7 +169,7 @@ export default async function ResultPage({
         </h2>
         {result.recommendations.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            조건에 맞는 이름이 없습니다. 돌림자나 글로벌 발음 조건을 완화해 보세요.
+            조건에 맞는 이름이 없습니다. 돌림자나 발음·남녀 공용 조건을 완화해 보세요.
           </p>
         )}
         {result.recommendations.map((r, i) => {
@@ -218,7 +218,7 @@ export default async function ResultPage({
                     </>
                   )}
                   {" · "}
-                  <span className="text-muted-foreground">글로벌 발음</span> {r.globalScore}
+                  <span className="text-muted-foreground">외국어 발음</span> {r.globalScore}
                 </p>
                 {(() => {
                   const st = result.stats?.get(r.hangul);
@@ -236,7 +236,7 @@ export default async function ResultPage({
                               : `${st.latest.upperBound?.toLocaleString("ko-KR")}명 미만`}
                           </span>
                         )}
-                        {st.neutral && <span className="text-muted-foreground">젠더 뉴트럴</span>}
+                        {st.neutral && <span className="text-muted-foreground">남녀 공용</span>}
                       </summary>
                       <div className="mt-3">
                         <NameStatsDetail stat={st} />
