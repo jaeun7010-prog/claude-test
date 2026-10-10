@@ -213,6 +213,18 @@ export function NamingForm() {
           글로벌 발음 호환 우선 (영어권에서 읽기 쉬운 이름만)
         </label>
         <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="neutral" value="1" />
+          젠더 뉴트럴 이름만 (남녀 모두에게 쓰이는 이름)
+        </label>
+        <div className="space-y-2">
+          <Label htmlFor="rarity">희소성</Label>
+          <select id="rarity" name="rarity" className={selectClass} defaultValue="any">
+            <option value="any">상관없음</option>
+            <option value="rare">희소한 이름 우선 (동명이인이 적은 이름)</option>
+            <option value="common">익숙한 이름 우선</option>
+          </select>
+        </div>
+        <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="rare" value="1" />
           교육용 한자 외의 인명용 한자도 포함 (후보가 넓어지지만 낯선 글자가 늘어납니다)
         </label>

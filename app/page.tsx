@@ -19,6 +19,9 @@ export default async function Home() {
         <Button asChild>
           <Link href="/naming">작명 시작하기</Link>
         </Button>
+        <Button asChild variant="outline">
+          <Link href="/stats">이름 통계</Link>
+        </Button>
         {user ? (
           <Button asChild variant="outline">
             <Link href="/mypage">마이페이지</Link>

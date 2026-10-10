@@ -11,6 +11,10 @@ export interface NamingParams {
   dolrimja: { syllable: string; position: 1 | 2 } | null;
   /** 글로벌 발음 호환 점수 필터 사용 여부 */
   globalFriendly: boolean;
+  /** 젠더 뉴트럴(성비가 한쪽으로 치우치지 않은) 이름만 */
+  neutral: boolean;
+  /** 희소성 선호: 희소한 이름 우선 / 익숙한 이름 우선 */
+  rarity: "any" | "rare" | "common";
   /** 교육용 한자 밖의 인명용 한자도 후보에 포함 */
   includeRare: boolean;
 }
@@ -87,6 +91,8 @@ export function parseNamingParams(raw: Raw): ParseResult {
       length,
       dolrimja,
       globalFriendly: one(raw.glob) === "1",
+      neutral: one(raw.neutral) === "1",
+      rarity: one(raw.rarity) === "rare" ? "rare" : one(raw.rarity) === "common" ? "common" : "any",
       includeRare: one(raw.rare) === "1",
     },
   };

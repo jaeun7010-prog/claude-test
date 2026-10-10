@@ -65,6 +65,8 @@ export async function saveName(formData: FormData) {
       length: p.length,
       dolrimja: p.dolrimja,
       globalFriendly: p.globalFriendly,
+      neutral: p.neutral,
+      rarity: p.rarity,
       includeRare: p.includeRare,
       lateNight: p.birth.lateNight,
     },

@@ -27,3 +27,22 @@
 # Unihan.zip을 풀고 CJKRadicals.txt를 내려받은 뒤
 npx tsx scripts/build-hanja-seed.ts <Unihan 폴더> <CJKRadicals.txt>
 ```
+
+---
+
+# name_stats (이름 출생 통계)
+
+저장소에는 통계 **원본이 포함되어 있지 않습니다.** 대법원 전자가족관계등록시스템의
+「상위 출생신고 이름 현황」 등 정당한 경로로 확보한 데이터를 CSV로 정리해 적재하세요.
+
+1. `supabase/schema.sql`을 다시 실행합니다 (`name_stats_year_summary` 뷰가 추가되었습니다).
+2. `supabase/seed/name_stats_template.csv` 형식(`name,year,male_count,female_count`)으로 CSV를 만듭니다.
+   이름은 **성을 제외한 한글 이름**입니다.
+3. `npx tsx scripts/import-name-stats.ts <CSV 경로>` → `supabase/seed/name_stats_NN.sql` 생성
+4. 생성된 SQL을 SQL Editor에서 순서대로 실행합니다 (upsert라 재실행해도 안전).
+
+## 해석 규칙
+
+공개 통계가 상위 N개 이름만 제공한다면, 목록에 없는 이름은 **0명이 아니라 "해당 연도 목록의 최소 인원 미만"**입니다.
+`name_stats_year_summary.min_listed`가 그 상한이며, 화면에서는 점선 막대로 구분해 표시합니다.
+같은 연도의 일부 이름만 넣으면 이 상한이 왜곡되므로, 연도 단위로 전체 목록을 한 번에 적재하세요.

@@ -134,6 +134,20 @@ create table if not exists public.name_stats (
 create index if not exists name_stats_name_idx on public.name_stats (name);
 create index if not exists name_stats_year_idx on public.name_stats (year);
 
+-- 연도별 집계: 통계가 "상위 N개 이름"만 공개되는 경우, 목록에 없는 이름은 0명이 아니라
+-- "해당 연도 목록의 최소 인원 미만"이다. min_listed 가 그 상한이다.
+create or replace view public.name_stats_year_summary
+with (security_invoker = true) as
+select
+  year,
+  min(total_count) as min_listed,
+  count(*)         as names,
+  sum(total_count) as listed_total
+from public.name_stats
+group by year;
+
+grant select on public.name_stats_year_summary to anon, authenticated;
+
 -- -----------------------------------------------------------------------------
 -- 4. user_naming_history : 유저가 마이페이지에 저장한 작명 이력
 -- -----------------------------------------------------------------------------

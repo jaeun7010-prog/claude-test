@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { analyzeSaju } from "@/lib/saju";
+import { loadNameSummaries, type NameStatSummary } from "@/lib/stats/name-stats";
 import { analyzeName } from "./analyze";
 import { fetchByEum, fetchPool, fetchSurname } from "./hanja-repo";
 import type { NamingParams } from "./params";
@@ -12,6 +13,10 @@ export type NamingResult =
       saju: ReturnType<typeof analyzeSaju>;
       surname: NameHanja[];
       recommendations: Recommendation[];
+      /** 이름(성 제외) → 출생 통계 요약. 통계 데이터가 적재되지 않았으면 null */
+      stats: Map<string, NameStatSummary> | null;
+      /** 사용자에게 알릴 안내 (예: 통계 미적재로 필터 미적용) */
+      notice?: string;
     }
   | { ok: false; error: string };
 
@@ -69,6 +74,9 @@ async function runNamingUnsafe(
     else second = fixed;
   }
 
+  const wantsStatsFilter = p.neutral || p.rarity !== "any";
+  const RESULT_LIMIT = 30;
+
   const run = (minLuckyGyeok: number) =>
     recommendNames({
       surname,
@@ -79,15 +87,57 @@ async function runNamingUnsafe(
       requireNeeded: true,
       minLuckyGyeok,
       minGlobalScore: p.globalFriendly ? 70 : 0,
-      limit: 30,
+      // 통계로 거를 때는 후보를 넉넉히 뽑는다
+      limit: wantsStatsFilter ? 150 : RESULT_LIMIT,
     });
 
   // 4격이 모두 길수인 이름을 우선하고, 후보가 부족하면 3격 이상으로 완화한다
-  let recommendations = run(4);
   // (희귀 한자 포함 모드는 후보가 많아 느리므로 완화 재시도를 하지 않는다)
+  let recommendations = run(4);
   if (recommendations.length < 10 && !p.includeRare) recommendations = run(3);
 
-  return { ok: true, saju, surname, recommendations };
+  // 출생 통계 연동 (희소성 표시 + 젠더 뉴트럴/희소성 필터)
+  let stats: Map<string, NameStatSummary> | null = null;
+  let notice: string | undefined;
+  try {
+    const loaded = await loadNameSummaries(
+      supabase,
+      recommendations.map((r) => r.hangul)
+    );
+    stats = loaded?.summaries ?? null;
+  } catch (e) {
+    console.error("[naming] 통계 조회 실패", e);
+  }
+
+  if (wantsStatsFilter) {
+    if (!stats) {
+      notice = "출생 통계 데이터가 아직 적재되지 않아 젠더 뉴트럴·희소성 조건은 적용되지 않았습니다.";
+    } else {
+      if (p.neutral) {
+        // 통계에 한 번도 오르지 않은 이름은 성비를 알 수 없어 제외한다
+        recommendations = recommendations.filter((r) => stats!.get(r.hangul)?.neutral);
+      }
+      if (p.rarity !== "any") {
+        const order = { "매우 드묾": 0, 드묾: 1, 보통: 2, 흔함: 3 } as const;
+        const key = (r: Recommendation) => {
+          const t = stats!.get(r.hangul)?.tier;
+          return t ? order[t] : 0;
+        };
+        const sign = p.rarity === "rare" ? 1 : -1;
+        // 안정 정렬: 등급이 같으면 기존 점수 순서를 유지
+        recommendations = recommendations
+          .map((r, i) => ({ r, i }))
+          .sort((a, b) => sign * (key(a.r) - key(b.r)) || a.i - b.i)
+          .map((x) => x.r);
+      }
+      if (p.neutral && recommendations.length === 0) {
+        notice = "젠더 뉴트럴 조건을 만족하는 추천 이름이 없습니다. 조건을 완화해 보세요.";
+      }
+    }
+  }
+  recommendations = recommendations.slice(0, RESULT_LIMIT);
+
+  return { ok: true, saju, surname, recommendations, stats, notice };
 }
 
 /** 저장 시 서버에서 다시 분석 (클라이언트가 보낸 점수를 신뢰하지 않음) */

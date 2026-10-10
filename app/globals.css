@@ -28,6 +28,10 @@
     --border: 28 30% 84%;
     --input: 28 30% 84%;
     --ring: var(--navy);
+
+    /* 차트 범주색 (validate_palette 통과: 남=blue, 여=orange) */
+    --chart-male: #2a78d6;
+    --chart-female: #eb6834;
     --radius: 0.5rem;
   }
 }
@@ -40,4 +44,9 @@
     @apply bg-background font-sans text-foreground antialiased;
   }
   /* 한문·제목 등 고풍스러운 영역은 font-serif(나눔명조) 사용 */
+}
+
+.dark {
+  --chart-male: #3987e5;
+  --chart-female: #d95926;
 }

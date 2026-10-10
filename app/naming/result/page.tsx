@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { saveName } from "@/app/naming/actions";
 import { Button } from "@/components/ui/button";
+import { NameStatsDetail, TierBadge } from "@/components/name-stats-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { parseNamingParams } from "@/lib/naming/params";
 import { runNaming } from "@/lib/naming/service";
@@ -100,6 +101,12 @@ export default async function ResultPage({
           <Link href="/naming">다시 입력</Link>
         </Button>
       </header>
+
+      {result.notice && (
+        <p role="status" className="rounded-md bg-secondary p-3 text-sm">
+          {result.notice}
+        </p>
+      )}
 
       {searchParams.saveError && (
         <p role="alert" className="text-sm text-destructive">
@@ -213,6 +220,30 @@ export default async function ResultPage({
                   {" · "}
                   <span className="text-muted-foreground">글로벌 발음</span> {r.globalScore}
                 </p>
+                {(() => {
+                  const st = result.stats?.get(r.hangul);
+                  if (!st) return null;
+                  return (
+                    <details className="rounded-md border p-3 text-sm">
+                      <summary className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1">
+                        <span className="text-muted-foreground">희소성</span>
+                        <TierBadge tier={st.tier} />
+                        {st.latest && (
+                          <span className="text-muted-foreground">
+                            {st.latest.year}년{" "}
+                            {st.latest.listed
+                              ? `${st.latest.total.toLocaleString("ko-KR")}명`
+                              : `${st.latest.upperBound?.toLocaleString("ko-KR")}명 미만`}
+                          </span>
+                        )}
+                        {st.neutral && <span className="text-muted-foreground">젠더 뉴트럴</span>}
+                      </summary>
+                      <div className="mt-3">
+                        <NameStatsDetail stat={st} />
+                      </div>
+                    </details>
+                  );
+                })()}
                 <ul className="text-xs text-muted-foreground">
                   {r.givenName.map((c) => (
                     <li key={c.hanja}>
