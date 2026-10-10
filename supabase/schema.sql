@@ -106,6 +106,9 @@ create table if not exists public.hanja_dict (
 -- 한문 교육용 기초 한자(1,800자) 여부: 널리 알려진 글자를 우선 추천하는 데 사용
 alter table public.hanja_dict add column if not exists is_edu boolean not null default false;
 
+-- 한글 훈 (예: 金 → 쇠). 값은 supabase/seed/hanja_hun_NN.sql 로 채웁니다.
+alter table public.hanja_dict add column if not exists hun text;
+
 create index if not exists hanja_dict_eum_idx     on public.hanja_dict (eum);
 create index if not exists hanja_dict_element_idx on public.hanja_dict (element);
 create index if not exists hanja_dict_usable_idx  on public.hanja_dict (eum, element)
@@ -280,21 +283,14 @@ create policy "history_delete_own" on public.user_naming_history
   for delete to authenticated
   using ((select auth.uid()) = user_id);
 
--- ---- orders : 본인 주문 조회 + 'pending' 상태로만 생성 가능 ----
--- 결제 확정(paid), 환불, 배송 상태 변경 등은 서버(service_role, 포트원 웹훅/검증 API)에서만 처리합니다.
--- 클라이언트에서 status/amount/payment_id 를 임의로 바꿀 수 없도록 update/delete 정책은 두지 않습니다.
+-- ---- orders : 본인 주문 조회만 가능 ----
+-- 주문 생성(pending), 결제 확정(paid), 환불, 배송 상태 변경은 모두 서버(service_role)에서만 처리합니다.
+-- 클라이언트(anon 키)에서 amount/item_options 를 임의로 정해 직접 insert 하면 결제 금액을 조작할 수 있으므로
+-- insert/update/delete 정책은 두지 않습니다.
 drop policy if exists "orders_select_own" on public.orders;
 create policy "orders_select_own" on public.orders
   for select to authenticated
   using ((select auth.uid()) = user_id);
 
+-- 이전 버전에서 만들었던 클라이언트 insert 정책 제거 (여러 번 실행해도 안전)
 drop policy if exists "orders_insert_own_pending" on public.orders;
-create policy "orders_insert_own_pending" on public.orders
-  for insert to authenticated
-  with check (
-    (select auth.uid()) = user_id
-    and status = 'pending'
-    and payment_id is null
-    and portone_tx_id is null
-    and paid_at is null
-  );

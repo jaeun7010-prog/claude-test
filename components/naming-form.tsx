@@ -10,6 +10,8 @@ import { createClient } from "@/lib/supabase/client";
 
 interface SurnameOption {
   hanja: string;
+  /** 한글 훈 (예: 쇠) */
+  hun: string | null;
   strokes: number;
 }
 
@@ -37,36 +39,47 @@ export function NamingForm() {
     if (s.length === 2) {
       const h = COMMON_SURNAMES[s];
       if (h) {
-        setOptions([{ hanja: h, strokes: 0 }]);
+        setOptions([{ hanja: h, hun: null, strokes: 0 }]);
         setSurnameHanja(h);
       }
       return;
     }
 
     let cancelled = false;
-    supabase
-      .from("hanja_dict")
-      .select("hanja, stroke_count")
-      .eq("eum", s)
-      .eq("is_name_hanja", true)
-      .order("stroke_count", { ascending: true })
-      .limit(60)
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) {
-          setLoadError(true);
-          return;
-        }
-        const opts = (data ?? []).map((r) => ({
-          hanja: r.hanja as string,
-          strokes: r.stroke_count as number,
-        }));
-        setOptions(opts);
-        const preferred = COMMON_SURNAMES[s];
-        setSurnameHanja(
-          preferred && opts.some((o) => o.hanja === preferred) ? preferred : (opts[0]?.hanja ?? "")
-        );
-      });
+    const load = async () => {
+      const query = (columns: string) =>
+        supabase
+          .from("hanja_dict")
+          .select(columns)
+          .eq("eum", s)
+          .eq("is_name_hanja", true)
+          .order("stroke_count", { ascending: true })
+          .limit(60);
+      // hun 컬럼이 아직 없는 DB(42703)는 훈 없이 다시 조회한다
+      let res = await query("hanja, stroke_count, hun");
+      if (res.error?.code === "42703") res = await query("hanja, stroke_count");
+      if (cancelled) return;
+      if (res.error) {
+        setLoadError(true);
+        return;
+      }
+      const rows = (res.data ?? []) as unknown as {
+        hanja: string;
+        stroke_count: number;
+        hun?: string | null;
+      }[];
+      const opts = rows.map((r) => ({
+        hanja: r.hanja,
+        hun: r.hun ?? null,
+        strokes: r.stroke_count,
+      }));
+      setOptions(opts);
+      const preferred = COMMON_SURNAMES[s];
+      setSurnameHanja(
+        preferred && opts.some((o) => o.hanja === preferred) ? preferred : (opts[0]?.hanja ?? "")
+      );
+    };
+    void load();
     return () => {
       cancelled = true;
     };
@@ -103,9 +116,9 @@ export function NamingForm() {
               {options.length === 0 && <option value="">성을 먼저 입력하세요</option>}
               {options.map((o) => (
                 <option key={o.hanja} value={o.hanja}>
-                  {o.strokes
-                    ? `${surname.trim()} (${o.hanja}, ${o.strokes}획)`
-                    : `${surname.trim()} (${o.hanja})`}
+                  {o.hanja} ({o.hun ? `${o.hun} ` : ""}
+                  {surname.trim()}
+                  {o.strokes ? `, ${o.strokes}획` : ""})
                 </option>
               ))}
             </select>

@@ -10,9 +10,25 @@ interface Row {
   meaning: string | null;
   stroke_count: number;
   element: Element | null;
+  /** 한글 훈 (예: 金 → 쇠). hun 컬럼이 아직 없으면 undefined */
+  hun?: string | null;
 }
 
-const COLUMNS = "hanja, eum, meaning, stroke_count, element";
+const BASE_COLUMNS = "hanja, eum, meaning, stroke_count, element";
+const COLUMNS = `${BASE_COLUMNS}, hun`;
+
+type QueryResult = { data: unknown; error: { code?: string; message: string } | null };
+
+/**
+ * hun 컬럼과 함께 조회하고, 아직 마이그레이션되지 않은 DB(컬럼 없음, 42703)면 훈 없이 다시 조회한다.
+ * 배포 순서와 상관없이 엔진이 멈추지 않도록 하기 위한 안전장치.
+ */
+async function select(run: (columns: string) => PromiseLike<QueryResult>): Promise<Row[]> {
+  let res = await run(COLUMNS);
+  if (res.error?.code === "42703") res = await run(BASE_COLUMNS);
+  if (res.error) throw new Error(`한자 사전 조회 실패: ${res.error.message}`);
+  return (res.data ?? []) as Row[];
+}
 const PAGE = 1000; // Supabase API 기본 최대 행 수
 
 const toChar = (r: Row): NameHanja => ({
@@ -21,6 +37,7 @@ const toChar = (r: Row): NameHanja => ({
   strokes: r.stroke_count,
   element: r.element,
   meaning: r.meaning,
+  hun: r.hun ?? null,
 });
 
 /** 성씨 한자: 한자와 음이 모두 일치하는 행 */
@@ -29,13 +46,9 @@ export async function fetchSurname(
   hanja: string[],
   eum: string[]
 ): Promise<NameHanja[] | null> {
-  const { data, error } = await supabase
-    .from("hanja_dict")
-    .select(COLUMNS)
-    .in("hanja", hanja)
-    .in("eum", eum);
-  if (error) throw new Error(`한자 사전 조회 실패: ${error.message}`);
-  const rows = (data ?? []) as Row[];
+  const rows = await select((cols) =>
+    supabase.from("hanja_dict").select(cols).in("hanja", hanja).in("eum", eum)
+  );
   const out: NameHanja[] = [];
   for (let i = 0; i < hanja.length; i++) {
     const row = rows.find((r) => r.hanja === hanja[i] && r.eum === eum[i]);
@@ -47,15 +60,16 @@ export async function fetchSurname(
 
 /** 특정 음의 이름용 한자 (불용한자 제외) — 돌림자 후보 */
 export async function fetchByEum(supabase: SupabaseClient, eum: string): Promise<NameHanja[]> {
-  const { data, error } = await supabase
-    .from("hanja_dict")
-    .select(COLUMNS)
-    .eq("eum", eum)
-    .eq("is_name_hanja", true)
-    .eq("is_forbidden", false)
-    .range(0, PAGE - 1);
-  if (error) throw new Error(`한자 사전 조회 실패: ${error.message}`);
-  return ((data ?? []) as Row[]).map(toChar);
+  const rows = await select((cols) =>
+    supabase
+      .from("hanja_dict")
+      .select(cols)
+      .eq("eum", eum)
+      .eq("is_name_hanja", true)
+      .eq("is_forbidden", false)
+      .range(0, PAGE - 1)
+  );
+  return rows.map(toChar);
 }
 
 /**
@@ -65,15 +79,15 @@ export async function fetchByEum(supabase: SupabaseClient, eum: string): Promise
 export async function fetchPool(supabase: SupabaseClient): Promise<NameHanja[]> {
   const out: NameHanja[] = [];
   for (let from = 0; ; from += PAGE) {
-    const { data, error } = await supabase
-      .from("hanja_dict")
-      .select(COLUMNS)
-      .eq("is_name_hanja", true)
-      .eq("is_forbidden", false)
-      .order("id", { ascending: true })
-      .range(from, from + PAGE - 1);
-    if (error) throw new Error(`한자 사전 조회 실패: ${error.message}`);
-    const rows = (data ?? []) as Row[];
+    const rows = await select((cols) =>
+      supabase
+        .from("hanja_dict")
+        .select(cols)
+        .eq("is_name_hanja", true)
+        .eq("is_forbidden", false)
+        .order("id", { ascending: true })
+        .range(from, from + PAGE - 1)
+    );
     out.push(...rows.map(toChar).filter((c) => hasAcceptableMeaning(c.meaning)));
     if (rows.length < PAGE) break;
   }

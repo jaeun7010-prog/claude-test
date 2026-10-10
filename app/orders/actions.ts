@@ -39,8 +39,9 @@ const EMBROIDERY = /^[가-힣\p{Script=Han}A-Za-z0-9 ]+$/u;
 const PHONE = /^01\d-?\d{3,4}-?\d{4}$/;
 
 /**
- * 결제 전 주문 생성. 금액/오행은 클라이언트 값을 믿지 않고 서버에서 다시 계산하며,
- * RLS 정책(pending 상태 + payment_id 없음)에 맞춰 사용자 세션으로 삽입한다.
+ * 결제 전 주문 생성. 금액/오행은 클라이언트 값을 믿지 않고 서버에서 다시 계산한다.
+ * 주문 삽입은 service_role 로만 한다: 클라이언트(anon 키 + 사용자 세션)에서 amount 를 임의로 정해
+ * 직접 insert 하는 것을 막기 위해 orders 에는 insert 정책을 두지 않는다 (schema.sql 참고).
  */
 export async function createOrder(input: CheckoutInput): Promise<CreateOrderResult> {
   const supabase = createClient();
@@ -132,7 +133,14 @@ export async function createOrder(input: CheckoutInput): Promise<CreateOrderResu
     return fail("알 수 없는 주문 유형입니다.");
   }
 
-  const { data, error } = await supabase
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch (e) {
+    console.error("[orders] admin 클라이언트 생성 실패", e);
+    return fail("주문 처리 설정(SUPABASE_SERVICE_ROLE_KEY)이 누락되었습니다.");
+  }
+  const { data, error } = await admin
     .from("orders")
     .insert({ ...row, user_id: user.id, status: "pending" })
     .select("id, amount, item_name")

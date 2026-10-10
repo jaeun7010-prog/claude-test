@@ -165,7 +165,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "15px" }}>
           <thead>
             <tr style={{ backgroundColor: C.sand }}>
-              {["한자", "음", "뜻", "획수", "자원오행"].map((t) => (
+              {["한자", "음", "훈", "획수", "자원오행"].map((t) => (
                 <th key={t} style={{ padding: "8px", border: `1px solid ${C.line}`, fontWeight: 700 }}>
                   {t}
                 </th>
@@ -179,7 +179,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
                   {c.hanja}
                 </td>
                 <td style={{ padding: "8px", border: `1px solid ${C.line}` }}>{c.eum}</td>
-                <td style={{ padding: "8px", border: `1px solid ${C.line}` }}>{c.meaning ?? "-"}</td>
+                <td style={{ padding: "8px", border: `1px solid ${C.line}` }}>{c.hun ?? "-"}</td>
                 <td style={{ padding: "8px", border: `1px solid ${C.line}` }}>{c.strokes}</td>
                 <td style={{ padding: "8px", border: `1px solid ${C.line}` }}>
                   {c.element ? `${ELEMENT_HANJA[c.element]}(${c.element})` : "-"}

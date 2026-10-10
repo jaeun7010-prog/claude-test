@@ -21,6 +21,21 @@
   목록은 `scripts/build-hanja-seed.ts`의 `FORBIDDEN`에서 관리합니다.
 - **최신성**: Unihan 18.0 기준이며, 대법원 최신 개정 목록과 일부 차이가 있을 수 있습니다.
 
+## 한글 훈 (hun)
+
+`hanja_dict.hun`에 한글 훈(예: 金 → 쇠)을 채웁니다. 화면에는 `쇠 금`처럼 훈음으로 표시됩니다.
+
+1. `supabase/schema.sql`을 다시 실행합니다 (`hun` 컬럼 추가, 여러 번 실행해도 안전).
+2. `hanja_hun_01.sql` ~ `hanja_hun_05.sql`을 순서대로 SQL Editor에서 실행합니다 (`update`라 재실행해도 안전).
+3. 확인: `select count(*) from hanja_dict where hun is not null;` → 약 7,335
+
+- **출처**: [libhangul](https://github.com/libhangul/libhangul)의 `data/hanja/hanja.txt` (BSD-3-Clause, Copyright (c) 2005,2006 Choe Hwanjin).
+- 한 글자에 훈이 여럿이면 첫 훈을 쓰되, `성 금`처럼 성씨 표기용 훈은 일반 훈이 있을 때 뒤로 밀었습니다.
+- 같은 음의 훈이 없으면 같은 한자의 다른 음 훈을 빌렸습니다 (177행). 사전에 없는 약 1,150행(14%)은 `hun`이 비어 있고, 화면에서는 음만 표시하고 영문 뜻풀이로 대체합니다.
+- 코드는 `hun` 컬럼이 아직 없어도 동작하도록 되어 있습니다 (훈 없이 표시).
+
+재생성: `npx tsx scripts/build-hanja-hun.ts <hanja.txt 경로>`
+
 ## 재생성
 
 ```bash

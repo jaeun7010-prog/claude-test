@@ -7,8 +7,15 @@ import type { Element, HanjaChar, NamingAnalysis } from "./types";
 
 /** 사전에서 읽어 온 한자 한 글자 (추천 후보) */
 export interface NameHanja extends HanjaChar {
+  /** 영문 뜻풀이 (Unihan) — 후보 선별용 */
   meaning: string | null;
+  /** 한글 훈 (예: 金 → 쇠). 화면에는 `훈 음`(쇠 금)으로 보여 준다 */
+  hun: string | null;
 }
+
+/** 한자의 한글 훈음 표기 (훈이 없으면 음만) */
+export const hunEum = (c: { hun: string | null; eum: string }) =>
+  c.hun ? `${c.hun} ${c.eum}` : c.eum;
 
 export interface RecommendOptions {
   surname: NameHanja[];

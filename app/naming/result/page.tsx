@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { NameStatsDetail, TierBadge } from "@/components/name-stats-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { parseNamingParams } from "@/lib/naming/params";
+import { hunEum } from "@/lib/naming/recommend";
 import { runNaming } from "@/lib/naming/service";
 import { BRANCHES_KO, STEMS_KO, type Pillar } from "@/lib/saju";
 import { createClient } from "@/lib/supabase/server";
@@ -189,7 +190,7 @@ export default async function ResultPage({
                       </span>
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {r.givenName.map((c) => `${c.hanja} ${c.eum} ${c.strokes}획`).join(" · ")}
+                      {r.givenName.map((c) => `${c.hanja} ${hunEum(c)} ${c.strokes}획`).join(" · ")}
                     </p>
                   </div>
                   <div className="text-right">
@@ -247,7 +248,9 @@ export default async function ResultPage({
                 <ul className="text-xs text-muted-foreground">
                   {r.givenName.map((c) => (
                     <li key={c.hanja}>
-                      {c.hanja} {c.eum}: {c.meaning ?? "-"}
+                      {c.hanja} {hunEum(c)}
+                      {/* 훈 데이터가 없는 글자는 영문 뜻풀이를 참고용으로 보여 준다 */}
+                      {!c.hun && c.meaning ? ` — ${c.meaning}` : ""}
                     </li>
                   ))}
                 </ul>
