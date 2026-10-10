@@ -252,6 +252,7 @@ export default async function ResultPage({
                   ))}
                 </ul>
 
+                <div className="flex flex-wrap gap-2">
                 {user ? (
                   <form action={saveName}>
                     <input type="hidden" name="qs" value={qs} />
@@ -272,6 +273,16 @@ export default async function ResultPage({
                     </Link>
                   </Button>
                 )}
+                <Button asChild size="sm" variant="outline">
+                  <Link
+                    href={`/goods?${qs}&gh=${encodeURIComponent(gh)}&ge=${encodeURIComponent(
+                      r.givenName.map((c) => c.eum).join("")
+                    )}`}
+                  >
+                    리포트 · 맞춤 굿즈
+                  </Link>
+                </Button>
+                </div>
               </CardContent>
             </Card>
           );

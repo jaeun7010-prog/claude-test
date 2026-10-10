@@ -5,6 +5,9 @@ export async function requestPayment(params: {
   orderName: string;
   totalAmount: number;
   paymentId: string;
+  /** 모바일 등 리다이렉트 결제 후 돌아올 주소 */
+  redirectUrl: string;
+  customer?: { fullName?: string; phoneNumber?: string; email?: string };
 }) {
   return PortOne.requestPayment({
     storeId: process.env.NEXT_PUBLIC_PORTONE_STORE_ID!,
@@ -14,5 +17,7 @@ export async function requestPayment(params: {
     totalAmount: params.totalAmount,
     currency: "CURRENCY_KRW",
     payMethod: "CARD",
+    redirectUrl: params.redirectUrl,
+    customer: params.customer,
   });
 }
