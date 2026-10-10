@@ -73,14 +73,18 @@ export function analyzeName(input: NamingInput): NamingAnalysis {
     .filter((e): e is Element => e !== null);
   const pronunciation = evaluateFlow(pronElements);
 
-  // 자원오행: 사전에 오행이 있는 경우에만
-  const all = [surname[0], ...givenName];
+  // 자원오행: 오행을 아는 글자만으로 평가한다. 이름 글자 중 하나라도 오행을 알아야 의미가 있다.
+  // needMatched: 용신 글자가 있으면 true, 이름 글자가 모두 확인됐는데 없으면 false, 판단 불가면 null
   let resource: NamingAnalysis["resource"] = null;
-  if (all.every((c) => c.element)) {
-    const flow = evaluateFlow(all.map((c) => c.element as Element));
-    const needMatched = neededElement
-      ? givenName.some((c) => c.element === neededElement)
-      : null;
+  const knownGiven = givenName.filter((c) => c.element);
+  if (knownGiven.length > 0) {
+    const chars = [surname[0], ...givenName].filter((c) => c.element);
+    const flow = evaluateFlow(chars.map((c) => c.element as Element));
+    let needMatched: boolean | null = null;
+    if (neededElement) {
+      if (knownGiven.some((c) => c.element === neededElement)) needMatched = true;
+      else if (knownGiven.length === givenName.length) needMatched = false;
+    }
     resource = { ...flow, needMatched };
   }
 

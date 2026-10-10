@@ -19,3 +19,14 @@ export function reduceSuri(n: number): number {
 export function isLuckySuri(suri: number): boolean {
   return LUCKY_SURI.has(reduceSuri(suri));
 }
+
+/** 1~81 인덱스로 길수 여부를 O(1)로 조회 (추천처럼 대량 계산용) */
+const LUCKY_TABLE = new Uint8Array(82);
+LUCKY_SURI.forEach((n) => {
+  LUCKY_TABLE[n] = 1;
+});
+
+/** raw 획수 합의 길수 여부 (81 초과는 환원). 반복 호출용 빠른 경로 */
+export function isLuckyRaw(n: number): boolean {
+  return LUCKY_TABLE[n > 81 ? ((n - 1) % 81) + 1 : n] === 1;
+}

@@ -103,6 +103,9 @@ create table if not exists public.hanja_dict (
   unique (hanja, eum)
 );
 
+-- 한문 교육용 기초 한자(1,800자) 여부: 널리 알려진 글자를 우선 추천하는 데 사용
+alter table public.hanja_dict add column if not exists is_edu boolean not null default false;
+
 create index if not exists hanja_dict_eum_idx     on public.hanja_dict (eum);
 create index if not exists hanja_dict_element_idx on public.hanja_dict (element);
 create index if not exists hanja_dict_usable_idx  on public.hanja_dict (eum, element)

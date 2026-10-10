@@ -16,7 +16,9 @@ export default async function Home() {
         사주 맞춤 작명 &amp; 희소성 통계 플랫폼
       </p>
       <div className="flex gap-3">
-        <Button>작명 시작하기</Button>
+        <Button asChild>
+          <Link href="/naming">작명 시작하기</Link>
+        </Button>
         {user ? (
           <Button asChild variant="outline">
             <Link href="/mypage">마이페이지</Link>
