@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* 테마 컬러: Warm Ivory #fdfbf7 / Deep Navy #2d3a52 / Sand Beige #f4eae1 */
+    --ivory: 40 60% 98%;
+    --navy: 219 29% 25%;
+    --sand: 28 46% 92%;
+
+    --background: var(--ivory);
+    --foreground: var(--navy);
+    --card: var(--ivory);
+    --card-foreground: var(--navy);
+    --popover: var(--ivory);
+    --popover-foreground: var(--navy);
+    --primary: var(--navy);
+    --primary-foreground: var(--ivory);
+    --secondary: var(--sand);
+    --secondary-foreground: var(--navy);
+    --muted: var(--sand);
+    --muted-foreground: 219 15% 42%;
+    --accent: var(--sand);
+    --accent-foreground: var(--navy);
+    --destructive: 0 62% 45%;
+    --destructive-foreground: var(--ivory);
+    --border: 28 30% 84%;
+    --input: 28 30% 84%;
+    --ring: var(--navy);
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+  /* 한문·제목 등 고풍스러운 영역은 font-serif(나눔명조) 사용 */
+}

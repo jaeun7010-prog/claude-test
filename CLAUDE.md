@@ -2,21 +2,38 @@
 
 이 파일은 Claude Code(claude.ai/code)가 이 저장소에서 작업할 때 참고할 안내서입니다.
 
-## 프로젝트
+# 프로젝트: 이름핏 (NameFit) - 사주 맞춤 작명 & 희소성 통계 플랫폼
 
-수리 작명소: 정통 수리성명학(원획법, 81수리, 삼재오행)에 기반한 정적 한국어 작명 도구입니다. HTML/CSS/JS만 사용하며 빌드, 패키지 매니저, 테스트, 린터가 없습니다. `index.html`을 브라우저에서 바로 열면 됩니다. 쓸 수 있는 문법 검사는 `node --check script.js`뿐입니다. `test.txt`는 앱과 무관한 임시 파일입니다.
+## Tech Stack
+- Framework: Next.js 14+ (App Router), TypeScript, Tailwind CSS, shadcn/ui
+- Database & Auth: Supabase (PostgreSQL, Supabase Auth)
+- Payment: Portone (포트원 / 구 아임포트)
+- PDF Generation: react-pdf / html2pdf.js
 
-## 구조
+## Key Features & Differentiation
+1. 회원가입/로그인: Supabase Auth 기반 유저 인증 및 작명 결과 마이페이지 지속 저장
+2. 정통 성명학 엔진: 자원오행, 발음오행, 수리 81수(원/형/이/정 4격), 불용한자 필터링
+3. 차별화 필터: 돌림자, 외자, 젠더 뉴트럴(중성적 이름), 순우리말, 글로벌(영어) 발음 호환 점수
+4. 실시간 희소성 통계: 연도별 출생 동명이인 수 및 성비 비율 시각화
+5. 프리미엄 리포트: 양가 어르신 제출용 고풍스러운 한문 PDF 다운로드
+6. 결제 & 커머스: 포트원(Portone) 결제 연동 + 사주 맞춤 자수 굿즈(턱받이, 손수건) 주문
 
-모든 로직은 `script.js`에 있으며 순서는 데이터 표 → 순수 계산 → DOM 헬퍼 → UI 연결입니다.
+## 테마 컬러
+`app/globals.css`의 `:root`에 HSL 토큰으로 정의되어 있고, `tailwind.config.ts`에서 `ivory`/`navy`/`sand` 및 shadcn 시맨틱 토큰으로 노출됩니다. 컬러 값을 직접 쓰지 말고 토큰을 사용하세요.
 
-- **데이터 표** (`script.js` 상단): `SURNAMES` `[한자, 음, 획수]`, `HANJA` `[한자, 음, 획수, 뜻]`, 그리고 81수리 표인 `SURI` `[등급 A/B/C/D, 제목]`. `BY_CHAR`와 `BY_READING`은 `HANJA`에서 만든 조회용 맵입니다. 한자를 추가하려면 `HANJA`에 행만 추가하면 되고 다른 수정은 필요 없습니다.
-- **획수는 원획(原劃, 원래 글자 형태 기준)입니다.** 현행 또는 일반 자전 획수가 아닙니다: 氵=水 4, 艹=艸 6, 扌=手 4, 王=玉 5, 礻=示 5. 새 `HANJA` 항목도 이 기준을 따라야 하며, 어기면 점수가 틀어집니다.
-- **`analyze(S, a, b)`** 는 두 탭이 함께 쓰는 유일한 점수 계산 함수입니다. 4격(원/형/이/정), 삼재(천=S+1, 인=S+a, 지=원격)와 오행 관계, 음양 균형을 계산한 뒤 가중 합산한 0~100점을 반환합니다. 가중치는 임의로 정한 값이며 `analyze` 안에 있습니다(4격 85%, 삼재 10%, 음양 5%). 외자 이름(`b == null`)은 원격과 이격에 허수 1을 더합니다.
-- **두 탭이 결과 렌더러 하나를 공유합니다.** "이름 풀이"는 폼을 읽어 `renderResult`를 호출합니다. "이름 추천"은 입력한 한글 음에 해당하는 `HANJA` 조합을 모두 만들고 `analyze`로 점수를 매겨 카드로 보여줍니다. 카드를 누르면 풀이 폼이 채워지고 `renderResult`가 바로 호출됩니다.
-- **DOM 생성**은 `el(tag, cls, text)` 헬퍼와 `textContent`로만 하며 `innerHTML`은 쓰지 않습니다. 사용자 입력이 DOM으로 들어가기 때문이니 이 방식을 유지하세요.
-- `index.html`의 요소 ID(`c1/s1/c2/s2`, `chips1/2`, `info1/2`, `r-*`)는 `script.js`에서 문자열로 참조합니다. 이름을 바꿀 때는 양쪽을 함께 수정해야 합니다.
+| 이름 | HEX | 토큰 | 용도 |
+|---|---|---|---|
+| Warm Ivory | `#fdfbf7` | `--ivory` | background, card, popover, primary-foreground |
+| Deep Navy | `#2d3a52` | `--navy` | foreground, primary, ring |
+| Sand Beige | `#f4eae1` | `--sand` | secondary, muted, accent |
 
-## 스타일
+## 폰트
+`app/layout.tsx`에서 불러와 CSS 변수로 노출합니다.
+- **Pretendard** (`--font-pretendard`, Tailwind `font-sans`): 본문 기본 폰트. `app/fonts/PretendardVariable.woff2`를 `next/font/local`로 로드합니다.
+- **나눔명조** (`--font-myeongjo`, Tailwind `font-serif`): 제목, 한문, 프리미엄 리포트 등 고풍스러운 영역에 사용합니다. `next/font/google`의 `Nanum_Myeongjo`로 로드합니다.
 
-`style.css`는 `:root`의 CSS 커스텀 속성을 쓰고 `prefers-color-scheme: dark`로 다크 모드를 덮어씁니다. 등급 색상은 `.g-A/.g-B/.g-C/.g-D` 클래스가 `--g`를 지정하는 방식이며, 점수 링과 추천 카드가 이 변수를 읽습니다. Noto Serif KR 글꼴은 `index.html`에서 Google Fonts로 불러오고, 실패하면 로컬 명조체로 대체됩니다.
+## 프로젝트 구조
+- `lib/supabase/client.ts`(브라우저), `server.ts`(서버 컴포넌트/액션), `middleware.ts`(세션 갱신), 루트 `middleware.ts`
+- `lib/portone.ts`: 포트원 결제 요청 래퍼 (클라이언트 전용)
+- `components/ui/`: shadcn/ui 컴포넌트 (Tailwind v3 기준, `npx shadcn@latest add <name>`으로 추가)
+- 환경 변수는 `.env.local.example`을 참고합니다. 결제 검증용 `PORTONE_API_SECRET`은 서버 전용입니다.
