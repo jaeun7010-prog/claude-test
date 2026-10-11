@@ -33,6 +33,13 @@ export interface NameStatSummary {
   neutral: boolean;
   /** 어느 연도든 목록에 한 번이라도 올랐는가 */
   everListed: boolean;
+  /** 적재된 전체 연도의 성별별 누적 건수 (목록에 오른 해만 합산) */
+  cumulative: Cumulative;
+}
+
+export interface Cumulative {
+  male: number;
+  female: number;
 }
 
 export interface YearSummary {
@@ -49,7 +56,8 @@ interface StatRow {
   female_count: number;
 }
 
-const CHUNK = 100;
+// 한 번의 조회가 API 기본 최대 행 수(1,000행)를 넘지 않도록: 이름 40개 × 연도 수
+const CHUNK = 40;
 
 /** 연도별 목록 요약 (통계 데이터가 적재되지 않았거나 뷰가 없으면 빈 배열) */
 export async function fetchYearSummary(supabase: SupabaseClient): Promise<YearSummary[]> {
@@ -75,7 +83,7 @@ export async function fetchNameRows(
   for (let i = 0; i < unique.length; i += CHUNK) {
     const part = unique.slice(i, i + CHUNK);
     const { data, error } = await supabase
-      .from("name_stats")
+      .from("name_stats_yearly")
       .select("name, year, total_count, male_count, female_count")
       .in("name", part)
       .order("year", { ascending: true })
@@ -86,6 +94,25 @@ export async function fetchNameRows(
       list.push(r);
       out.set(r.name, list);
     }
+  }
+  return out;
+}
+
+/** 여러 이름의 성별별 누적 건수를 조회 (name_stats_cumulative 뷰) */
+export async function fetchCumulative(
+  supabase: SupabaseClient,
+  names: string[]
+): Promise<Map<string, Cumulative>> {
+  const unique = [...new Set(names)];
+  const out = new Map<string, Cumulative>();
+  for (let i = 0; i < unique.length; i += 500) {
+    const { data, error } = await supabase
+      .from("name_stats_cumulative")
+      .select("name, male_total, female_total")
+      .in("name", unique.slice(i, i + 500));
+    if (error) throw new Error(`이름 누적 통계 조회 실패: ${error.message}`);
+    for (const r of data ?? [])
+      out.set(r.name, { male: Number(r.male_total), female: Number(r.female_total) });
   }
   return out;
 }
@@ -101,7 +128,8 @@ export function tierOf(latest: YearPoint): Tier {
 export function summarizeName(
   name: string,
   rows: StatRow[],
-  years: YearSummary[]
+  years: YearSummary[],
+  cumulative: Cumulative = { male: 0, female: 0 }
 ): NameStatSummary {
   const byYear = new Map(rows.map((r) => [r.year, r]));
   const series: YearPoint[] = years.map((y) => {
@@ -138,6 +166,7 @@ export function summarizeName(
     recentTotal,
     neutral,
     everListed: rows.length > 0,
+    cumulative,
   };
 }
 
@@ -148,8 +177,12 @@ export async function loadNameSummaries(
 ): Promise<{ years: YearSummary[]; summaries: Map<string, NameStatSummary> } | null> {
   const years = await fetchYearSummary(supabase);
   if (years.length === 0) return null;
-  const rows = await fetchNameRows(supabase, names);
+  const [rows, cumulative] = await Promise.all([
+    fetchNameRows(supabase, names),
+    fetchCumulative(supabase, names),
+  ]);
   const summaries = new Map<string, NameStatSummary>();
-  for (const n of new Set(names)) summaries.set(n, summarizeName(n, rows.get(n) ?? [], years));
+  for (const n of new Set(names))
+    summaries.set(n, summarizeName(n, rows.get(n) ?? [], years, cumulative.get(n)));
   return { years, summaries };
 }

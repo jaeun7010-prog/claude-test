@@ -45,19 +45,33 @@ npx tsx scripts/build-hanja-seed.ts <Unihan 폴더> <CJKRadicals.txt>
 
 ---
 
-# name_stats (이름 출생 통계)
+# name_stats (이름 출생신고 통계)
 
 저장소에는 통계 **원본이 포함되어 있지 않습니다.** 대법원 전자가족관계등록시스템의
-「상위 출생신고 이름 현황」 등 정당한 경로로 확보한 데이터를 CSV로 정리해 적재하세요.
+「상위 출생신고 이름 현황」(2008년~, 출생신고 기준) 공개 통계를 관리자가 CSV로 정리해 업로드합니다.
+해당 사이트는 robots.txt로 자동 접근을 막고 있으므로 자동 수집은 하지 않습니다.
 
-1. `supabase/schema.sql`을 다시 실행합니다 (`name_stats_year_summary` 뷰가 추가되었습니다).
-2. `supabase/seed/name_stats_template.csv` 형식(`name,year,male_count,female_count`)으로 CSV를 만듭니다.
-   이름은 **성을 제외한 한글 이름**입니다.
-3. `npx tsx scripts/import-name-stats.ts <CSV 경로>` → `supabase/seed/name_stats_NN.sql` 생성
-4. 생성된 SQL을 SQL Editor에서 순서대로 실행합니다 (upsert라 재실행해도 안전).
+1. `supabase/schema.sql`(신규) 또는 `supabase/migrations/20261011000000_name_stats_snapshots.sql`(기존 DB)을 실행합니다.
+2. 관리자를 지정합니다 (SQL Editor).
+   ```sql
+   insert into public.admin_users (user_id)
+   select id from auth.users where email = 'admin@example.com'
+   on conflict do nothing;
+   ```
+3. `supabase/seed/name_stats_template.csv` 형식으로 CSV(UTF-8)를 만듭니다.
+   ```
+   name,year,gender,count
+   서윤,2023,여,1234
+   ```
+   이름은 **성을 제외한 한글 이름**, 성별은 `남`/`여`(또는 `male`/`female`, `M`/`F`), 건수는 쉼표 없는 숫자입니다.
+4. 관리자 계정으로 로그인해 `/admin/name-stats`에서 CSV와 **데이터 기준일**을 입력해 업로드합니다.
+   잘못된 행이 하나라도 있으면 아무것도 반영되지 않고 오류 목록이 표시됩니다.
+   반영 이력은 `data_snapshots`에 남고, 화면의 "○○○○년 ○월 ○일 기준" 표기는 가장 최근 기준일을 따릅니다.
 
 ## 해석 규칙
 
-공개 통계가 상위 N개 이름만 제공한다면, 목록에 없는 이름은 **0명이 아니라 "해당 연도 목록의 최소 인원 미만"**입니다.
-`name_stats_year_summary.min_listed`가 그 상한이며, 화면에서는 점선 막대로 구분해 표시합니다.
-같은 연도의 일부 이름만 넣으면 이 상한이 왜곡되므로, 연도 단위로 전체 목록을 한 번에 적재하세요.
+- CSV에 포함된 연도는 **통째로 교체**됩니다. 연도 단위로 남/여 전체 목록을 한 번에 올리세요.
+  일부 이름만 올리면 그 연도의 나머지 이름이 지워지고 아래 상한도 왜곡됩니다.
+- 공개 통계는 성별마다 상위 N개 이름만 제공하므로, 목록에 없는 이름은 **0명이 아니라 "목록의 최소 건수 미만"**입니다.
+  `name_stats_year_summary.min_listed`(성별 목록 최소 건수의 합)가 그 상한이며, 화면에서는 점선 막대로 구분해 표시합니다.
+- 누적 건수(`name_stats_cumulative`)는 목록에 오른 해만 합산한 값입니다.

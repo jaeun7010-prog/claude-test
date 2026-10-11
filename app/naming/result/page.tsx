@@ -2,11 +2,14 @@ import Link from "next/link";
 
 import { saveName } from "@/app/naming/actions";
 import { Button } from "@/components/ui/button";
-import { NameStatsDetail, TierBadge } from "@/components/name-stats-chart";
+import { DataSourceNote } from "@/components/data-source-note";
+import { NameStatsBasic } from "@/components/name-stats-basic";
+import { TierBadge } from "@/components/name-stats-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { parseNamingParams } from "@/lib/naming/params";
 import { hunEum } from "@/lib/naming/recommend";
 import { runNaming } from "@/lib/naming/service";
+import { getLatestSnapshot } from "@/lib/name-stats/snapshot";
 import { BRANCHES_KO, STEMS_KO, type Pillar } from "@/lib/saju";
 import { createClient } from "@/lib/supabase/server";
 
@@ -73,6 +76,8 @@ export default async function ResultPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const snapshot = result.stats ? await getLatestSnapshot() : null;
 
   const { pillars, yongsin } = result.saju;
   const qs = new URLSearchParams(
@@ -173,6 +178,7 @@ export default async function ResultPage({
             조건에 맞는 이름이 없습니다. 돌림자나 발음·남녀 공용 조건을 완화해 보세요.
           </p>
         )}
+        {result.stats && result.recommendations.length > 0 && <DataSourceNote />}
         {result.recommendations.map((r, i) => {
           const a = r.analysis;
           const gh = r.givenName.map((c) => c.hanja).join("");
@@ -225,24 +231,20 @@ export default async function ResultPage({
                   const st = result.stats?.get(r.hangul);
                   if (!st) return null;
                   return (
-                    <details className="rounded-md border p-3 text-sm">
-                      <summary className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1">
+                    <div className="space-y-2 rounded-md border p-3">
+                      <NameStatsBasic stat={st} asOfDate={snapshot?.asOfDate ?? null} />
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                         <span className="text-muted-foreground">희소성</span>
                         <TierBadge tier={st.tier} />
-                        {st.latest && (
-                          <span className="text-muted-foreground">
-                            {st.latest.year}년{" "}
-                            {st.latest.listed
-                              ? `${st.latest.total.toLocaleString("ko-KR")}명`
-                              : `${st.latest.upperBound?.toLocaleString("ko-KR")}명 미만`}
-                          </span>
-                        )}
                         {st.neutral && <span className="text-muted-foreground">남녀 공용</span>}
-                      </summary>
-                      <div className="mt-3">
-                        <NameStatsDetail stat={st} />
+                        <Link
+                          href={`/stats?name=${encodeURIComponent(r.hangul)}`}
+                          className="ml-auto text-primary underline"
+                        >
+                          연도별 상세 통계
+                        </Link>
                       </div>
-                    </details>
+                    </div>
                   );
                 })()}
                 <ul className="text-xs text-muted-foreground">

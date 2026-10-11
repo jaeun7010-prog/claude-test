@@ -1,10 +1,14 @@
 import Link from "next/link";
 
+import { DataSourceNote } from "@/components/data-source-note";
+import { NameStatsBasic } from "@/components/name-stats-basic";
 import { NameStatsDetail } from "@/components/name-stats-chart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { STATS_START_YEAR } from "@/lib/name-stats/constants";
+import { getLatestSnapshot } from "@/lib/name-stats/snapshot";
 import { loadNameSummaries } from "@/lib/stats/name-stats";
 import { createClient } from "@/lib/supabase/server";
 
@@ -30,13 +34,14 @@ export default async function StatsPage({
     }
   }
   const stat = loaded?.summaries.get(name);
+  const snapshot = stat ? await getLatestSnapshot() : null;
 
   return (
     <main className="mx-auto min-h-screen max-w-2xl space-y-8 px-6 py-12">
       <header>
         <h1 className="font-serif text-3xl font-bold">이름 희소성 통계</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          같은 이름(성 제외)으로 출생신고된 인원과 성비를 연도별로 확인합니다.
+          {STATS_START_YEAR}년 이후 같은 이름(성 제외)으로 출생신고된 건수와 성비를 연도별로 확인합니다.
         </p>
       </header>
 
@@ -70,17 +75,14 @@ export default async function StatsPage({
             <CardTitle>{stat.name}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <NameStatsBasic stat={stat} asOfDate={snapshot?.asOfDate ?? null} />
             <NameStatsDetail stat={stat} />
-            {!stat.everListed && (
-              <p className="text-sm text-muted-foreground">
-                통계 목록에 오른 적이 없는 이름입니다. 해당 연도 목록의 최소 인원 미만으로 추정되며,
-                0명이라는 뜻은 아닙니다.
-              </p>
-            )}
             <p className="text-xs text-muted-foreground">
-              통계는 공개된 상위 출생신고 이름 목록을 기준으로 하므로, 점선 막대는 &quot;목록 밖&quot;(해당
-              연도 최소 인원 미만)을 뜻합니다.
+              통계는 공개된 상위 출생신고 이름 목록을 기준으로 하므로, 점선 막대는 &quot;상위 목록 밖&quot;(해당
+              연도 최소 인원 미만)을 뜻합니다. {STATS_START_YEAR}년 이후 누적 건수는 목록에 오른 해만
+              합산한 값입니다.
             </p>
+            <DataSourceNote />
           </CardContent>
         </Card>
       )}

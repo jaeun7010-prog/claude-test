@@ -20,7 +20,8 @@ SQL Editor에서 순서대로 실행합니다 (모두 여러 번 실행해도 �
    - 실행 후 확인: `select policyname, cmd from pg_policies where tablename = 'orders';` → `orders_select_own`(SELECT)만 남아야 합니다.
 2. `supabase/seed/hanja_dict_01.sql` ~ `09.sql` → `select count(*) from hanja_dict;` = **8486**
 3. `supabase/seed/hanja_hun_01.sql` ~ `05.sql` → `select count(*) from hanja_dict where hun is not null;` ≈ **7335**
-4. 출생 통계(`name_stats`)는 원본이 저장소에 없습니다. 적재 전에는 희소성 화면이 비어 있는 것이 정상입니다 (`supabase/seed/README.md`).
+4. 출생 통계(`name_stats`)는 원본이 저장소에 없습니다. 관리자 지정 후 `/admin/name-stats`에서 CSV를 업로드합니다. 적재 전에는 희소성 화면이 비어 있는 것이 정상입니다 (`supabase/seed/README.md`).
+   - 이전 버전 스키마를 쓰던 DB는 `supabase/migrations/20261011000000_name_stats_snapshots.sql`만 실행하면 됩니다.
 
 Auth 설정 (Authentication → URL Configuration)
 
@@ -91,6 +92,6 @@ Auth 설정 (Authentication → URL Configuration)
 - [ ] 사업자 정보 푸터 표기 (상호, 대표자, 사업자등록번호, 통신판매업 신고번호)
 - [ ] 굿즈 배송/제작 프로세스와 관리자 화면 (현재 `orders` 상태 변경은 Supabase 콘솔에서 수동)
 - [ ] 포트원 환불 후 `refunded` 반영 확인 (웹훅 `Transaction.Cancelled`)
-- [ ] `name_stats` 통계 데이터 적재, 도메인/OG 이미지 등 메타데이터
+- [ ] 관리자 지정(`admin_users`) 후 `/admin/name-stats`에서 통계 CSV 업로드, 도메인/OG 이미지 등 메타데이터
 - [ ] 에러 모니터링 (Vercel Logs 또는 Sentry)
 - [ ] `hanja_hun` 출처(libhangul, BSD-3-Clause) 고지 — 오픈소스 라이선스 표기 페이지 또는 `supabase/seed/README.md`
