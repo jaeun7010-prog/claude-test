@@ -1,4 +1,9 @@
-import { evaluateFlow, pronunciationElement, strokeElement } from "./elements";
+import {
+  evaluateFlow,
+  evaluateResourceFlow,
+  pronunciationElement,
+  strokeElement,
+} from "./elements";
 import {
   GYEOK_WEIGHTS,
   PRONUNCIATION_FLOW_WEIGHTS,
@@ -95,7 +100,11 @@ export function analyzeName(input: NamingInput): NamingAnalysis {
   const knownGiven = givenName.filter((c) => c.element);
   if (knownGiven.length > 0) {
     const chars = [surname[0], ...givenName].filter((c) => c.element);
-    const flow = evaluateFlow(chars.map((c) => c.element as Element));
+    const flow = evaluateResourceFlow(
+      chars.map((c) => c.element as Element),
+      chars[0] === surname[0] && !!givenName[0].element,
+      neededElement
+    );
     let needMatched: boolean | null = null;
     if (neededElement) {
       if (knownGiven.some((c) => c.element === neededElement)) needMatched = true;
@@ -109,6 +118,8 @@ export function analyzeName(input: NamingInput): NamingAnalysis {
   if (neededElement && knownGiven.length > 0) {
     const saju = { needed: neededElement, favorable: favorableElement, unfavorable: unfavorableElement };
     const per = givenName.map((c) => sajuCharScore(c.element, saju) ?? SAJU_CHAR_SCORE.neutral);
+    // 통관 글자(이름 첫 글자)는 희신만큼 본다
+    if (resource?.tonggwan) per[0] = Math.max(per[0], SAJU_CHAR_SCORE.tonggwan);
     sajuScore = round1((per.reduce((a, b) => a + b, 0) / per.length) * 100);
   }
 

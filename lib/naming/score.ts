@@ -36,6 +36,8 @@ export const PRONUNCIATION_FLOW_WEIGHTS = [0.6, 0.4] as const;
 export const SAJU_CHAR_SCORE = {
   yongsin: 1,
   huisin: 0.6,
+  /** 통관 배치에서 성씨와 용신을 이어 주는 글자 (희신과 같게 본다) */
+  tonggwan: 0.6,
   neutral: 0.3,
   gisin: 0,
 } as const;

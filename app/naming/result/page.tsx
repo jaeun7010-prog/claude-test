@@ -165,6 +165,7 @@ function NameCardBody({
             <span className="text-muted-foreground">자원오행</span>{" "}
             {best.givenName.map((c) => c.element ?? "?").join("·")}
             {a.resource.needMatched && " (용신 보강)"}
+            {a.resource.tonggwan && " · 성씨와 용신을 잇는 배치(통관)"}
           </>
         )}
         {" · "}

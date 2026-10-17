@@ -1,4 +1,4 @@
-import type { Element, ElementFlow, Relation } from "./types";
+import type { Element, ElementFlow, Relation, ResourceFlow } from "./types";
 
 const ORDER: Element[] = ["목", "화", "토", "금", "수"];
 
@@ -80,4 +80,46 @@ export function evaluateFlow(elements: Element[], weights?: readonly number[]): 
   let score = relations.reduce((sum, r, i) => sum + RELATION_SCORE[r] * w[i], 0) / wSum;
   if (elements.length >= 3 && new Set(elements).size === 1) score = 40;
   return { elements, relations, score: Math.round(score * 10) / 10 };
+}
+
+/** 성씨와 용신 글자가 바로 붙어 상극일 때의 관계 점수. 용신을 채우려다 생긴 상극이라 일반 상극(0)보다 덜 감점한다 */
+export const YONGSIN_CLASH_SCORE = 30;
+
+/**
+ * 상극인 두 오행을 상생으로 이어 주는 통관 오행 (예: 화·금 → 토, 금·목 → 수).
+ * 상극은 상생 순서에서 두 칸 떨어져 있으므로 그 가운데 오행이다. 상극이 아니면 null.
+ */
+export function bridgeElement(a: Element, b: Element): Element | null {
+  if (relation(a, b) !== "극") return null;
+  const ia = ORDER.indexOf(a);
+  const ib = ORDER.indexOf(b);
+  return (ia + 2) % 5 === ib ? ORDER[(ia + 1) % 5] : ORDER[(ib + 1) % 5];
+}
+
+/**
+ * 자원오행 흐름 (성 → 이름 글자). evaluateFlow에 성씨·용신 상극 처리를 더한다.
+ * - 통관: 성씨와 용신이 상극인데 [성, 통관 오행, 용신] 순서로 이어지면 상생으로 이어진 것으로 보고 만점
+ * - 용신 상극: 이름 첫 글자가 용신이고 성씨와 상극이면 그 관계를 YONGSIN_CLASH_SCORE로 본다
+ * `elements[0]`이 성씨 오행일 때만 `surnameFirst`를 true로 넘긴다.
+ */
+export function evaluateResourceFlow(
+  elements: Element[],
+  surnameFirst: boolean,
+  needed?: Element
+): ResourceFlow {
+  const flow = evaluateFlow(elements);
+  const plain = { ...flow, tonggwan: false, yongsinClash: false };
+  if (!surnameFirst || !needed || elements.length < 2) return plain;
+
+  const [surname, first, second] = elements;
+  const bridge = bridgeElement(surname, needed);
+  if (bridge && elements.length === 3 && first === bridge && second === needed) {
+    return { ...flow, score: 100, tonggwan: true, yongsinClash: false };
+  }
+  if (first === needed && bridge) {
+    const scores = flow.relations.map((r, i) => (i === 0 ? YONGSIN_CLASH_SCORE : RELATION_SCORE[r]));
+    const score = scores.reduce((a, b) => a + b, 0) / scores.length;
+    return { ...flow, score: Math.round(score * 10) / 10, tonggwan: false, yongsinClash: true };
+  }
+  return plain;
 }

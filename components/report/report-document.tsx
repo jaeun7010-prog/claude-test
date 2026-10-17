@@ -217,6 +217,9 @@ export function ReportDocument({ data }: { data: ReportData }) {
           <p style={{ margin: "0 0 6px", fontSize: "16px", lineHeight: 1.8 }}>
             자원오행 {analysis.resource.elements.join(" → ")} (조화 {analysis.resource.score}점)
             {analysis.resource.needMatched ? " · 용신 오행을 보강합니다." : ""}
+            {analysis.resource.tonggwan
+              ? " · 가운데 글자가 성씨와 용신 오행을 상생으로 이어 줍니다(통관)."
+              : ""}
           </p>
         )}
         <p style={{ margin: "14px 0 0", fontSize: "26px", fontWeight: 800 }}>

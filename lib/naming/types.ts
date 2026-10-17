@@ -61,12 +61,20 @@ export interface ElementFlow {
 
 export type Relation = "생" | "비화" | "극" | "설";
 
+/** 자원오행 흐름 + 성씨·용신 상극 처리 결과 */
+export interface ResourceFlow extends ElementFlow {
+  /** [성, 통관 오행, 용신] 순서로 성씨와 용신의 상극을 이어 준 배치 */
+  tonggwan: boolean;
+  /** 이름 첫 글자(용신)와 성씨가 상극이라 감점을 줄인 경우 */
+  yongsinClash: boolean;
+}
+
 export interface NamingAnalysis {
   fourGyeok: Record<FourGyeokKey, GyeokResult>;
   /** 발음오행 (성·이름 초성 기준) */
   pronunciation: ElementFlow;
   /** 자원오행 (한자 고유 오행). 사전에 오행 정보가 없는 글자가 있으면 null */
-  resource: (ElementFlow & { needMatched: boolean | null }) | null;
+  resource: (ResourceFlow & { needMatched: boolean | null }) | null;
   /** 항목별 점수 */
   breakdown: ScoreBreakdown;
   /** 100점 만점 성명학 점수 (소수 첫째 자리). 등급·리포트·저장에는 이 점수만 쓴다 */
