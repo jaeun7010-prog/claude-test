@@ -44,8 +44,10 @@ export async function saveName(formData: FormData) {
     given_name: givenEum,
     given_name_hanja: givenHanja,
     total_score: r.analysis.totalScore,
+    // 부모 성 함께 쓰기: total_score 와 기본 분석은 새로 고르는 부분 기준, 법적 이름 전체 기준은 legal 에 참고로 둔다
     analysis: {
       ...r.analysis,
+      ...(r.legalAnalysis ? { legal: r.legalAnalysis, combination: r.combination } : {}),
       saju: {
         pillars: {
           year: pillars.year.hanja,
@@ -67,6 +69,8 @@ export async function saveName(formData: FormData) {
     filters: {
       length: p.length,
       dolrimja: p.dolrimja,
+      // 부모 성 함께 쓰기: given_name 에는 이 성을 포함한 법적 이름이 들어간다
+      parentSurname: p.parentSurname,
       globalFriendly: p.globalFriendly,
       neutral: p.neutral,
       rarity: p.rarity,

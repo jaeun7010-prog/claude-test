@@ -29,8 +29,14 @@ export const SURI_PARTS = {
   yinYang: 0.15,
 } as const;
 
-/** 발음오행 관계 가중치: 성 → 이름 첫 글자, 이름 첫 글자 → 둘째 글자 */
-export const PRONUNCIATION_FLOW_WEIGHTS = [0.6, 0.4] as const;
+/**
+ * 발음오행 관계 가중치 (가중 평균이라 합이 1이 아니어도 된다).
+ * - junction: 성 끝 글자 → 이름 첫 글자
+ * - given: 이름 안의 관계 전체 (관계가 여럿이면 똑같이 나눈다. 2자 이름이면 첫 글자 → 둘째 글자 하나)
+ * - surname: 복성 두 글자 사이 관계. 모든 후보에 같으므로 작게 둔다
+ * 단성 2자 이름은 0.6 / 0.4로 예전과 같다.
+ */
+export const PRONUNCIATION_FLOW_WEIGHTS = { junction: 0.6, given: 0.4, surname: 0.2 } as const;
 
 /** 사주 보완: 이름 한 글자의 자원오행이 무엇이냐에 따른 점수 (0~1) */
 export const SAJU_CHAR_SCORE = {

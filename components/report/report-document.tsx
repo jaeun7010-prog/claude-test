@@ -81,12 +81,19 @@ function PillarBox({ label, pillar }: { label: string; pillar: Pillar | null }) 
 
 export function ReportDocument({ data }: { data: ReportData }) {
   const { saju, analysis, given } = data;
+  const legal = data.legalAnalysis ?? null;
   const { pillars, yongsin } = saju;
   const fullHanja = `${data.surnameHanja}${given.map((c) => c.hanja).join("")}`;
   const fullHangul = `${data.surname}${given.map((c) => c.eum).join("")}`;
   const total = Object.values(yongsin.scores).reduce((a, b) => a + b, 0);
   const lacking = data.texts.lacking;
   const chars = [...data.surnameChars, ...given];
+  // 복성·부모 성 함께 쓰기로 글자가 4자 이상이면 3쪽이 A4를 넘지 않도록 한자 표를 줄인다
+  const compact = chars.length >= 4;
+  const cellPad = chars.length >= 5 ? "2px 8px" : compact ? "4px 8px" : "8px";
+  const hanjaSize = compact ? "20px" : "24px";
+  const gyeokPad = compact ? "6px 8px" : "9px 8px";
+  const sectionGap = compact ? "24px" : "34px";
   const footer = `이름핏 NameFit · ${fullHangul} 작명 리포트`;
 
   return (
@@ -103,6 +110,9 @@ export function ReportDocument({ data }: { data: ReportData }) {
           <div style={{ margin: "70px auto", width: "80px", borderTop: `2px solid ${C.navy}` }} />
           <p style={{ margin: 0, fontSize: "72px", fontWeight: 800, letterSpacing: "0.2em" }}>{fullHanja}</p>
           <p style={{ margin: "18px 0 0", fontSize: "30px" }}>{fullHangul}</p>
+          {data.texts.registration && (
+            <p style={{ margin: "18px 0 0", fontSize: "14px", color: C.muted }}>{data.texts.registration}</p>
+          )}
           <p style={{ margin: "90px 0 0", fontSize: "15px", color: C.muted }}>생년월일시 {data.birthText}</p>
           <p style={{ margin: "6px 0 0", fontSize: "15px", color: C.muted }}>작성일 {data.issuedAt}</p>
         </div>
@@ -173,6 +183,14 @@ export function ReportDocument({ data }: { data: ReportData }) {
       {/* 이름 풀이 */}
       <Frame footer={footer}>
         <h2 style={h2}>四. 이름 한자 풀이(姓名解)</h2>
+        {data.texts.registration && (
+          <p style={{ margin: "0 0 12px", fontSize: "14px", lineHeight: 1.7, color: C.muted }}>
+            {data.texts.registration}
+            {legal
+              ? " 아래 사격·점수는 새로 고르는 부분 기준이며, 법적 이름 전체 기준은 七에 실었습니다."
+              : " 수리·오행은 이 등록 기준으로 풀이했습니다."}
+          </p>
+        )}
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "15px" }}>
           <thead>
             <tr style={{ backgroundColor: C.sand }}>
@@ -186,13 +204,13 @@ export function ReportDocument({ data }: { data: ReportData }) {
           <tbody>
             {chars.map((c, i) => (
               <tr key={`${c.hanja}-${i}`} style={{ textAlign: "center" }}>
-                <td style={{ padding: "8px", border: `1px solid ${C.line}`, fontSize: "24px", fontWeight: 700 }}>
+                <td style={{ padding: cellPad, border: `1px solid ${C.line}`, fontSize: hanjaSize, fontWeight: 700 }}>
                   {c.hanja}
                 </td>
-                <td style={{ padding: "8px", border: `1px solid ${C.line}` }}>{c.eum}</td>
-                <td style={{ padding: "8px", border: `1px solid ${C.line}` }}>{c.hun ?? "-"}</td>
-                <td style={{ padding: "8px", border: `1px solid ${C.line}` }}>{c.strokes}</td>
-                <td style={{ padding: "8px", border: `1px solid ${C.line}` }}>
+                <td style={{ padding: cellPad, border: `1px solid ${C.line}` }}>{c.eum}</td>
+                <td style={{ padding: cellPad, border: `1px solid ${C.line}` }}>{c.hun ?? "-"}</td>
+                <td style={{ padding: cellPad, border: `1px solid ${C.line}` }}>{c.strokes}</td>
+                <td style={{ padding: cellPad, border: `1px solid ${C.line}` }}>
                   {c.element ? `${ELEMENT_HANJA[c.element]}(${c.element})` : "-"}
                 </td>
               </tr>
@@ -200,27 +218,27 @@ export function ReportDocument({ data }: { data: ReportData }) {
           </tbody>
         </table>
 
-        <h2 style={{ ...h2, marginTop: "34px" }}>五. 수리 81수 사격(四格)</h2>
+        <h2 style={{ ...h2, marginTop: sectionGap }}>五. 수리 81수 사격(四格)</h2>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "15px" }}>
           <tbody>
             {GYEOK.map((g) => {
               const r = analysis.fourGyeok[g.key];
               return (
                 <tr key={g.key}>
-                  <td style={{ padding: "9px 8px", border: `1px solid ${C.line}`, width: "130px", fontWeight: 700 }}>
+                  <td style={{ padding: gyeokPad, border: `1px solid ${C.line}`, width: "130px", fontWeight: 700 }}>
                     {g.name}
                   </td>
-                  <td style={{ padding: "9px 8px", border: `1px solid ${C.line}`, width: "90px", textAlign: "center" }}>
+                  <td style={{ padding: gyeokPad, border: `1px solid ${C.line}`, width: "90px", textAlign: "center" }}>
                     {r.suri}수 · {r.lucky ? "길(吉)" : "흉(凶)"}
                   </td>
-                  <td style={{ padding: "9px 8px", border: `1px solid ${C.line}`, color: C.muted }}>{g.desc}</td>
+                  <td style={{ padding: gyeokPad, border: `1px solid ${C.line}`, color: C.muted }}>{g.desc}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
 
-        <h2 style={{ ...h2, marginTop: "34px" }}>六. 오행 조화와 종합 평가</h2>
+        <h2 style={{ ...h2, marginTop: sectionGap }}>六. 오행 조화와 종합 평가</h2>
         <p style={{ margin: "0 0 6px", fontSize: "16px", lineHeight: 1.8 }}>
           발음오행 {analysis.pronunciation.elements.join(" → ")} (조화 {analysis.pronunciation.score}점)
         </p>
@@ -246,6 +264,59 @@ export function ReportDocument({ data }: { data: ReportData }) {
           권합니다.
         </p>
       </Frame>
+
+      {/* 부모 성 함께 쓰기: 법적 이름 전체 기준(참고)과 조합 진단 */}
+      {legal && (
+        <Frame footer={footer}>
+          <h2 style={h2}>七. 법적 이름 전체 기준 (참고)</h2>
+          {data.texts.registration && (
+            <p style={{ margin: "0 0 12px", fontSize: "15px", lineHeight: 1.7 }}>{data.texts.registration}</p>
+          )}
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "15px" }}>
+            <tbody>
+              {GYEOK.map((g) => {
+                const r = legal.fourGyeok[g.key];
+                return (
+                  <tr key={g.key}>
+                    <td style={{ padding: "9px 8px", border: `1px solid ${C.line}`, width: "130px", fontWeight: 700 }}>
+                      {g.name}
+                    </td>
+                    <td style={{ padding: "9px 8px", border: `1px solid ${C.line}`, width: "90px", textAlign: "center" }}>
+                      {r.suri}수 · {r.lucky ? "길(吉)" : "흉(凶)"}
+                    </td>
+                    <td style={{ padding: "9px 8px", border: `1px solid ${C.line}`, color: C.muted }}>{g.desc}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <p style={{ margin: "14px 0 6px", fontSize: "16px", lineHeight: 1.8 }}>
+            발음오행 {legal.pronunciation.elements.join(" → ")} (조화 {legal.pronunciation.score}점)
+            {legal.resource && ` · 자원오행 ${legal.resource.elements.join(" → ")} (조화 ${legal.resource.score}점)`}
+          </p>
+          <p style={{ margin: "6px 0 0", fontSize: "20px", fontWeight: 700 }}>
+            법적 이름 전체 기준 {legal.totalScore} / 100 · {legal.grade}등급
+          </p>
+
+          {data.texts.combination && data.texts.combination.length > 0 && (
+            <>
+              <h2 style={{ ...h2, marginTop: "34px" }}>八. 조합 진단(組合診斷)</h2>
+              <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "15px", lineHeight: 1.8 }}>
+                {data.texts.combination.map((x) => (
+                  <li key={x.text} style={{ color: x.tone === "weak" ? C.navy : C.muted }}>
+                    {x.tone === "weak" ? "참고 · " : ""}
+                    {x.text}
+                  </li>
+                ))}
+              </ul>
+              <p style={{ margin: "14px 0 0", fontSize: "13px", lineHeight: 1.7, color: C.muted }}>
+                어떤 이름을 골라도 똑같이 들어가는 부분(성 + 함께 쓰는 부모 성)을 따로 살펴본 것입니다. 함께 쓰기를
+                원하시면 이 점을 참고하세요.
+              </p>
+            </>
+          )}
+        </Frame>
+      )}
     </div>
   );
 }

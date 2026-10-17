@@ -2,18 +2,24 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { analyzeSaju } from "@/lib/saju";
 import { loadNameSummaries, type NameStatSummary } from "@/lib/stats/name-stats";
-import { analyzeName } from "./analyze";
+import { analyzeName, analyzeWithPrefix } from "./analyze";
+import { diagnoseCombination, type CombinationItem } from "./combination";
 import { fetchByEum, fetchPool, fetchSurname } from "./hanja-repo";
 import type { NamingParams } from "./params";
 import { recommendNames, type NameGroup, type NameHanja } from "./recommend";
 import { compareAnalysis } from "./score";
 import { TREND_MIN } from "./trend";
+import type { NamingAnalysis } from "./types";
 
 export type NamingResult =
   | {
       ok: true;
       saju: ReturnType<typeof analyzeSaju>;
       surname: NameHanja[];
+      /** 부모 성 함께 쓰기의 고정 앞 글자 (이름의 일부). 없으면 빈 배열 */
+      prefix: NameHanja[];
+      /** 부모 성 함께 쓰기의 조합 진단 (고정된 부분의 약점). 해당 없으면 null */
+      combination: CombinationItem[] | null;
       /** 한글 이름별 묶음 (대표 조합의 기본 순위 점수 순, 최대 CANDIDATE_LIMIT개) */
       groups: NameGroup[];
       /** 이름(성 제외) → 출생 통계 요약. 통계 데이터가 적재되지 않았으면 null */
@@ -28,11 +34,17 @@ export const DISPLAY_LIMIT = 30;
 /** 서버에서 넘기는 후보 이름 수. 우선순위를 바꾸면 이 안에서 맞춤 점수 상위 DISPLAY_LIMIT개를 보여 준다 */
 export const CANDIDATE_LIMIT = 60;
 
-/** 성씨 한자 + 사주 계산. 추천/저장에서 공통으로 사용 */
+/** 성씨 한자(부모 성 함께 쓰기면 그 성 글자도) + 사주 계산. 추천/저장에서 공통으로 사용 */
 export async function prepare(supabase: SupabaseClient, p: NamingParams) {
   const surname = await fetchSurname(supabase, [...p.surnameHanja], [...p.surname]);
   if (!surname) return null;
-  return { surname, saju: analyzeSaju(p.birth) };
+  let prefix: NameHanja[] = [];
+  if (p.parentSurname) {
+    const found = await fetchSurname(supabase, [...p.parentSurname.hanja], [...p.parentSurname.hangul]);
+    if (!found) return null;
+    prefix = found;
+  }
+  return { surname, prefix, saju: analyzeSaju(p.birth) };
 }
 
 export async function runNaming(
@@ -57,12 +69,15 @@ async function runNamingUnsafe(
 ): Promise<NamingResult> {
   const base = await prepare(supabase, p);
   if (!base) {
+    const [hangul, hanja] = p.parentSurname
+      ? [`${p.surname}·${p.parentSurname.hangul}`, `${p.surnameHanja}·${p.parentSurname.hanja}`]
+      : [p.surname, p.surnameHanja];
     return {
       ok: false,
-      error: `'${p.surname}' 성에 해당하는 한자 ${p.surnameHanja}을(를) 사전에서 찾을 수 없습니다.`,
+      error: `'${hangul}' 성에 해당하는 한자 ${hanja}을(를) 사전에서 찾을 수 없습니다.`,
     };
   }
-  const { surname, saju } = base;
+  const { surname, prefix, saju } = base;
   const { yongsin: needed, huisin, gisin } = saju.yongsin;
 
   // 대법원 인명용 한자 전체 (불용한자와 부정적·불분명한 뜻 제외)
@@ -87,6 +102,7 @@ async function runNamingUnsafe(
   const run = (minLuckyGyeok: number, minTrend: number) =>
     recommendNames({
       surname,
+      prefix,
       first: p.length === "1" ? [] : first,
       second: p.length === "1" ? [] : second,
       single: p.length === "2" || p.dolrimja ? [] : pool,
@@ -148,7 +164,31 @@ async function runNamingUnsafe(
   // 희귀/인기 정렬과 우선순위 가점은 결과 화면에서 바로 바꿀 수 있도록 브라우저에서 처리한다
   groups = groups.slice(0, CANDIDATE_LIMIT);
 
-  return { ok: true, saju, surname, groups, stats, notice };
+  let combination: CombinationItem[] | null = null;
+  if (prefix.length > 0) {
+    combination = diagnoseCombination(surname, prefix, { yongsin: needed, gisin });
+    // 화면에 먼저 보일 상위 이름들의 법적 이름 전체 기준 점수와 비교
+    const top = groups.slice(0, DISPLAY_LIMIT).map((g) => g.options[0]);
+    const pairs = top.flatMap((o) => (o.legalAnalysis ? [[o.analysis, o.legalAnalysis] as const] : []));
+    if (pairs.length > 0) {
+      const gap = pairs.reduce((s, [a, l]) => s + (a.totalScore - l.totalScore), 0) / pairs.length;
+      const grades = { S: 0, A: 0, B: 0, C: 0 };
+      for (const [, l] of pairs) grades[l.grade]++;
+      const gradeText = (["S", "A", "B", "C"] as const)
+        .filter((g) => grades[g] > 0)
+        .map((g) => `${g} ${grades[g]}개`)
+        .join(" · ");
+      const diff = Math.round(Math.abs(gap) * 10) / 10;
+      combination.push({
+        tone: gap >= 3 ? "weak" : "good",
+        text:
+          `법적 이름 전체(성 + ${prefix.map((c) => c.eum).join("")}○○) 기준으로 계산하면 상위 추천 ${pairs.length}개의 점수가 ` +
+          `평균 ${diff}점 ${gap >= 0 ? "낮고" : "높고"}, 등급은 ${gradeText}입니다.`,
+      });
+    }
+  }
+
+  return { ok: true, saju, surname, prefix, combination, groups, stats, notice };
 }
 
 /** 저장 시 서버에서 다시 분석 (클라이언트가 보낸 점수를 신뢰하지 않음) */
@@ -160,15 +200,35 @@ export async function analyzeChosen(
 ) {
   const base = await prepare(supabase, p);
   if (!base) return null;
+  // 부모 성 함께 쓰기면 이름이 그 성 글자로 시작해야 한다
+  if (p.parentSurname && !(givenHanja.startsWith(p.parentSurname.hanja) && givenEum.startsWith(p.parentSurname.hangul)))
+    return null;
   const given = await fetchSurname(supabase, [...givenHanja], [...givenEum]);
-  if (!given) return null;
+  if (!given || given.length <= base.prefix.length) return null;
   const { yongsin, huisin, gisin } = base.saju.yongsin;
-  const analysis = analyzeName({
-    surname: base.surname,
-    givenName: given,
-    neededElement: yongsin,
-    favorableElement: huisin,
-    unfavorableElement: gisin,
-  });
-  return { ...base, given, analysis };
+  const saju = { neededElement: yongsin, favorableElement: huisin, unfavorableElement: gisin };
+  if (base.prefix.length > 0) {
+    // 부모 성 함께 쓰기: 등급·저장·PDF는 새로 고르는 부분 기준, 법적 이름 전체 기준은 참고로 함께 둔다
+    const { analysis, legal } = analyzeWithPrefix({
+      surname: base.surname,
+      prefix: base.prefix,
+      givenName: given.slice(base.prefix.length),
+      ...saju,
+    });
+    return {
+      ...base,
+      given,
+      analysis,
+      legalAnalysis: legal as NamingAnalysis | null,
+      combination: diagnoseCombination(base.surname, base.prefix, { yongsin, gisin }) as CombinationItem[] | null,
+    };
+  }
+  const analysis = analyzeName({ surname: base.surname, givenName: given, ...saju });
+  return {
+    ...base,
+    given,
+    analysis,
+    legalAnalysis: null as NamingAnalysis | null,
+    combination: null as CombinationItem[] | null,
+  };
 }

@@ -1,4 +1,4 @@
-import { analyzeName } from "./analyze";
+import { analyzeName, analyzeWithPrefix } from "./analyze";
 import { compareAnalysis } from "./score";
 import { globalPronunciationScore } from "./global-pronunciation";
 import type { Suitability } from "./hanja-suitability";
@@ -23,6 +23,12 @@ export const hunEum = (c: { hun: string | null; eum: string }) =>
 
 export interface RecommendOptions {
   surname: NameHanja[];
+  /**
+   * 부모 성 함께 쓰기: 이름 앞에 고정으로 붙는 다른 부모의 성 글자 (예: 김박서윤의 朴).
+   * 등급·순위는 새로 고르는 부분 기준 점수(analyzeWithPrefix의 analysis)로 정하고, 법적 이름 전체 기준 점수는
+   * legalAnalysis에 참고로 남긴다. 글로벌 발음·이름 통계는 법적 이름(박서윤), 요즘 어감·한자 뜻은 새 글자만 본다
+   */
+  prefix?: NameHanja[];
   /** 첫째 글자 후보 */
   first: NameHanja[];
   /** 둘째 글자 후보. 외자만 추천하면 비워 둠 */
@@ -49,11 +55,14 @@ export interface RecommendOptions {
 }
 
 export interface Recommendation {
+  /** 법적 이름 글자 (부모 성 함께 쓰기면 prefix 포함) */
   givenName: NameHanja[];
-  /** 한글 이름 (성 제외) */
+  /** 한글 이름 (성 제외, 부모 성 함께 쓰기면 prefix 포함) */
   hangul: string;
   analysis: NamingAnalysis;
   globalScore: number;
+  /** 부모 성 함께 쓰기의 법적 이름 전체 기준 점수 (참고용). 해당 없으면 undefined */
+  legalAnalysis?: NamingAnalysis;
   /** 0~1: 요즘 이름 트렌드·발음 조화 점수 */
   trend: number;
   /** 0~1: 한자 뜻 점수 (글자별 뜻 등급의 평균) */
@@ -89,6 +98,7 @@ const hanjaOf = (r: Recommendation) => r.givenName.map((c) => c.hanja).join("");
 export function recommendNames(opts: RecommendOptions): NameGroup[] {
   const {
     surname,
+    prefix = [],
     first,
     second,
     single,
@@ -116,7 +126,8 @@ export function recommendNames(opts: RecommendOptions): NameGroup[] {
     scored.length = Math.min(scored.length, KEEP);
   };
 
-  const S = surname.reduce((n, c) => n + c.strokes, 0);
+  // 부모 성 함께 쓰기는 새로 고르는 부분 기준(부모 성을 성 쪽에 붙인 성 합산)으로 4격을 본다
+  const S = [...surname, ...prefix].reduce((n, c) => n + c.strokes, 0);
 
   /** 4격 길수 개수 (fourGyeok와 같은 규칙). 외자는 b가 없음 */
   const luckyCount = (a: number, b: number | null) =>
@@ -124,25 +135,32 @@ export function recommendNames(opts: RecommendOptions): NameGroup[] {
       ? +isLuckyRaw(a + 1) + +isLuckyRaw(S + a) + +isLuckyRaw(S + 1) + +isLuckyRaw(S + a)
       : +isLuckyRaw(a + b) + +isLuckyRaw(S + a) + +isLuckyRaw(S + b) + +isLuckyRaw(S + a + b);
 
-  const accept = (givenName: NameHanja[], trend: number) => {
+  const prefixHangul = hangulOf(prefix);
+
+  const accept = (chosen: NameHanja[], trend: number) => {
+    const givenName = [...prefix, ...chosen];
     const hangul = hangulOf(givenName);
     const globalScore = globalPronunciationScore(hangul);
     if (globalScore < minGlobalScore) return;
-    const analysis = analyzeName({
-      surname,
-      givenName,
-      neededElement,
-      favorableElement,
-      unfavorableElement,
-    });
-    const meaning = meaningScore(givenName);
+    const saju = { neededElement, favorableElement, unfavorableElement };
+    let analysis: NamingAnalysis;
+    let legalAnalysis: NamingAnalysis | undefined;
+    if (prefix.length > 0) {
+      ({ analysis, legal: legalAnalysis } = analyzeWithPrefix({ surname, prefix, givenName: chosen, ...saju }));
+    } else {
+      analysis = analyzeName({ surname, givenName, ...saju });
+    }
+    const meaning = meaningScore(chosen);
     const baseScore = baseRankScore(analysis.totalScore, meaning, trend);
-    scored.push({ givenName, hangul, analysis, globalScore, trend, meaning, baseScore });
+    scored.push({ givenName, hangul, analysis, legalAnalysis, globalScore, trend, meaning, baseScore });
     if (scored.length >= KEEP * 4) prune();
   };
 
   const hasNeed = (c: NameHanja) => c.element === neededElement;
+  // 부모 성 함께 쓰기도 새로 고르는 글자에 용신이 있어야 한다 (사주 보완을 새 글자로만 보므로)
   const needFilter = requireNeeded && !!neededElement;
+  // 부모 성 끝 음절과 같은 음절로 시작하면 "박박…"처럼 같은 소리가 겹쳐 제외한다
+  const repeatsPrefix = (eum: string) => !!prefixHangul && prefixHangul.endsWith(eum);
 
   // 트렌드 점수는 음(한글)에만 달려 있으므로, 같은 음끼리 묶어 한 번만 계산해
   // 낯선 음절 조합을 한자 단위 전수 조합 전에 통째로 건너뛴다
@@ -157,6 +175,7 @@ export function recommendNames(opts: RecommendOptions): NameGroup[] {
   };
 
   for (const [eum, group] of groupByEum(single)) {
+    if (repeatsPrefix(eum)) continue;
     const trend = trendScore(eum, allowSyllables);
     if (trend < 0 || trend < minTrend) continue;
     for (const c of group) {
@@ -168,6 +187,7 @@ export function recommendNames(opts: RecommendOptions): NameGroup[] {
 
   const secondGroups = groupByEum(second);
   for (const [eumA, groupA] of groupByEum(first)) {
+    if (repeatsPrefix(eumA)) continue;
     for (const [eumB, groupB] of secondGroups) {
       const trend = trendScore(eumA + eumB, allowSyllables);
       if (trend < 0 || trend < minTrend) continue;

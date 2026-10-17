@@ -5,6 +5,11 @@ import { COMPOUND_SURNAMES } from "./surnames";
 export interface NamingParams {
   surname: string; // 한글 성
   surnameHanja: string; // 한자 성 (글자 수는 surname과 동일)
+  /**
+   * 부모 성 함께 쓰기 (예: 김박서윤의 박). 법적 성은 surname 하나이고, 이 성은 이름 앞부분으로 등록된다.
+   * URL `ps`(한글)·`psh`(한자). 없으면 null
+   */
+  parentSurname: { hangul: string; hanja: string } | null;
   birth: BirthInput;
   /** 출생지. 예전 링크처럼 place가 없으면 서울 */
   birthplace: Birthplace;
@@ -33,16 +38,32 @@ export type ParseResult =
   | { ok: true; value: NamingParams }
   | { ok: false; error: string };
 
+/** 성(한글·한자) 검증. 2자는 복성 목록에 있을 때만 받는다 */
+function checkSurname(hangul: string, hanja: string, label: string): string | null {
+  if (!HANGUL.test(hangul) || hangul.length > 2) return `${label}을 한글 1~2자로 입력해 주세요.`;
+  if (hangul.length === 2 && !COMPOUND_SURNAMES.includes(hangul))
+    return `지원하지 않는 ${label}입니다. 단성(1자) 또는 복성(남궁 등)을 입력해 주세요. 두 부모의 성을 함께 쓰려면 "부모 성 함께 쓰기"를 선택해 주세요.`;
+  if (!HANJA.test(hanja) || [...hanja].length !== hangul.length)
+    return `${label}의 한자를 선택해 주세요.`;
+  return null;
+}
+
 export function parseNamingParams(raw: Raw): ParseResult {
   const surname = one(raw.surname).trim();
   const surnameHanja = one(raw.sh).trim();
-  if (!HANGUL.test(surname) || surname.length > 2)
-    return { ok: false, error: "성을 한글 1~2자로 입력해 주세요." };
-  const expectedLen = surname.length === 2 && COMPOUND_SURNAMES.includes(surname) ? 2 : 1;
-  if (surname.length !== expectedLen)
-    return { ok: false, error: "지원하지 않는 성입니다. 단성(1자) 또는 복성(남궁 등)을 입력해 주세요." };
-  if (!HANJA.test(surnameHanja) || [...surnameHanja].length !== expectedLen)
-    return { ok: false, error: "성의 한자를 선택해 주세요." };
+  const surnameError = checkSurname(surname, surnameHanja, "성");
+  if (surnameError) return { ok: false, error: surnameError };
+
+  let parentSurname: NamingParams["parentSurname"] = null;
+  const ps = one(raw.ps).trim();
+  if (ps) {
+    const psh = one(raw.psh).trim();
+    const error = checkSurname(ps, psh, "함께 쓸 부모 성");
+    if (error) return { ok: false, error };
+    if (ps === surname)
+      return { ok: false, error: "함께 쓸 부모 성이 아이의 성과 같습니다. 다른 부모의 성을 입력해 주세요." };
+    parentSurname = { hangul: ps, hanja: psh };
+  }
 
   const date = one(raw.date);
   const dm = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -96,6 +117,7 @@ export function parseNamingParams(raw: Raw): ParseResult {
     value: {
       surname,
       surnameHanja,
+      parentSurname,
       birth: {
         year,
         month,

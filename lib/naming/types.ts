@@ -15,8 +15,13 @@ export interface HanjaChar {
 export interface NamingInput {
   /** 성 (1자 단성 또는 2자 복성) */
   surname: HanjaChar[];
-  /** 이름 (1자 외자 또는 2자) */
+  /** 이름 (1자 외자 또는 2자. 부모 성 함께 쓰기는 앞에 다른 부모 성 글자가 붙어 3~4자) */
   givenName: HanjaChar[];
+  /**
+   * 발음오행을 성 끝 글자부터 본다 (성 글자 사이 관계는 점수에서 뺀다).
+   * 부모 성 함께 쓰기의 부분 점수(analyzeWithPrefix)에서 성 + 부모 성을 성 쪽에 두고 쓴다
+   */
+  pronunciationFromSurnameEnd?: boolean;
   /** 사주에서 구한 용신(보강이 필요한 오행). 있으면 사주 보완 점수에 반영 */
   neededElement?: Element;
   /** 희신 (용신을 돕는 오행) */
@@ -69,6 +74,14 @@ export interface ResourceFlow extends ElementFlow {
    * - 희신 배치 / 용신 편중: 성씨가 용신과 같은 오행일 때
    */
   arrangement: "통관" | "용신 상극" | "희신 배치" | "용신 편중" | null;
+}
+
+/** 부모 성 함께 쓰기의 두 가지 점수 (analyzeWithPrefix) */
+export interface PrefixedAnalysis {
+  /** 새로 고르는 부분 기준: 등급·순위·저장·PDF 기본 점수 */
+  analysis: NamingAnalysis;
+  /** 법적 이름 전체 기준 (성 + 부모 성 + 새 글자): 자세히 보기·PDF 참고용 */
+  legal: NamingAnalysis;
 }
 
 export interface NamingAnalysis {

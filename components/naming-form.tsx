@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { COMMON_SURNAMES } from "@/lib/naming/surnames";
+import { COMMON_SURNAMES, COMPOUND_SURNAMES } from "@/lib/naming/surnames";
 import {
   BIRTHPLACES,
   CUSTOM_BIRTHPLACE_ID,
@@ -18,40 +18,75 @@ interface SurnameOption {
   /** 한글 훈 (예: 쇠) */
   hun: string | null;
   strokes: number;
+  /** 복성의 글자별 획수 (예: 南9 + 宮10) */
+  detail?: string;
 }
 
 const selectClass =
   "flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-export function NamingForm() {
+/**
+ * 성(한글) 입력 + 한자 선택. 한글 성이 바뀌면 사전에서 해당 음의 한자 후보를 불러온다.
+ * 복성은 알려진 조합(COMMON_SURNAMES)만 지원하고, 글자별 획수를 함께 보여 준다.
+ */
+function SurnameFields({
+  label,
+  hangulName,
+  hanjaName,
+  placeholder,
+}: {
+  label: string;
+  /** 폼 필드 이름 (URL 파라미터) */
+  hangulName: string;
+  hanjaName: string;
+  placeholder: string;
+}) {
   const supabase = useMemo(() => createClient(), []);
   const [surname, setSurname] = useState("");
   const [options, setOptions] = useState<SurnameOption[]>([]);
   const [surnameHanja, setSurnameHanja] = useState("");
-  const [noTime, setNoTime] = useState(false);
-  const [place, setPlace] = useState(DEFAULT_BIRTHPLACE_ID);
-  const [length, setLength] = useState<"any" | "1" | "2">("any");
   const [loadError, setLoadError] = useState(false);
+  const s = surname.trim();
+  const unknownCompound = /^[가-힣]{2}$/.test(s) && !COMPOUND_SURNAMES.includes(s);
 
-  // 성(한글)이 바뀌면 사전에서 해당 음의 한자 후보를 불러온다 (복성은 글자별 조합)
   useEffect(() => {
     setOptions([]);
     setSurnameHanja("");
     setLoadError(false);
-    const s = surname.trim();
     if (!/^[가-힣]{1,2}$/.test(s)) return;
 
-    // 복성: 알려진 조합만 지원하고 기본 한자를 그대로 보여준다
+    let cancelled = false;
+
+    // 복성: 기본 한자 조합 하나를 보여 주고, 글자별 획수를 사전에서 읽어 붙인다
     if (s.length === 2) {
       const h = COMMON_SURNAMES[s];
-      if (h) {
-        setOptions([{ hanja: h, hun: null, strokes: 0 }]);
-        setSurnameHanja(h);
-      }
-      return;
+      if (!h || !COMPOUND_SURNAMES.includes(s)) return;
+      setOptions([{ hanja: h, hun: null, strokes: 0 }]);
+      setSurnameHanja(h);
+      void (async () => {
+        const res = await supabase
+          .from("hanja_dict")
+          .select("hanja, eum, stroke_count")
+          .in("hanja", [...h])
+          .in("eum", [...s]);
+        if (cancelled || res.error) return;
+        const rows = (res.data ?? []) as { hanja: string; eum: string; stroke_count: number }[];
+        const chars = [...h].map((c, i) => rows.find((r) => r.hanja === c && r.eum === s[i]));
+        if (chars.some((r) => !r)) return;
+        setOptions([
+          {
+            hanja: h,
+            hun: null,
+            strokes: chars.reduce((n, r) => n + r!.stroke_count, 0),
+            detail: chars.map((r) => `${r!.hanja}${r!.stroke_count}`).join(" + "),
+          },
+        ]);
+      })();
+      return () => {
+        cancelled = true;
+      };
     }
 
-    let cancelled = false;
     const load = async () => {
       const query = (columns: string) =>
         supabase
@@ -89,7 +124,59 @@ export function NamingForm() {
     return () => {
       cancelled = true;
     };
-  }, [surname, supabase]);
+  }, [s, supabase]);
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div className="space-y-2">
+        <Label htmlFor={hangulName}>{label} (한글)</Label>
+        <Input
+          id={hangulName}
+          name={hangulName}
+          placeholder={placeholder}
+          maxLength={2}
+          value={surname}
+          onChange={(e) => setSurname(e.target.value)}
+          required
+        />
+        {unknownCompound && (
+          <p className="text-xs text-destructive">
+            지원하는 복성은 {COMPOUND_SURNAMES.join("·")}입니다. 두 부모의 성을 함께 쓰려면 아래 &lsquo;부모 성
+            함께 쓰기&rsquo;를 선택해 주세요.
+          </p>
+        )}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor={hanjaName}>{label} (한자)</Label>
+        <select
+          id={hanjaName}
+          name={hanjaName}
+          className={selectClass}
+          value={surnameHanja}
+          onChange={(e) => setSurnameHanja(e.target.value)}
+          required
+          disabled={options.length === 0}
+        >
+          {options.length === 0 && <option value="">성을 먼저 입력하세요</option>}
+          {options.map((o) => (
+            <option key={o.hanja} value={o.hanja}>
+              {o.hanja} ({o.hun ? `${o.hun} ` : ""}
+              {s}
+              {o.detail ? `, ${o.detail} = ${o.strokes}획` : o.strokes ? `, ${o.strokes}획` : ""})
+            </option>
+          ))}
+        </select>
+        {loadError && <p className="text-xs text-destructive">한자 목록을 불러오지 못했습니다.</p>}
+      </div>
+    </div>
+  );
+}
+
+export function NamingForm() {
+  const [noTime, setNoTime] = useState(false);
+  const [place, setPlace] = useState(DEFAULT_BIRTHPLACE_ID);
+  const [length, setLength] = useState<"any" | "1" | "2">("any");
+  const [withParent, setWithParent] = useState(false);
 
   // 기타 해외 출생: 브라우저가 아는 IANA 시간대 목록 (선택했을 때만 렌더링)
   const timeZones = useMemo(
@@ -101,44 +188,21 @@ export function NamingForm() {
     <form action="/naming/result" method="get" className="space-y-6">
       <section className="space-y-3">
         <h2 className="font-serif text-lg font-bold">성씨</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="surname">성 (한글)</Label>
-            <Input
-              id="surname"
-              name="surname"
-              placeholder="예: 김"
-              maxLength={2}
-              value={surname}
-              onChange={(e) => setSurname(e.target.value)}
-              required
-            />
+        <SurnameFields label="성" hangulName="surname" hanjaName="sh" placeholder="예: 김, 남궁" />
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={withParent} onChange={(e) => setWithParent(e.target.checked)} />
+          부모 성 함께 쓰기 (예: 김박서윤)
+        </label>
+        {withParent && (
+          <div className="space-y-3 rounded-md border p-4">
+            <SurnameFields label="함께 쓸 부모 성" hangulName="ps" hanjaName="psh" placeholder="예: 박" />
+            <p className="text-xs text-muted-foreground">
+              출생신고에는 성을 하나만 등록할 수 있어, 함께 쓰는 부모 성은 이름의 첫 부분으로 등록됩니다
+              (김박서윤 → 성 김, 이름 박서윤). 이름 등급과 아래 이름 글자 수·돌림자는 새로 고르는 부분(서윤)
+              기준이고, 성과 부모 성 조합의 약점은 결과 화면의 조합 진단에서 따로 알려 드립니다.
+            </p>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="sh">성 (한자)</Label>
-            <select
-              id="sh"
-              name="sh"
-              className={selectClass}
-              value={surnameHanja}
-              onChange={(e) => setSurnameHanja(e.target.value)}
-              required
-              disabled={options.length === 0}
-            >
-              {options.length === 0 && <option value="">성을 먼저 입력하세요</option>}
-              {options.map((o) => (
-                <option key={o.hanja} value={o.hanja}>
-                  {o.hanja} ({o.hun ? `${o.hun} ` : ""}
-                  {surname.trim()}
-                  {o.strokes ? `, ${o.strokes}획` : ""})
-                </option>
-              ))}
-            </select>
-            {loadError && (
-              <p className="text-xs text-destructive">한자 목록을 불러오지 못했습니다.</p>
-            )}
-          </div>
-        </div>
+        )}
       </section>
 
       <section className="space-y-3">

@@ -7,12 +7,14 @@ import { NameStatsBasic } from "@/components/name-stats-basic";
 import { TierBadge } from "@/components/name-stats-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResultList, type ResultItem } from "@/components/naming/result-list";
+import { CombinationNote } from "@/components/naming/combination-note";
 import { GeokgukNote } from "@/components/naming/geokguk-note";
 import { RelationsNote } from "@/components/naming/relations-note";
 import { TimeCorrectionNote } from "@/components/naming/time-correction-note";
 import { parseNamingParams, type NamingParams } from "@/lib/naming/params";
 import { parsePriorities, type Priorities } from "@/lib/naming/priorities";
 import { hunEum, type NameGroup, type Recommendation } from "@/lib/naming/recommend";
+import { REGISTRATION_CAVEAT, registrationText } from "@/lib/naming/registration";
 import { GRADE_MIN, SCORE_WEIGHTS } from "@/lib/naming/score";
 import type { Grade, NamingAnalysis } from "@/lib/naming/types";
 import { DISPLAY_LIMIT, runNaming } from "@/lib/naming/service";
@@ -71,6 +73,48 @@ function ScoreBreakdownLine({ analysis }: { analysis: NamingAnalysis }) {
         return `${label} ${v === null ? "-" : Math.round(v)}`;
       }).join(" · ")}
     </p>
+  );
+}
+
+/** 원/형/이/정 4격 수리와 길흉 */
+function GyeokGrid({ analysis }: { analysis: NamingAnalysis }) {
+  return (
+    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
+      {(Object.keys(GYEOK_LABEL) as (keyof typeof GYEOK_LABEL)[]).map((k) => (
+        <p key={k}>
+          <span className="text-muted-foreground">{GYEOK_LABEL[k]}</span> {analysis.fourGyeok[k].suri}수{" "}
+          {analysis.fourGyeok[k].lucky ? "길" : "흉"}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+/** 부모 성 함께 쓰기: 법적 이름 전체 기준 점수 (참고). 등급은 새로 고르는 부분 기준이라 따로 보여 준다 */
+function LegalDetails({ r, p }: { r: Recommendation; p: NamingParams }) {
+  const l = r.legalAnalysis;
+  if (!l) return null;
+  return (
+    <details className="rounded-md border">
+      <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-primary">
+        자세히 보기: 법적 이름 전체 기준 (참고)
+      </summary>
+      <div className="space-y-2 border-t p-3 text-sm">
+        <p>
+          성 {p.surname}({p.surnameHanja}) · 이름 {eumOf(r)}({hanjaOf(r)}) 전체로 계산하면{" "}
+          <b>
+            {l.grade}등급 {l.totalScore.toFixed(1)}점
+          </b>
+          입니다.
+        </p>
+        <ScoreBreakdownLine analysis={l} />
+        <GyeokGrid analysis={l} />
+        <p className="text-muted-foreground">
+          발음오행 {l.pronunciation.elements.join("→")}
+          {l.resource && ` · 자원오행 ${l.resource.elements.join("→")}`}
+        </p>
+      </div>
+    </details>
   );
 }
 
@@ -145,20 +189,28 @@ function NameCardBody({
             </span>
           </p>
           <p className="mt-1 text-sm text-muted-foreground">{charLine(best)}</p>
+          {p.parentSurname && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {registrationText({
+                surname: p.surname,
+                surnameHanja: p.surnameHanja,
+                given: eumOf(best),
+                givenHanja: hanjaOf(best),
+              })}
+            </p>
+          )}
         </div>
         <GradeBadge grade={a.grade} score={a.totalScore} />
       </div>
 
       <ScoreBreakdownLine analysis={a} />
+      {p.parentSurname && (
+        <p className="text-xs text-muted-foreground">
+          등급은 새로 고르는 부분 기준입니다 (성과 함께 쓰는 부모 성을 하나의 성처럼 보고 계산).
+        </p>
+      )}
 
-      <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
-        {(Object.keys(GYEOK_LABEL) as (keyof typeof GYEOK_LABEL)[]).map((k) => (
-          <p key={k}>
-            <span className="text-muted-foreground">{GYEOK_LABEL[k]}</span> {a.fourGyeok[k].suri}수{" "}
-            {a.fourGyeok[k].lucky ? "길" : "흉"}
-          </p>
-        ))}
-      </div>
+      <GyeokGrid analysis={a} />
       <p className="text-sm">
         <span className="text-muted-foreground">발음오행</span> {a.pronunciation.elements.join("→")}
         {a.resource && (
@@ -188,6 +240,7 @@ function NameCardBody({
         </div>
       )}
       <MeaningList r={best} />
+      <LegalDetails r={best} p={p} />
 
       <OptionActions r={best} qs={qs} loggedIn={loggedIn} />
 
@@ -212,6 +265,7 @@ function NameCardBody({
                 </div>
                 <ScoreBreakdownLine analysis={r.analysis} />
                 <MeaningList r={r} />
+                <LegalDetails r={r} p={p} />
                 <OptionActions r={r} qs={qs} loggedIn={loggedIn} />
               </li>
             ))}
@@ -328,7 +382,8 @@ export default async function ResultPage({
         <div>
           <h1 className="font-serif text-3xl font-bold">
             {p.surname}
-            {p.surnameHanja && ` (${p.surnameHanja})`}씨 추천 이름
+            {p.surnameHanja && ` (${p.surnameHanja})`}씨
+            {p.parentSurname && ` · ${p.parentSurname.hangul}(${p.parentSurname.hanja}) 함께 쓰기`} 추천 이름
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {p.birth.year}.{p.birth.month}.{p.birth.day}
@@ -342,6 +397,25 @@ export default async function ResultPage({
           <Link href="/naming">다시 입력</Link>
         </Button>
       </header>
+
+      {p.parentSurname && (
+        <div role="note" className="space-y-1 rounded-md border p-4 text-sm">
+          <p className="font-medium">출생신고 시에는 이렇게 등록됩니다</p>
+          <p>
+            부를 때는 &lsquo;{p.surname}
+            {p.parentSurname.hangul}○○&rsquo;이지만, 성은 <b>{p.surname}({p.surnameHanja})</b> 하나로 등록하고{" "}
+            <b>
+              {p.parentSurname.hangul}○○({p.parentSurname.hanja}○○)
+            </b>
+            을 이름으로 등록합니다.
+          </p>
+          <p className="text-xs text-muted-foreground">{REGISTRATION_CAVEAT}</p>
+        </div>
+      )}
+
+      {result.combination && p.parentSurname && (
+        <CombinationNote items={result.combination} label={`${p.surname} + ${p.parentSurname.hangul}`} />
+      )}
 
       {result.notice && (
         <p role="status" className="rounded-md bg-secondary p-3 text-sm">

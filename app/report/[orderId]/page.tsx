@@ -85,7 +85,9 @@ export default async function ReportPage({ params }: { params: { orderId: string
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-serif text-2xl font-bold">{fullName} 프리미엄 리포트</h1>
-          <p className="text-sm text-muted-foreground">양가 어르신께 드리는 한문 작명 리포트 (A4 3쪽)</p>
+          <p className="text-sm text-muted-foreground">
+            양가 어르신께 드리는 한문 작명 리포트 (A4 {data.legalAnalysis ? 4 : 3}쪽)
+          </p>
         </div>
         <div className="flex items-start gap-2">
           <Button asChild variant="outline">

@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { registrationText } from "@/lib/naming/registration";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "마이페이지 | 이름핏" };
@@ -39,7 +40,7 @@ export default async function MyPage() {
     supabase
       .from("user_naming_history")
       .select(
-        "id, surname, surname_hanja, given_name, given_name_hanja, total_score, is_favorite, created_at"
+        "id, surname, surname_hanja, given_name, given_name_hanja, total_score, is_favorite, created_at, filters"
       )
       .order("created_at", { ascending: false }),
     // 결제 대기(미결제) 주문은 목록에서 제외
@@ -111,6 +112,16 @@ export default async function MyPage() {
                         {h.given_name_hanja}
                       </p>
                     )}
+                    {(h.filters as { parentSurname?: unknown } | null)?.parentSurname ? (
+                      <p className="text-xs text-muted-foreground">
+                        {registrationText({
+                          surname: h.surname,
+                          surnameHanja: h.surname_hanja ?? "",
+                          given: h.given_name,
+                          givenHanja: h.given_name_hanja ?? "",
+                        })}
+                      </p>
+                    ) : null}
                   </div>
                   <div className="text-right text-sm text-muted-foreground">
                     {h.total_score != null && (

@@ -21,6 +21,7 @@ import type {
   HanjaChar,
   NamingAnalysis,
   NamingInput,
+  PrefixedAnalysis,
   ScoreBreakdown,
 } from "./types";
 
@@ -37,8 +38,9 @@ function gyeok(raw: number): GyeokResult {
 }
 
 /**
- * 원/형/이/정 4격.
- * 원격=이름 획수 합, 형격=성+이름 첫 자, 이격=성+이름 끝 자, 정격=전체 합.
+ * 원/형/이/정 4격. 성 획수는 성 글자 획수의 합이다 (복성도 두 글자를 더한다).
+ * 원격=이름 획수 합, 형격=성+이름 첫 자, 이격=성+이름 첫 자를 뺀 나머지, 정격=전체 합.
+ * 2자 이름의 이격은 성+이름 끝 자와 같고, 3자 이상(부모 성 함께 쓰기)은 둘째 글자부터 모두 더한다.
  * 외자 이름은 관례에 따라 원격·이격 계산에 1획을 보탭니다(천격 1).
  */
 export function fourGyeok(
@@ -47,22 +49,47 @@ export function fourGyeok(
 ): Record<FourGyeokKey, GyeokResult> {
   const s = sum(surname);
   const first = givenName[0].strokes;
-  const last = givenName[givenName.length - 1].strokes;
   const single = givenName.length === 1;
 
   return {
     won: gyeok(single ? first + 1 : sum(givenName)),
     hyeong: gyeok(s + first),
-    i: gyeok(s + (single ? 1 : last)),
+    i: gyeok(s + (single ? 1 : sum(givenName.slice(1)))),
     jeong: gyeok(s + sum(givenName)),
   };
 }
 
-function validate({ surname, givenName }: NamingInput) {
-  if (surname.length < 1 || surname.length > 2)
-    throw new RangeError("성은 1~2자여야 합니다.");
-  if (givenName.length < 1 || givenName.length > 2)
-    throw new RangeError("이름은 1~2자여야 합니다.");
+/**
+ * 자원오행 흐름·통관에서 성씨 오행으로 볼 글자: 성 끝 글자(이름과 붙는 글자) → 첫 글자 순으로 오행을 아는 글자.
+ * 둘 다 모르면 null (성을 빼고 이름 글자만으로 흐름을 본다)
+ */
+export function surnameElementChar(surname: HanjaChar[]): HanjaChar | null {
+  return [...surname].reverse().find((c) => c.element) ?? null;
+}
+
+/**
+ * 발음오행 관계 가중치 (PRONUNCIATION_FLOW_WEIGHTS): 성 → 이름 첫 글자 관계에 junction,
+ * 이름 안의 관계들에 given을 나눠 주고, 복성 두 글자 사이 관계에는 surname을 준다.
+ */
+function pronunciationWeights(surnameLen: number, givenLen: number): number[] {
+  const w = PRONUNCIATION_FLOW_WEIGHTS;
+  return [
+    ...Array<number>(surnameLen - 1).fill(w.surname),
+    w.junction,
+    ...Array<number>(givenLen - 1).fill(w.given / (givenLen - 1)),
+  ];
+}
+
+/** 출생신고 이름 글자 수 상한 (성 제외). 가족관계등록 실무 기준 */
+export const MAX_GIVEN_NAME_LENGTH = 5;
+
+function validate({ surname, givenName, pronunciationFromSurnameEnd }: NamingInput) {
+  // 부모 성 함께 쓰기의 부분 점수는 성(1~2자) + 부모 성(1~2자)을 성 쪽에 둔다
+  const maxSurname = pronunciationFromSurnameEnd ? 4 : 2;
+  if (surname.length < 1 || surname.length > maxSurname)
+    throw new RangeError(`성은 1~${maxSurname}자여야 합니다.`);
+  if (givenName.length < 1 || givenName.length > MAX_GIVEN_NAME_LENGTH)
+    throw new RangeError(`이름은 1~${MAX_GIVEN_NAME_LENGTH}자여야 합니다.`);
   for (const c of [...surname, ...givenName]) {
     if (!Number.isInteger(c.strokes) || c.strokes < 1)
       throw new RangeError(`획수가 올바르지 않습니다: ${c.hanja}`);
@@ -73,7 +100,10 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 
 export function analyzeName(input: NamingInput): NamingAnalysis {
   validate(input);
-  const { surname, givenName, neededElement, favorableElement, unfavorableElement } = input;
+  const { givenName, neededElement, favorableElement, unfavorableElement } = input;
+  const { surname } = input;
+  // 발음오행에서 볼 성 글자 (부분 점수면 성 끝 글자만)
+  const pronSurname = input.pronunciationFromSurnameEnd ? surname.slice(-1) : surname;
 
   const gyeoks = fourGyeok(surname, givenName);
   const luck =
@@ -88,21 +118,27 @@ export function analyzeName(input: NamingInput): NamingAnalysis {
   const suriScore =
     luck * SURI_PARTS.luck + suriFlow * SURI_PARTS.flow + yinYang * SURI_PARTS.yinYang;
 
-  // 발음오행: 성의 첫 글자 + 이름 글자들의 초성
-  const pronElements = [surname[0], ...givenName]
-    .map((c) => pronunciationElement(c.eum))
-    .filter((e): e is Element => e !== null);
-  const pronunciation = evaluateFlow(pronElements, PRONUNCIATION_FLOW_WEIGHTS);
+  // 발음오행: 성 글자(복성은 두 글자 모두) + 이름 글자들의 초성. 한글 음절이 아닌 음이 있으면 관계별 가중치 없이 본다
+  const pronChars = [...pronSurname, ...givenName].map((c) => pronunciationElement(c.eum));
+  const pronElements = pronChars.filter((e): e is Element => e !== null);
+  const pronunciation = evaluateFlow(
+    pronElements,
+    pronElements.length === pronChars.length
+      ? pronunciationWeights(pronSurname.length, givenName.length)
+      : undefined
+  );
 
   // 자원오행: 오행을 아는 글자만으로 평가한다. 이름 글자 중 하나라도 오행을 알아야 의미가 있다.
+  // 성씨 오행은 surnameElementChar(성 끝 글자 → 첫 글자)로 정한다.
   // needMatched: 용신 글자가 있으면 true, 이름 글자가 모두 확인됐는데 없으면 false, 판단 불가면 null
   let resource: NamingAnalysis["resource"] = null;
   const knownGiven = givenName.filter((c) => c.element);
   if (knownGiven.length > 0) {
-    const chars = [surname[0], ...givenName].filter((c) => c.element);
+    const surnameChar = surnameElementChar(surname);
+    const chars = [...(surnameChar ? [surnameChar] : []), ...knownGiven];
     const flow = evaluateResourceFlow(
       chars.map((c) => c.element as Element),
-      chars[0] === surname[0] && !!givenName[0].element,
+      !!surnameChar && !!givenName[0].element,
       neededElement
     );
     let needMatched: boolean | null = null;
@@ -152,5 +188,25 @@ export function analyzeName(input: NamingInput): NamingAnalysis {
     breakdown,
     totalScore,
     grade: gradeOf(totalScore),
+  };
+}
+
+/**
+ * 부모 성 함께 쓰기 (예: 김박서윤 = 성 金 + 이름 朴瑞允).
+ * - analysis (새로 고르는 부분 기준): 부모 성을 성 쪽에 붙여 복성처럼 보고(4격은 성 합산) 새 글자(瑞允)를 평가한다.
+ *   발음오행은 부모 성 끝 글자부터(박→서→윤), 자원오행 성씨 오행은 surnameElementChar(부모 성 끝 글자 → … → 성 첫 글자),
+ *   사주 보완은 새 글자만 본다. 고정된 부분(김→박 관계, 성 + 부모 성 형격 등)은 조합 진단(combination.ts)에서 따로 알린다.
+ * - legal (법적 이름 전체 기준): 성 金, 이름 朴瑞允으로 계산한 점수. 참고용
+ */
+export function analyzeWithPrefix(input: NamingInput & { prefix: HanjaChar[] }): PrefixedAnalysis {
+  const { prefix, surname, givenName, ...rest } = input;
+  return {
+    analysis: analyzeName({
+      ...rest,
+      surname: [...surname, ...prefix],
+      givenName,
+      pronunciationFromSurnameEnd: true,
+    }),
+    legal: analyzeName({ ...rest, surname, givenName: [...prefix, ...givenName] }),
   };
 }
