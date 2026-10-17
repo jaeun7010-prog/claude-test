@@ -14,6 +14,7 @@ export {
   type YongsinResult,
   type ElementScores,
 } from "./yongsin";
+export { analyzeRelations, RELATION_FACTORS, type SajuRelation } from "./relations";
 
 import { calculateFourPillars, type BirthInput, type Pillar } from "./pillars";
 import { deriveYongsin } from "./yongsin";

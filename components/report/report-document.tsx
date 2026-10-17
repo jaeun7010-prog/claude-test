@@ -153,6 +153,16 @@ export function ReportDocument({ data }: { data: ReportData }) {
           좋습니다.
         </p>
         <p style={{ margin: "0 0 8px", fontSize: "15px", lineHeight: 1.8, color: C.muted }}>{yongsin.reason}</p>
+        {yongsin.relations.length > 0 && (
+          <p style={{ margin: "0 0 8px", fontSize: "15px", lineHeight: 1.8, color: C.muted }}>
+            합·충·형:{" "}
+            {yongsin.relations
+              .map((r) => `${r.chars} ${r.kind}${r.status === "성립" && r.element ? `(${r.element})` : ""}${r.status === "묶임" ? "(묶임)" : ""}`)
+              .join(", ")}
+            {" — "}
+            {[...new Set(yongsin.relations.filter((r) => r.status !== "표시만").map((r) => r.easy))].join(" ")}
+          </p>
+        )}
         <p style={{ margin: 0, fontSize: "15px", lineHeight: 1.8, color: C.muted }}>
           사주에서 가장 부족한 기운은 {ELEMENT_HANJA[lacking]}({lacking})으로, 행운의 동물은{" "}
           {ELEMENT_LUCKY[lacking].animal}, 행운의 색은 {ELEMENT_LUCKY[lacking].color}입니다.
@@ -217,9 +227,11 @@ export function ReportDocument({ data }: { data: ReportData }) {
           <p style={{ margin: "0 0 6px", fontSize: "16px", lineHeight: 1.8 }}>
             자원오행 {analysis.resource.elements.join(" → ")} (조화 {analysis.resource.score}점)
             {analysis.resource.needMatched ? " · 용신 오행을 보강합니다." : ""}
-            {analysis.resource.tonggwan
+            {analysis.resource.arrangement === "통관"
               ? " · 가운데 글자가 성씨와 용신 오행을 상생으로 이어 줍니다(통관)."
-              : ""}
+              : analysis.resource.arrangement === "희신 배치"
+                ? " · 가운데 글자가 성씨와 끝 글자의 용신 오행을 함께 생해 줍니다."
+                : ""}
           </p>
         )}
         <p style={{ margin: "14px 0 0", fontSize: "26px", fontWeight: 800 }}>
@@ -228,8 +240,8 @@ export function ReportDocument({ data }: { data: ReportData }) {
         </p>
 
         <p style={{ margin: "34px 0 0", fontSize: "12px", lineHeight: 1.7, color: C.muted }}>
-          본 리포트는 억부·조후 중심의 단순화된 사주 풀이와 수리 81수·오행 이론에 따른 참고 자료이며, 합·충·형과
-          격국은 반영하지 않았습니다. 작명의 최종 결정은 가족의 뜻과 함께 정하시길 권합니다.
+          본 리포트는 억부·조후와 합·충·형을 반영한 사주 풀이와 수리 81수·오행 이론에 따른 참고 자료이며, 격국은
+          아직 반영하지 않았습니다. 작명의 최종 결정은 가족의 뜻과 함께 정하시길 권합니다.
         </p>
       </Frame>
     </div>

@@ -119,7 +119,7 @@ export function analyzeName(input: NamingInput): NamingAnalysis {
     const saju = { needed: neededElement, favorable: favorableElement, unfavorable: unfavorableElement };
     const per = givenName.map((c) => sajuCharScore(c.element, saju) ?? SAJU_CHAR_SCORE.neutral);
     // 통관 글자(이름 첫 글자)는 희신만큼 본다
-    if (resource?.tonggwan) per[0] = Math.max(per[0], SAJU_CHAR_SCORE.tonggwan);
+    if (resource?.arrangement === "통관") per[0] = Math.max(per[0], SAJU_CHAR_SCORE.tonggwan);
     sajuScore = round1((per.reduce((a, b) => a + b, 0) / per.length) * 100);
   }
 

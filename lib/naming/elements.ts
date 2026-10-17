@@ -96,11 +96,17 @@ export function bridgeElement(a: Element, b: Element): Element | null {
   return (ia + 2) % 5 === ib ? ORDER[(ia + 1) % 5] : ORDER[(ib + 1) % 5];
 }
 
+/** 성씨가 곧 용신이라 생긴 같은 오행 편중(예: 金+金+金)의 흐름 점수. 일반 편중(40)보다 덜 감점한다 */
+export const YONGSIN_SAME_SCORE = 50;
+
 /**
- * 자원오행 흐름 (성 → 이름 글자). evaluateFlow에 성씨·용신 상극 처리를 더한다.
+ * 자원오행 흐름 (성 → 이름 글자). evaluateFlow에 성씨·용신 관계 처리를 더한다.
  * - 통관: 성씨와 용신이 상극인데 [성, 통관 오행, 용신] 순서로 이어지면 상생으로 이어진 것으로 보고 만점
  * - 용신 상극: 이름 첫 글자가 용신이고 성씨와 상극이면 그 관계를 YONGSIN_CLASH_SCORE로 본다
- * `elements[0]`이 성씨 오행일 때만 `surnameFirst`를 true로 넘긴다.
+ * - 희신 배치: 성씨가 용신과 같은 오행이고 [성, 희신, 용신] 순서(예: 金+土+金)면 희신이 양쪽을 생하므로 만점
+ * - 용신 편중: 성씨가 용신과 같은 오행이고 모든 글자가 그 오행이면 YONGSIN_SAME_SCORE
+ * 같은 수리·발음이면 통관·희신 배치가 용신 상극·용신 편중보다 조금 높게 나오도록 맞춘 값이다.
+ * `elements[0]`이 성씨 오행이고 이름 첫 글자 오행을 알 때만 `surnameFirst`를 true로 넘긴다.
  */
 export function evaluateResourceFlow(
   elements: Element[],
@@ -108,18 +114,31 @@ export function evaluateResourceFlow(
   needed?: Element
 ): ResourceFlow {
   const flow = evaluateFlow(elements);
-  const plain = { ...flow, tonggwan: false, yongsinClash: false };
+  const plain: ResourceFlow = { ...flow, arrangement: null };
   if (!surnameFirst || !needed || elements.length < 2) return plain;
 
   const [surname, first, second] = elements;
+  const full = elements.length === 3;
+
+  if (surname === needed) {
+    const huisin = ORDER[(ORDER.indexOf(needed) + 4) % 5]; // 용신을 생하는 오행
+    if (full && first === huisin && second === needed) {
+      return { ...flow, score: 100, arrangement: "희신 배치" };
+    }
+    if (full && elements.every((e) => e === needed)) {
+      return { ...flow, score: YONGSIN_SAME_SCORE, arrangement: "용신 편중" };
+    }
+    return plain;
+  }
+
   const bridge = bridgeElement(surname, needed);
-  if (bridge && elements.length === 3 && first === bridge && second === needed) {
-    return { ...flow, score: 100, tonggwan: true, yongsinClash: false };
+  if (bridge && full && first === bridge && second === needed) {
+    return { ...flow, score: 100, arrangement: "통관" };
   }
   if (first === needed && bridge) {
     const scores = flow.relations.map((r, i) => (i === 0 ? YONGSIN_CLASH_SCORE : RELATION_SCORE[r]));
     const score = scores.reduce((a, b) => a + b, 0) / scores.length;
-    return { ...flow, score: Math.round(score * 10) / 10, tonggwan: false, yongsinClash: true };
+    return { ...flow, score: Math.round(score * 10) / 10, arrangement: "용신 상극" };
   }
   return plain;
 }

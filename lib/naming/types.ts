@@ -61,12 +61,14 @@ export interface ElementFlow {
 
 export type Relation = "생" | "비화" | "극" | "설";
 
-/** 자원오행 흐름 + 성씨·용신 상극 처리 결과 */
+/** 자원오행 흐름 + 성씨·용신 관계 처리 결과 */
 export interface ResourceFlow extends ElementFlow {
-  /** [성, 통관 오행, 용신] 순서로 성씨와 용신의 상극을 이어 준 배치 */
-  tonggwan: boolean;
-  /** 이름 첫 글자(용신)와 성씨가 상극이라 감점을 줄인 경우 */
-  yongsinClash: boolean;
+  /**
+   * 성씨·용신 관계로 점수를 따로 매긴 배치 (elements.ts의 evaluateResourceFlow). 해당 없으면 null
+   * - 통관 / 용신 상극: 성씨와 용신이 상극일 때
+   * - 희신 배치 / 용신 편중: 성씨가 용신과 같은 오행일 때
+   */
+  arrangement: "통관" | "용신 상극" | "희신 배치" | "용신 편중" | null;
 }
 
 export interface NamingAnalysis {

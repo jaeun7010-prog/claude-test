@@ -7,6 +7,7 @@ import { NameStatsBasic } from "@/components/name-stats-basic";
 import { TierBadge } from "@/components/name-stats-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResultList, type ResultItem } from "@/components/naming/result-list";
+import { RelationsNote } from "@/components/naming/relations-note";
 import { TimeCorrectionNote } from "@/components/naming/time-correction-note";
 import { parseNamingParams, type NamingParams } from "@/lib/naming/params";
 import { parsePriorities, type Priorities } from "@/lib/naming/priorities";
@@ -165,7 +166,8 @@ function NameCardBody({
             <span className="text-muted-foreground">자원오행</span>{" "}
             {best.givenName.map((c) => c.element ?? "?").join("·")}
             {a.resource.needMatched && " (용신 보강)"}
-            {a.resource.tonggwan && " · 성씨와 용신을 잇는 배치(통관)"}
+            {a.resource.arrangement === "통관" && " · 성씨와 용신을 잇는 배치(통관)"}
+            {a.resource.arrangement === "희신 배치" && " · 용신을 돕는 기운을 사이에 둔 배치"}
           </>
         )}
         {" · "}
@@ -392,6 +394,8 @@ export default async function ResultPage({
             ))}
           </div>
 
+          <RelationsNote relations={yongsin.relations} rawScores={yongsin.rawScores} scores={yongsin.scores} />
+
           <div className="rounded-md border p-4 text-sm">
             <p>
               일간 <b>{ELEMENT_HANJA[yongsin.dayMaster.element]}{yongsin.dayMaster.element}</b> ·{" "}
@@ -404,7 +408,7 @@ export default async function ResultPage({
             <p className="mt-2 text-muted-foreground">{yongsin.reason}</p>
           </div>
           <p className="text-xs text-muted-foreground">
-            합·충·형과 격국을 반영하지 않은 억부·조후 중심의 단순화된 풀이이며 참고용입니다.
+            억부·조후와 합·충·형을 반영한 풀이이며, 격국은 아직 반영하지 않은 참고용입니다.
           </p>
         </CardContent>
       </Card>

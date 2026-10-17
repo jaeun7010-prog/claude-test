@@ -1,11 +1,7 @@
 import type { Element } from "@/lib/naming/types";
-import {
-  BRANCH_ELEMENT,
-  ELEMENT_ORDER,
-  HIDDEN_STEMS,
-  STEM_ELEMENT,
-} from "./constants";
+import { BRANCH_ELEMENT, ELEMENT_ORDER, STEM_ELEMENT } from "./constants";
 import type { FourPillars } from "./pillars";
+import { analyzeRelations, type ElementScores, type SajuRelation } from "./relations";
 
 // ---------------------------------------------------------------------------
 // 십성 (일간 기준 관계)
@@ -34,37 +30,12 @@ export function tenGod(dayStem: number, otherStem: number): TenGod {
 }
 
 // ---------------------------------------------------------------------------
-// 오행 세력
+// 오행 세력: 위치별 가중치 + 지장간 분배 후 합·충·형 반영 (relations.ts)
 // ---------------------------------------------------------------------------
-/** 위치별 가중치. 월지(월령)를 가장 크게 본다 */
-const STEM_WEIGHT = { year: 1.0, month: 1.2, hour: 1.0 };
-const BRANCH_WEIGHT = { year: 1.0, month: 3.0, day: 1.5, hour: 1.2 };
-/** 일간 자신 */
-const DAY_STEM_WEIGHT = 1.0;
-
-export type ElementScores = Record<Element, number>;
+export type { ElementScores };
 
 export function elementScores(p: FourPillars): ElementScores {
-  const s: ElementScores = { 목: 0, 화: 0, 토: 0, 금: 0, 수: 0 };
-
-  s[STEM_ELEMENT[p.day.stem]] += DAY_STEM_WEIGHT;
-  s[STEM_ELEMENT[p.year.stem]] += STEM_WEIGHT.year;
-  s[STEM_ELEMENT[p.month.stem]] += STEM_WEIGHT.month;
-  if (p.hour) s[STEM_ELEMENT[p.hour.stem]] += STEM_WEIGHT.hour;
-
-  const addBranch = (branch: number, weight: number) => {
-    // 지장간 일수 비율로 분배. 지장간이 없는 경우를 대비해 지지 본 오행은 쓰지 않음
-    for (const [stem, days] of HIDDEN_STEMS[branch]) {
-      s[STEM_ELEMENT[stem]] += (weight * days) / 30;
-    }
-  };
-  addBranch(p.year.branch, BRANCH_WEIGHT.year);
-  addBranch(p.month.branch, BRANCH_WEIGHT.month);
-  addBranch(p.day.branch, BRANCH_WEIGHT.day);
-  if (p.hour) addBranch(p.hour.branch, BRANCH_WEIGHT.hour);
-
-  for (const e of ELEMENT_ORDER) s[e] = Math.round(s[e] * 100) / 100;
-  return s;
+  return analyzeRelations(p).scores;
 }
 
 // ---------------------------------------------------------------------------
@@ -74,7 +45,12 @@ export type Strength = "극신강" | "신강" | "중화" | "신약" | "극신약
 
 export interface YongsinResult {
   dayMaster: { stem: number; element: Element };
+  /** 합·충·형 반영 후 오행 세력 */
   scores: ElementScores;
+  /** 합·충·형 반영 전 오행 세력 */
+  rawScores: ElementScores;
+  /** 원국의 합·충·형 근거 */
+  relations: SajuRelation[];
   /** 십성군별 점수: 비겁/식상/재성/관성/인성 */
   groups: Record<"비겁" | "식상" | "재성" | "관성" | "인성", number>;
   /** 일간을 돕는 힘(비겁+인성) / 전체 */
@@ -125,13 +101,18 @@ const SUMMER = new Set([5, 6, 7]); // 巳午未
 /**
  * 억부(抑扶) 용신 + 조후(調候) 보정.
  *
- * 단순화된 모델입니다. 합·충·형, 삼합·방합에 의한 오행 변화와 격국 판단은
- * 반영하지 않으므로 명리학자의 정밀 감정과는 다를 수 있습니다.
+ * 오행 세력은 합·충·형을 반영한 값으로 본다. 격국 판단은 아직 반영하지 않는다.
  */
-export function deriveYongsin(p: FourPillars): YongsinResult {
+export function deriveYongsin(
+  p: FourPillars,
+  /** ignoreRelations: 합·충·형 반영 전 세력으로 판단 (보강 전후 비교용) */
+  options: { ignoreRelations?: boolean } = {}
+): YongsinResult {
   const dmStem = p.day.stem;
   const dm = STEM_ELEMENT[dmStem];
-  const scores = elementScores(p);
+  const analyzed = analyzeRelations(p);
+  const { rawScores, relations } = analyzed;
+  const scores = options.ignoreRelations ? rawScores : analyzed.scores;
   const total = ELEMENT_ORDER.reduce((sum, e) => sum + scores[e], 0);
   const { elements, scores: groups } = groupsOf(dm, scores);
 
@@ -190,6 +171,8 @@ export function deriveYongsin(p: FourPillars): YongsinResult {
   return {
     dayMaster: { stem: dmStem, element: dm },
     scores,
+    rawScores,
+    relations,
     groups,
     selfRatio: Math.round(selfRatio * 1000) / 1000,
     strength,
