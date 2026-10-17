@@ -54,7 +54,7 @@ export default async function MyPage() {
   const displayName = profile?.name || user.email;
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl space-y-8 px-6 py-12">
+    <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-3xl space-y-8 px-6 py-12">
       <header className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-serif text-3xl font-bold">마이페이지</h1>

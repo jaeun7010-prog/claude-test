@@ -37,7 +37,7 @@ export default async function StatsPage({
   const snapshot = stat ? await getLatestSnapshot() : null;
 
   return (
-    <main className="mx-auto min-h-screen max-w-2xl space-y-8 px-6 py-12">
+    <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-2xl space-y-8 px-6 py-12">
       <header>
         <h1 className="font-serif text-3xl font-bold">이름 희소성 통계</h1>
         <p className="mt-2 text-sm text-muted-foreground">

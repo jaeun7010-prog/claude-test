@@ -36,7 +36,7 @@ export default async function OrderCompletePage({
   const failed = !!searchParams.code;
 
   return (
-    <main className="mx-auto min-h-screen max-w-xl space-y-6 px-6 py-12">
+    <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-xl space-y-6 px-6 py-12">
       <Card>
         <CardHeader>
           <CardTitle>

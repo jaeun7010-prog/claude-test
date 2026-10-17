@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { safeNextPath } from "@/lib/auth";
@@ -36,6 +37,8 @@ export async function login(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: authErrorMessage(error.message) };
 
+  // 공통 상단 메뉴(로그인 ↔ 마이페이지)를 바로 바꾼다
+  revalidatePath("/", "layout");
   redirect(next);
 }
 
@@ -68,7 +71,10 @@ export async function signup(
   if (error) return { error: authErrorMessage(error.message) };
 
   // 이메일 인증이 꺼져 있으면 세션이 바로 발급됨
-  if (data.session) redirect("/mypage");
+  if (data.session) {
+    revalidatePath("/", "layout");
+    redirect("/mypage");
+  }
 
   return {
     message:
@@ -79,5 +85,6 @@ export async function signup(
 export async function logout() {
   const supabase = createClient();
   await supabase.auth.signOut();
+  revalidatePath("/", "layout");
   redirect("/");
 }

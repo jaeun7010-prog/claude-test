@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Nanum_Myeongjo } from "next/font/google";
 import "./globals.css";
+import { SiteHeader } from "@/components/site/site-header";
 
 const pretendard = localFont({
   src: "./fonts/PretendardVariable.woff2",
@@ -29,7 +30,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className={`${pretendard.variable} ${myeongjo.variable}`}>
-      <body>{children}</body>
+      <body>
+        <SiteHeader />
+        {children}
+      </body>
     </html>
   );
 }

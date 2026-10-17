@@ -66,7 +66,7 @@ export default async function GoodsPage({
   const fullName = `${p.surname}${ge}`;
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl space-y-8 px-6 py-12">
+    <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-3xl space-y-8 px-6 py-12">
       <header className="space-y-2">
         <Button asChild variant="ghost" size="sm" className="-ml-3">
           <Link href={`/naming/result?${qs}`}>← 추천 결과</Link>
