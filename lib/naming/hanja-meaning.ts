@@ -17,10 +17,14 @@ const UNCLEAR_GLOSS =
 const POSITIVE_GLOSS =
   /\b(bright|brightness|brilliant|shine|shining|light|luminous|wise|wisdom|clever|intelligent|virtue|virtuous|benevolent|benevolence|kind|kindness|gentle|graceful|elegant|refined|beautiful|beauty|pretty|lovely|jade|gem|jewel|pearl|precious|fortune|fortunate|auspicious|lucky|happy|happiness|joy|joyful|peace|peaceful|harmony|harmonious|prosper|prosperous|abundant|flourish|flourishing|noble|honor|honour|honest|sincere|faithful|loyal|talent|talented|excellent|outstanding|great|grand|lofty|high|vast|spring|dawn|sun|moon|star|cloud|flower|blossom|orchid|bamboo|pine|jade|rain|sky|heaven|sea|ocean|river|clear|pure|fragrant|fragrance|sweet|warm|gentle|soft)\b/i;
 
+/** 부수 글자에 붙는 "Kangxi radical 173" 같은 설명. 뜻이 아니므로 판정 전에 지운다 */
+const RADICAL_NOTE = /[;,]?\s*Kangxi radical \d+/gi;
+
 /** 이름에 쓸 수 있는 뜻인지 (뜻풀이가 없으면 판단할 수 없어 제외) */
 export function hasAcceptableMeaning(meaning: string | null): boolean {
-  if (!meaning || !meaning.trim()) return false;
-  return !NEGATIVE_GLOSS.test(meaning) && !UNCLEAR_GLOSS.test(meaning);
+  const m = (meaning ?? "").replace(RADICAL_NOTE, "").trim();
+  if (!m) return false;
+  return !NEGATIVE_GLOSS.test(m) && !UNCLEAR_GLOSS.test(m);
 }
 
 /** 뜻이 긍정적이면 true */

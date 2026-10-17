@@ -1,7 +1,8 @@
 import { analyzeName } from "./analyze";
 import { compareAnalysis } from "./score";
 import { globalPronunciationScore } from "./global-pronunciation";
-import { hasPositiveMeaning } from "./hanja-meaning";
+import type { Suitability } from "./hanja-suitability";
+import { baseRankScore, meaningScore } from "./ranking";
 import { isLuckyRaw } from "./suri81";
 import { trendScore } from "./trend";
 import type { Element, HanjaChar, NamingAnalysis } from "./types";
@@ -12,6 +13,8 @@ export interface NameHanja extends HanjaChar {
   meaning: string | null;
   /** 한글 훈 (예: 金 → 쇠). 화면에는 `훈 음`(쇠 금)으로 보여 준다 */
   hun: string | null;
+  /** 이름 뜻 적합도 (hanja-suitability.ts). "exclude"는 후보 풀에 들어오지 않는다 */
+  suitability: Suitability;
 }
 
 /** 한자의 한글 훈음 표기 (훈이 없으면 음만) */
@@ -51,39 +54,37 @@ export interface Recommendation {
   hangul: string;
   analysis: NamingAnalysis;
   globalScore: number;
-  /** 0~1: 요즘 이름 트렌드·발음 조화 점수 (정렬 가중치) */
+  /** 0~1: 요즘 이름 트렌드·발음 조화 점수 */
   trend: number;
+  /** 0~1: 한자 뜻 점수 (글자별 뜻 등급의 평균) */
+  meaning: number;
+  /** 기본 순위 점수 (성명학 + 한자 뜻 + 요즘 어감, ranking.ts). 화면 순서에만 쓴다 */
+  baseScore: number;
 }
 
-/** 같은 한글 이름의 한자 조합 묶음. options[0]이 성명학 점수가 가장 높은 대표 조합 */
+/** 같은 한글 이름의 한자 조합 묶음. options[0]이 기본 순위 점수가 가장 높은 대표 조합 */
 export interface NameGroup {
   hangul: string;
   options: Recommendation[];
 }
 
-/** 순위 산정 시 트렌드 점수(0~1)에 곱하는 가중치 */
-const TREND_WEIGHT = 35;
-/** 뜻이 긍정적인 한자 한 글자당 가산점 */
-const MEANING_BONUS = 2;
-
 const hangulOf = (chars: NameHanja[]) => chars.map((c) => c.eum).join("");
 
-// 뜻이 긍정적인 글자 수 (한자의 교육용 여부와는 무관)
-const positiveCount = (r: Recommendation) =>
-  r.givenName.filter((c) => hasPositiveMeaning(c.meaning)).length;
-
-/** 같은 한글 이름 안에서 한자 조합 비교: 성명학 점수 → 뜻 → 한자 순 */
-export const compareOptions = (x: Recommendation, y: Recommendation) =>
+/**
+ * 추천 비교 (내림차순): 기본 순위 점수 → 성명학 동점 규칙(사주 보완 → 수리 → 발음오행) → 한자.
+ * 한글 이름 단위의 희소성 비교는 이름 카드를 정렬하는 쪽(service.ts)에서 한다.
+ */
+export const compareRecommendations = (x: Recommendation, y: Recommendation) =>
+  y.baseScore - x.baseScore ||
   compareAnalysis(x.analysis, y.analysis) ||
-  positiveCount(y) - positiveCount(x) ||
   hanjaOf(x).localeCompare(hanjaOf(y));
 
 const hanjaOf = (r: Recommendation) => r.givenName.map((c) => c.hanja).join("");
 
 /**
  * 후보 조합을 전수 평가해 한글 이름별로 묶어 반환.
- * 어떤 한글 이름을 고를지는 트렌드·뜻 가산점을 더한 순위로 정하고(낯선 어감 배제),
- * 이름 안의 한자 조합은 성명학 점수 순으로 정렬한다. 화면 정렬은 호출하는 쪽에서 한다.
+ * 한글 이름과 이름 안의 한자 조합 모두 기본 순위 점수(성명학 + 한자 뜻 + 요즘 어감) 순으로 고른다.
+ * 화면 정렬은 호출하는 쪽에서 한다.
  */
 export function recommendNames(opts: RecommendOptions): NameGroup[] {
   const {
@@ -105,13 +106,8 @@ export function recommendNames(opts: RecommendOptions): NameGroup[] {
 
   const scored: Recommendation[] = [];
 
-  // 성명학 점수(0~100)에 트렌드 점수(0~1)와 뜻 가산점을 더해, 어감이 현대적이고 뜻이 좋은 이름을 앞에 둔다
-  const rank = (r: Recommendation) =>
-    r.analysis.totalScore + TREND_WEIGHT * r.trend + MEANING_BONUS * positiveCount(r);
   const byRank = (x: Recommendation, y: Recommendation) =>
-    rank(y) - rank(x) ||
-    y.globalScore - x.globalScore ||
-    x.hangul.localeCompare(y.hangul, "ko");
+    compareRecommendations(x, y) || x.hangul.localeCompare(y.hangul, "ko");
 
   // 후보가 수십만 건이 될 수 있어 일정량이 쌓이면 상위 일부만 남긴다
   const KEEP = Math.max(limit * maxPerName * 20, 2000);
@@ -139,7 +135,9 @@ export function recommendNames(opts: RecommendOptions): NameGroup[] {
       favorableElement,
       unfavorableElement,
     });
-    scored.push({ givenName, hangul, analysis, globalScore, trend });
+    const meaning = meaningScore(givenName);
+    const baseScore = baseRankScore(analysis.totalScore, meaning, trend);
+    scored.push({ givenName, hangul, analysis, globalScore, trend, meaning, baseScore });
     if (scored.length >= KEEP * 4) prune();
   };
 
@@ -188,7 +186,7 @@ export function recommendNames(opts: RecommendOptions): NameGroup[] {
 
   prune();
 
-  // 순위가 높은 한글 이름부터 limit개를 고르고, 이름마다 성명학 점수가 높은 한자 조합 maxPerName개를 담는다
+  // 순위가 높은 한글 이름부터 limit개를 고르고, 이름마다 순위가 높은 한자 조합 maxPerName개를 담는다
   const byName = new Map<string, Recommendation[]>();
   for (const r of scored) {
     const list = byName.get(r.hangul);
@@ -197,6 +195,6 @@ export function recommendNames(opts: RecommendOptions): NameGroup[] {
   }
   return [...byName].map(([hangul, list]) => ({
     hangul,
-    options: list.sort(compareOptions).slice(0, maxPerName),
+    options: list.sort(compareRecommendations).slice(0, maxPerName),
   }));
 }

@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Element } from "./types";
-import { hasAcceptableMeaning } from "./hanja-meaning";
+import { classifyHanja } from "./hanja-suitability";
+import { nameHunOf } from "./name-hanja-allowlist";
 import type { NameHanja } from "./recommend";
 
 interface Row {
@@ -12,15 +13,17 @@ interface Row {
   element: Element | null;
   /** 한글 훈 (예: 金 → 쇠). hun 컬럼이 아직 없으면 undefined */
   hun?: string | null;
+  /** 한문 교육용 기초 한자 여부. is_edu 컬럼이 아직 없으면 undefined */
+  is_edu?: boolean;
 }
 
 const BASE_COLUMNS = "hanja, eum, meaning, stroke_count, element";
-const COLUMNS = `${BASE_COLUMNS}, hun`;
+const COLUMNS = `${BASE_COLUMNS}, hun, is_edu`;
 
 type QueryResult = { data: unknown; error: { code?: string; message: string } | null };
 
 /**
- * hun 컬럼과 함께 조회하고, 아직 마이그레이션되지 않은 DB(컬럼 없음, 42703)면 훈 없이 다시 조회한다.
+ * hun·is_edu 컬럼과 함께 조회하고, 아직 마이그레이션되지 않은 DB(컬럼 없음, 42703)면 두 컬럼 없이 다시 조회한다.
  * 배포 순서와 상관없이 엔진이 멈추지 않도록 하기 위한 안전장치.
  */
 async function select(run: (columns: string) => PromiseLike<QueryResult>): Promise<Row[]> {
@@ -37,7 +40,15 @@ const toChar = (r: Row): NameHanja => ({
   strokes: r.stroke_count,
   element: r.element,
   meaning: r.meaning,
-  hun: r.hun ?? null,
+  // 허용 목록의 이름용 대표 풀이가 있으면 사전 훈 대신 보여 준다 (판정에는 사전 훈을 쓴다)
+  hun: nameHunOf(r.hanja, r.eum) ?? r.hun ?? null,
+  suitability: classifyHanja({
+    hanja: r.hanja,
+    eum: r.eum,
+    meaning: r.meaning,
+    hun: r.hun ?? null,
+    isEdu: r.is_edu ?? false,
+  }),
 });
 
 /** 성씨 한자: 한자와 음이 모두 일치하는 행 */
@@ -73,8 +84,8 @@ export async function fetchByEum(supabase: SupabaseClient, eum: string): Promise
 }
 
 /**
- * 추천 후보 풀: 대법원 인명용 한자 전체에서 불용한자와, 뜻이 부정적이거나 불분명한 글자를 뺀 것.
- * 자원오행을 모르는 글자(element null)도 포함하며, 교육용 여부는 구분하지 않는다.
+ * 추천 후보 풀: 대법원 인명용 한자 전체에서 불용한자와, 뜻 등급이 "제외"인 글자(hanja-suitability.ts)를 뺀 것.
+ * 자원오행을 모르는 글자(element null)도 포함한다. 나머지 등급은 순위 점수(ranking.ts)에 반영된다.
  */
 export async function fetchPool(supabase: SupabaseClient): Promise<NameHanja[]> {
   const out: NameHanja[] = [];
@@ -88,7 +99,7 @@ export async function fetchPool(supabase: SupabaseClient): Promise<NameHanja[]> 
         .order("id", { ascending: true })
         .range(from, from + PAGE - 1)
     );
-    out.push(...rows.map(toChar).filter((c) => hasAcceptableMeaning(c.meaning)));
+    out.push(...rows.map(toChar).filter((c) => c.suitability !== "exclude"));
     if (rows.length < PAGE) break;
   }
   return out;

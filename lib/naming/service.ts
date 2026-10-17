@@ -5,7 +5,6 @@ import { loadNameSummaries, type NameStatSummary } from "@/lib/stats/name-stats"
 import { analyzeName } from "./analyze";
 import { fetchByEum, fetchPool, fetchSurname } from "./hanja-repo";
 import type { NamingParams } from "./params";
-import { hasAcceptableMeaning } from "./hanja-meaning";
 import { recommendNames, type NameGroup, type NameHanja } from "./recommend";
 import { compareAnalysis } from "./score";
 import { TREND_MIN } from "./trend";
@@ -70,7 +69,7 @@ async function runNamingUnsafe(
     allowSyllables.add(p.dolrimja.syllable);
     let fixed = await fetchByEum(supabase, p.dolrimja.syllable);
     // 돌림자는 사용자가 정한 글자이므로 후보를 넓게 두되, 품질 좋은 글자가 있으면 그쪽을 우선한다
-    const good = fixed.filter((c) => hasAcceptableMeaning(c.meaning));
+    const good = fixed.filter((c) => c.suitability !== "exclude");
     if (good.length > 0) fixed = good;
     if (fixed.length === 0) {
       return { ok: false, error: `돌림자 '${p.dolrimja.syllable}'에 해당하는 한자가 없습니다.` };
@@ -118,13 +117,15 @@ async function runNamingUnsafe(
     console.error("[naming] 통계 조회 실패", e);
   }
 
-  // 대표 조합의 성명학 점수 순. 동점이면 사주 보완 → 수리 → 발음오행 → 희소성(누적 건수가 적은 이름) 순
+  // 대표 조합의 기본 순위 점수(성명학 + 한자 뜻 + 요즘 어감) 순.
+  // 동점이면 사주 보완 → 수리 → 발음오행 → 희소성(누적 건수가 적은 이름) 순
   const births = (g: NameGroup) => {
     const c = stats?.get(g.hangul)?.cumulative;
     return c ? c.male + c.female : 0;
   };
   groups.sort(
     (a, b) =>
+      b.options[0].baseScore - a.options[0].baseScore ||
       compareAnalysis(a.options[0].analysis, b.options[0].analysis) ||
       births(a) - births(b) ||
       a.hangul.localeCompare(b.hangul, "ko")

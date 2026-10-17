@@ -269,8 +269,8 @@ export default async function ResultPage({
           <p className="text-xs text-muted-foreground">
             성명학 등급은 사주 보완 {SCORE_WEIGHTS.saju} · 수리 {SCORE_WEIGHTS.suri} · 발음오행{" "}
             {SCORE_WEIGHTS.pronunciation} · 자원오행 {SCORE_WEIGHTS.resource}점 배점의 100점 만점 점수로 정합니다
-            (S {GRADE_MIN.S}점 이상 · A {GRADE_MIN.A}점 이상 · B {GRADE_MIN.B}점 이상 · 그 밖은 C). 같은 한글 이름의
-            한자 조합은 한 카드에 묶었습니다.
+            (S {GRADE_MIN.S}점 이상 · A {GRADE_MIN.A}점 이상 · B {GRADE_MIN.B}점 이상 · 그 밖은 C). 순서는 성명학
+            점수에 한자 뜻과 요즘 어감을 더해 정하고, 같은 한글 이름의 한자 조합은 한 카드에 묶었습니다.
           </p>
         )}
         {result.stats && result.groups.length > 0 && <DataSourceNote />}
