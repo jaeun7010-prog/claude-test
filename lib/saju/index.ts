@@ -15,6 +15,14 @@ export {
   type ElementScores,
 } from "./yongsin";
 export { analyzeRelations, RELATION_FACTORS, type SajuRelation } from "./relations";
+export {
+  analyzeGeokguk,
+  GEOK_EASY,
+  type Geokguk,
+  type GeokName,
+  type OuterCandidate,
+} from "./geokguk";
+export { TEN_GOD_GROUP, type TenGodGroup } from "./ten-gods";
 
 import { calculateFourPillars, type BirthInput, type Pillar } from "./pillars";
 import { deriveYongsin } from "./yongsin";

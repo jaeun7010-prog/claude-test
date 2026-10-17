@@ -1,33 +1,11 @@
 import type { Element } from "@/lib/naming/types";
 import { BRANCH_ELEMENT, ELEMENT_ORDER, STEM_ELEMENT } from "./constants";
 import type { FourPillars } from "./pillars";
+import { analyzeGeokguk, type Geokguk } from "./geokguk";
 import { analyzeRelations, type ElementScores, type SajuRelation } from "./relations";
+import { groupElements } from "./ten-gods";
 
-// ---------------------------------------------------------------------------
-// 십성 (일간 기준 관계)
-// ---------------------------------------------------------------------------
-export type TenGod =
-  | "비견" | "겁재" | "식신" | "상관" | "편재" | "정재"
-  | "편관" | "정관" | "편인" | "정인";
-
-/** 오행 a가 b를 생하는가 */
-const generates = (a: Element, b: Element) =>
-  ELEMENT_ORDER[(ELEMENT_ORDER.indexOf(a) + 1) % 5] === b;
-
-/** 오행 a가 b를 극하는가 */
-const controls = (a: Element, b: Element) =>
-  ELEMENT_ORDER[(ELEMENT_ORDER.indexOf(a) + 2) % 5] === b;
-
-export function tenGod(dayStem: number, otherStem: number): TenGod {
-  const me = STEM_ELEMENT[dayStem];
-  const other = STEM_ELEMENT[otherStem];
-  const samePolarity = dayStem % 2 === otherStem % 2;
-  if (me === other) return samePolarity ? "비견" : "겁재";
-  if (generates(me, other)) return samePolarity ? "식신" : "상관";
-  if (controls(me, other)) return samePolarity ? "편재" : "정재";
-  if (controls(other, me)) return samePolarity ? "편관" : "정관";
-  return samePolarity ? "편인" : "정인"; // other가 me를 생함
-}
+export { tenGod, type TenGod } from "./ten-gods";
 
 // ---------------------------------------------------------------------------
 // 오행 세력: 위치별 가중치 + 지장간 분배 후 합·충·형 반영 (relations.ts)
@@ -63,23 +41,22 @@ export interface YongsinResult {
   /** 기신: 용신을 극하는 오행 (이름에서 피하는 것이 좋음) */
   gisin: Element;
   /** 용신을 정한 방식 */
-  method: "억부" | "조후" | "균형";
+  method: "격국" | "억부" | "조후" | "균형";
+  /** 격국 판단 (ignoreGeokguk이면 null) */
+  geokguk: Geokguk | null;
   reason: string;
 }
 
 function groupsOf(dm: Element, s: ElementScores) {
-  const next = ELEMENT_ORDER[(ELEMENT_ORDER.indexOf(dm) + 1) % 5]; // 내가 생함 = 식상
-  const wealth = ELEMENT_ORDER[(ELEMENT_ORDER.indexOf(dm) + 2) % 5]; // 내가 극함 = 재성
-  const official = ELEMENT_ORDER[(ELEMENT_ORDER.indexOf(dm) + 3) % 5]; // 나를 극함 = 관성
-  const resource = ELEMENT_ORDER[(ELEMENT_ORDER.indexOf(dm) + 4) % 5]; // 나를 생함 = 인성
+  const elements = groupElements(dm);
   return {
-    elements: { 비겁: dm, 식상: next, 재성: wealth, 관성: official, 인성: resource },
+    elements,
     scores: {
-      비겁: s[dm],
-      식상: s[next],
-      재성: s[wealth],
-      관성: s[official],
-      인성: s[resource],
+      비겁: s[elements.비겁],
+      식상: s[elements.식상],
+      재성: s[elements.재성],
+      관성: s[elements.관성],
+      인성: s[elements.인성],
     },
   };
 }
@@ -99,14 +76,18 @@ const WINTER = new Set([11, 0, 1]); // 亥子丑
 const SUMMER = new Set([5, 6, 7]); // 巳午未
 
 /**
- * 억부(抑扶) 용신 + 조후(調候) 보정.
+ * 억부(抑扶)로 강약 방향을 정하고, 정격이 성립하면 격국(《자평진전》)으로 상신을 고른 뒤
+ * 조후(調候)가 극단이면 마지막에 덮어쓴다. 파격이면 억부 판단을 그대로 쓴다.
  *
- * 오행 세력은 합·충·형을 반영한 값으로 본다. 격국 판단은 아직 반영하지 않는다.
+ * 오행 세력은 합·충·형을 반영한 값으로 본다.
  */
 export function deriveYongsin(
   p: FourPillars,
-  /** ignoreRelations: 합·충·형 반영 전 세력으로 판단 (보강 전후 비교용) */
-  options: { ignoreRelations?: boolean } = {}
+  /**
+   * ignoreRelations: 합·충·형 반영 전 세력으로 판단 (2단계 전후 비교용)
+   * ignoreGeokguk: 격국 없이 억부·조후만으로 판단 (3단계 전후 비교용)
+   */
+  options: { ignoreRelations?: boolean; ignoreGeokguk?: boolean } = {}
 ): YongsinResult {
   const dmStem = p.day.stem;
   const dm = STEM_ELEMENT[dmStem];
@@ -149,6 +130,20 @@ export function deriveYongsin(
     reason = `일간(${dm})이 중화에 가까워 가장 부족한 ${pick}을(를) 보충합니다.`;
   }
 
+  // 격국: 정격이 성립하면 강약 방향 안에서 격이 정한 상신을 쓴다
+  const geokguk = options.ignoreGeokguk
+    ? null
+    : analyzeGeokguk({ pillars: p, scores, groups, selfRatio, strength, relations });
+  if (geokguk?.applied && geokguk.sangsin) {
+    const { group, element, reason: why } = geokguk.sangsin;
+    yongsin = element;
+    method = "격국";
+    const how = strength === "중화" ? "중화에 가까워" : `${strength}하여`;
+    reason = `${geokguk.basis} ${geokguk.name}입니다. 일간(${dm})이 ${how} ${group}(${element})${element === "목" || element === "금" ? "으로" : "로"} ${why}.`;
+  } else if (geokguk) {
+    reason += ` (${geokguk.name}: ${geokguk.fallback})`;
+  }
+
   // 조후 보정: 한난조습이 극단이면 조후를 우선한다
   const mb = p.month.branch;
   if (WINTER.has(mb) && scores.화 / total < FIRE_SHARE_MIN) {
@@ -180,6 +175,7 @@ export function deriveYongsin(
     huisin: ELEMENT_ORDER[(idx + 4) % 5],
     gisin: ELEMENT_ORDER[(idx + 3) % 5],
     method,
+    geokguk,
     reason,
   };
 }

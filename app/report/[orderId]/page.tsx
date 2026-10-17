@@ -5,6 +5,7 @@ import { ReportDocument, type ReportData } from "@/components/report/report-docu
 import { ReportDownloadButton } from "@/components/report/download-button";
 import { Button } from "@/components/ui/button";
 import { isUuid } from "@/lib/commerce/payment-sync";
+import { buildReportSnapshot, isReportSnapshot, type ReportSnapshot } from "@/lib/commerce/report-snapshot";
 import { parseNamingParams } from "@/lib/naming/params";
 import { analyzeChosen } from "@/lib/naming/service";
 import { createClient } from "@/lib/supabase/server";
@@ -39,7 +40,7 @@ export default async function ReportPage({ params }: { params: { orderId: string
   // RLS 로 본인 주문만 조회된다
   const { data: order } = await supabase
     .from("orders")
-    .select("id, order_type, status, item_options, paid_at, created_at")
+    .select("id, order_type, status, item_options, report_snapshot, paid_at, created_at")
     .eq("id", params.orderId)
     .maybeSingle();
 
@@ -60,34 +61,24 @@ export default async function ReportPage({ params }: { params: { orderId: string
     qs?: string;
     name?: { given?: string; givenHanja?: string };
   };
-  const parsed = parseNamingParams(Object.fromEntries(new URLSearchParams(opts.qs ?? "")));
-  if (!parsed.ok || !opts.name?.given || !opts.name.givenHanja)
-    return <Notice message="주문에 저장된 작명 정보를 읽을 수 없습니다. 고객센터로 문의해 주세요." />;
-
-  const chosen = await analyzeChosen(supabase, parsed.value, opts.name.givenHanja, opts.name.given);
-  if (!chosen) return <Notice message="이름 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." />;
-
-  const p = parsed.value;
-  const { year, month, day } = p.birth;
-  const birthText =
-    `${year}년 ${month}월 ${day}일` +
-    (p.hasTime
-      ? ` ${String(p.birth.hour).padStart(2, "0")}시 ${String(p.birth.minute ?? 0).padStart(2, "0")}분`
-      : " (시각 미상)") +
-    ` · ${p.birthplace.label} 출생`;
   const issued = new Date(order.paid_at ?? order.created_at);
+  const issuedAt = `${issued.getFullYear()}년 ${issued.getMonth() + 1}월 ${issued.getDate()}일`;
 
-  const data: ReportData = {
-    surname: p.surname,
-    surnameHanja: p.surnameHanja,
-    surnameChars: chosen.surname,
-    given: chosen.given,
-    analysis: chosen.analysis,
-    saju: chosen.saju,
-    birthText,
-    issuedAt: `${issued.getFullYear()}년 ${issued.getMonth() + 1}월 ${issued.getDate()}일`,
-  };
-  const fullName = `${p.surname}${opts.name.given}`;
+  let snapshot: ReportSnapshot;
+  if (isReportSnapshot(order.report_snapshot)) {
+    // 주문 시점에 고정한 내용만 보여 준다
+    snapshot = order.report_snapshot;
+  } else {
+    // report_snapshot 도입(2026-10-18) 전 주문: 고정 내용이 없어 지금 엔진으로 다시 계산한다
+    const parsed = parseNamingParams(Object.fromEntries(new URLSearchParams(opts.qs ?? "")));
+    if (!parsed.ok || !opts.name?.given || !opts.name.givenHanja)
+      return <Notice message="주문에 저장된 작명 정보를 읽을 수 없습니다. 고객센터로 문의해 주세요." />;
+    const chosen = await analyzeChosen(supabase, parsed.value, opts.name.givenHanja, opts.name.given);
+    if (!chosen) return <Notice message="이름 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." />;
+    snapshot = buildReportSnapshot(parsed.value, chosen);
+  }
+  const data: ReportData = { ...snapshot, issuedAt };
+  const fullName = `${data.surname}${data.given.map((c) => c.eum).join("")}`;
 
   return (
     <main className="mx-auto min-h-screen max-w-4xl space-y-6 px-4 py-10">

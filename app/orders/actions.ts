@@ -17,6 +17,7 @@ import {
   type ShippingInput,
 } from "@/lib/commerce/catalog";
 import { isUuid, paymentIdOf, syncOrderPayment } from "@/lib/commerce/payment-sync";
+import { buildReportSnapshot } from "@/lib/commerce/report-snapshot";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -76,6 +77,8 @@ export async function createOrder(input: CheckoutInput): Promise<CreateOrderResu
       item_options: base,
       quantity: 1,
       amount: REPORT_PRICE,
+      // 결제할 내용 그대로 고정한다. 리포트는 이 값만 보여 준다 (엔진이 바뀌어도 그대로)
+      report_snapshot: buildReportSnapshot(parsed.value, chosen),
     };
   } else if (input.kind === "goods") {
     if (!PRODUCT_IDS.includes(input.product)) return fail("알 수 없는 상품입니다.");

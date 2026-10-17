@@ -1,8 +1,6 @@
-import { ELEMENT_LUCKY, lackingElement } from "@/lib/commerce/catalog";
-import type { NameHanja } from "@/lib/naming/recommend";
-import type { NamingAnalysis } from "@/lib/naming/types";
+import { ELEMENT_LUCKY } from "@/lib/commerce/catalog";
+import type { ReportSnapshot } from "@/lib/commerce/report-snapshot";
 import { BRANCHES_KO, STEMS_KO, type Pillar } from "@/lib/saju";
-import type { analyzeSaju } from "@/lib/saju";
 
 /**
  * 프리미엄 리포트 본문. html2canvas 가 Tailwind 의 `hsl(var(--x))` 색상을 못 읽을 수 있어
@@ -19,16 +17,8 @@ const GYEOK = [
   { key: "jeong", name: "정격(貞格)", desc: "총운 · 평생을 아우르는 종합 기운" },
 ] as const;
 
-export interface ReportData {
-  surname: string;
-  surnameHanja: string;
-  surnameChars: NameHanja[];
-  given: NameHanja[];
-  analysis: NamingAnalysis;
-  saju: ReturnType<typeof analyzeSaju>;
-  birthText: string;
-  issuedAt: string;
-}
+/** 주문에 고정된 분석 결과 + 작성일 */
+export type ReportData = Omit<ReportSnapshot, "version" | "createdAt"> & { issuedAt: string };
 
 const PAGE: React.CSSProperties = {
   width: "794px",
@@ -95,7 +85,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
   const fullHanja = `${data.surnameHanja}${given.map((c) => c.hanja).join("")}`;
   const fullHangul = `${data.surname}${given.map((c) => c.eum).join("")}`;
   const total = Object.values(yongsin.scores).reduce((a, b) => a + b, 0);
-  const lacking = lackingElement(yongsin.scores, yongsin.yongsin);
+  const lacking = data.texts.lacking;
   const chars = [...data.surnameChars, ...given];
   const footer = `이름핏 NameFit · ${fullHangul} 작명 리포트`;
 
@@ -161,6 +151,17 @@ export function ReportDocument({ data }: { data: ReportData }) {
               .join(", ")}
             {" — "}
             {[...new Set(yongsin.relations.filter((r) => r.status !== "표시만").map((r) => r.easy))].join(" ")}
+          </p>
+        )}
+        {yongsin.geokguk && (
+          <p style={{ margin: "0 0 8px", fontSize: "15px", lineHeight: 1.8, color: C.muted }}>
+            격국(格局): {yongsin.geokguk.name}
+            {yongsin.geokguk.sangsin
+              ? ` · 상신 ${yongsin.geokguk.sangsin.group}(${yongsin.geokguk.sangsin.element})`
+              : ""}
+            {` · ${yongsin.geokguk.status}`}
+            {" — "}
+            {data.texts.geokguk}
           </p>
         )}
         <p style={{ margin: 0, fontSize: "15px", lineHeight: 1.8, color: C.muted }}>
@@ -240,8 +241,9 @@ export function ReportDocument({ data }: { data: ReportData }) {
         </p>
 
         <p style={{ margin: "34px 0 0", fontSize: "12px", lineHeight: 1.7, color: C.muted }}>
-          본 리포트는 억부·조후와 합·충·형을 반영한 사주 풀이와 수리 81수·오행 이론에 따른 참고 자료이며, 격국은
-          아직 반영하지 않았습니다. 작명의 최종 결정은 가족의 뜻과 함께 정하시길 권합니다.
+          사주의 강약, 계절 균형, 합충, 격국을 기준으로 아이에게 필요한 기운을 찾았습니다. 학파에 따라 해석이 다를 수
+          있습니다. 이름 풀이는 수리 81수·오행 이론에 따른 참고 자료이며, 작명의 최종 결정은 가족의 뜻과 함께 정하시길
+          권합니다.
         </p>
       </Frame>
     </div>

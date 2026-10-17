@@ -58,6 +58,9 @@ export async function saveName(formData: FormData) {
         huisin: yongsin.huisin,
         gisin: yongsin.gisin,
         method: yongsin.method,
+        geokguk: yongsin.geokguk
+          ? { name: yongsin.geokguk.name, status: yongsin.geokguk.status, applied: yongsin.geokguk.applied }
+          : null,
         birthDate: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
       },
     },

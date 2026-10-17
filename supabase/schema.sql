@@ -400,6 +400,28 @@ create trigger orders_set_updated_at
   before update on public.orders
   for each row execute function public.set_updated_at();
 
+-- 프리미엄 리포트 고정 (supabase/migrations/20261018000000_order_report_snapshot.sql 과 같은 내용)
+alter table public.orders add column if not exists report_snapshot jsonb;
+comment on column public.orders.report_snapshot is
+  '프리미엄 리포트 고정 내용 (주문 시점 분석 결과). 한 번 저장하면 변경 불가. lib/commerce/report-snapshot.ts 참고';
+
+create or replace function public.orders_freeze_report_snapshot()
+returns trigger
+language plpgsql
+as $$
+begin
+  if old.report_snapshot is not null and new.report_snapshot is distinct from old.report_snapshot then
+    raise exception 'orders.report_snapshot는 한 번 저장하면 바꿀 수 없습니다 (order %)', old.id;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists orders_freeze_report_snapshot on public.orders;
+create trigger orders_freeze_report_snapshot
+  before update on public.orders
+  for each row execute function public.orders_freeze_report_snapshot();
+
 -- =============================================================================
 -- RLS (Row Level Security)
 -- =============================================================================

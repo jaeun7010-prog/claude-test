@@ -7,6 +7,7 @@ import { NameStatsBasic } from "@/components/name-stats-basic";
 import { TierBadge } from "@/components/name-stats-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResultList, type ResultItem } from "@/components/naming/result-list";
+import { GeokgukNote } from "@/components/naming/geokguk-note";
 import { RelationsNote } from "@/components/naming/relations-note";
 import { TimeCorrectionNote } from "@/components/naming/time-correction-note";
 import { parseNamingParams, type NamingParams } from "@/lib/naming/params";
@@ -395,6 +396,7 @@ export default async function ResultPage({
           </div>
 
           <RelationsNote relations={yongsin.relations} rawScores={yongsin.rawScores} scores={yongsin.scores} />
+          <GeokgukNote yongsin={yongsin} />
 
           <div className="rounded-md border p-4 text-sm">
             <p>
@@ -408,7 +410,8 @@ export default async function ResultPage({
             <p className="mt-2 text-muted-foreground">{yongsin.reason}</p>
           </div>
           <p className="text-xs text-muted-foreground">
-            억부·조후와 합·충·형을 반영한 풀이이며, 격국은 아직 반영하지 않은 참고용입니다.
+            사주의 강약, 계절 균형, 합충, 격국을 기준으로 아이에게 필요한 기운을 찾았습니다. 학파에 따라 해석이 다를 수
+            있습니다.
           </p>
         </CardContent>
       </Card>

@@ -68,6 +68,8 @@ export interface SajuRelation {
   detail: string;
   /** 쉬운 말 설명 */
   easy: string;
+  /** 일간이 합한 천간합 (쟁합 제외). 격국의 화격 후보 판단에 쓴다 */
+  dayMaster?: boolean;
 }
 
 export type ElementScores = Record<Element, number>;
@@ -303,7 +305,7 @@ export function analyzeRelations(p: FourPillars): RelationAnalysis {
     }
     if (x.pos === "day" || y.pos === "day") {
       relations.push({
-        ...base, status: "표시만",
+        ...base, status: "표시만", dayMaster: true,
         detail: `${chars} 천간합(${posKoStem(ps)}) — 일간이 합하므로 일간 오행은 바꾸지 않음${monthElement === element ? ` (월령도 같은 ${element} 기운이라 화격 여부를 따로 살핌)` : ""}`,
         easy: `아이 자신을 나타내는 기운이 ${POSITION_EASY[x.pos === "day" ? y.pos : x.pos]}의 기운과 끌어당기지만, 본래 기운은 그대로 봅니다.`,
       });
