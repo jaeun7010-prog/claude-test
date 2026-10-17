@@ -10,7 +10,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { GradeBadge } from "@/components/naming/analysis-parts";
 import { registrationText } from "@/lib/naming/registration";
+import { readSaved, SAVED_COLUMNS, type SavedRow } from "@/lib/naming/saved";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "마이페이지 | 이름핏" };
@@ -39,9 +41,7 @@ export default async function MyPage() {
       .maybeSingle(),
     supabase
       .from("user_naming_history")
-      .select(
-        "id, surname, surname_hanja, given_name, given_name_hanja, total_score, is_favorite, created_at, filters"
-      )
+      .select(SAVED_COLUMNS)
       .order("created_at", { ascending: false }),
     // 결제 대기(미결제) 주문은 목록에서 제외
     supabase
@@ -52,6 +52,7 @@ export default async function MyPage() {
   ]);
 
   const displayName = profile?.name || user.email;
+  const saved = (history ?? []).map((h) => readSaved(h as SavedRow));
 
   return (
     <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-3xl space-y-8 px-6 py-12">
@@ -89,48 +90,51 @@ export default async function MyPage() {
         <CardHeader>
           <CardTitle>저장된 작명 결과</CardTitle>
           <CardDescription>
-            {history?.length ?? 0}건이 저장되어 있습니다.
+            {saved.length}건이 저장되어 있습니다. 이름을 누르면 저장할 때의 분석을 볼 수 있습니다.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {history && history.length > 0 ? (
+          {saved.length > 0 ? (
             <ul className="divide-y">
-              {history.map((h) => (
-                <li
-                  key={h.id}
-                  className="flex items-center justify-between py-3"
-                >
-                  <div>
-                    <p className="font-serif text-lg font-bold">
-                      {h.surname}
-                      {h.given_name}
-                      {h.is_favorite && " ★"}
-                    </p>
-                    {(h.surname_hanja || h.given_name_hanja) && (
-                      <p className="font-serif text-sm text-muted-foreground">
-                        {h.surname_hanja}
-                        {h.given_name_hanja}
-                      </p>
+              {saved.map((h) => (
+                <li key={h.id}>
+                  <Link
+                    href={`/mypage/names/${h.id}`}
+                    className="-mx-2 flex items-center gap-4 rounded-md px-2 py-3 hover:bg-secondary"
+                  >
+                    {h.grade && h.totalScore != null ? (
+                      <GradeBadge grade={h.grade} score={h.totalScore} size="sm" />
+                    ) : (
+                      <span className="w-10 shrink-0 text-center text-xs text-muted-foreground">-</span>
                     )}
-                    {(h.filters as { parentSurname?: unknown } | null)?.parentSurname ? (
-                      <p className="text-xs text-muted-foreground">
-                        {registrationText({
-                          surname: h.surname,
-                          surnameHanja: h.surname_hanja ?? "",
-                          given: h.given_name,
-                          givenHanja: h.given_name_hanja ?? "",
-                        })}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-serif text-lg font-bold">
+                        {h.surname}
+                        {h.given}
+                        {h.isFavorite && " ★"}
                       </p>
-                    ) : null}
-                  </div>
-                  <div className="text-right text-sm text-muted-foreground">
-                    {h.total_score != null && (
-                      <p className="font-medium text-foreground">
-                        {Number(h.total_score)}점
-                      </p>
-                    )}
-                    <p>{new Date(h.created_at).toLocaleDateString("ko-KR")}</p>
-                  </div>
+                      {(h.surnameHanja || h.givenHanja) && (
+                        <p className="font-serif text-sm text-muted-foreground">
+                          {h.surnameHanja}
+                          {h.givenHanja}
+                        </p>
+                      )}
+                      {h.parentSurname && (
+                        <p className="text-xs text-muted-foreground">
+                          {registrationText({
+                            surname: h.surname,
+                            surnameHanja: h.surnameHanja,
+                            given: h.given,
+                            givenHanja: h.givenHanja,
+                          })}
+                        </p>
+                      )}
+                    </div>
+                    <div className="shrink-0 text-right text-sm text-muted-foreground">
+                      <p>{new Date(h.createdAt).toLocaleDateString("ko-KR")}</p>
+                      <p className="text-primary">자세히 ›</p>
+                    </div>
+                  </Link>
                 </li>
               ))}
             </ul>

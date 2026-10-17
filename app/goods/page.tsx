@@ -4,6 +4,7 @@ import { GoodsCard } from "@/components/goods-card";
 import { ReportPurchase } from "@/components/report-purchase";
 import { Button } from "@/components/ui/button";
 import { PRODUCT_IDS, ELEMENT_LUCKY, lackingElement } from "@/lib/commerce/catalog";
+import { isUuid } from "@/lib/commerce/payment-sync";
 import { parseNamingParams } from "@/lib/naming/params";
 import { analyzeChosen } from "@/lib/naming/service";
 import { createClient } from "@/lib/supabase/server";
@@ -35,6 +36,8 @@ export default async function GoodsPage({
   const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
   const gh = first(searchParams.gh);
   const ge = first(searchParams.ge);
+  // 마이페이지 저장 이름에서 온 경우: 주문에 저장 id 를 남긴다 (createOrder 가 소유·이름 일치를 확인)
+  const hid = isUuid(first(searchParams.hid)) ? first(searchParams.hid) : undefined;
   if (!parsed.ok) return <Problem message={parsed.error} />;
   if (!gh || !ge) return <Problem message="이름 정보가 올바르지 않습니다." />;
 
@@ -56,12 +59,13 @@ export default async function GoodsPage({
   // 주문 생성 시 서버가 같은 값으로 사주를 다시 계산한다 (클라이언트 값은 신뢰하지 않음)
   const qs = new URLSearchParams(
     Object.entries(searchParams).flatMap(([k, v]) =>
-      typeof v === "string" && k !== "gh" && k !== "ge" && k !== "saveError"
+      typeof v === "string" && k !== "gh" && k !== "ge" && k !== "hid" && k !== "saveError"
         ? [[k, v] as [string, string]]
         : []
     )
   ).toString();
-  const here = `/goods?${qs}&gh=${encodeURIComponent(gh)}&ge=${encodeURIComponent(ge)}`;
+  const here =
+    `/goods?${qs}&gh=${encodeURIComponent(gh)}&ge=${encodeURIComponent(ge)}` + (hid ? `&hid=${hid}` : "");
   const loginHref = `/login?next=${encodeURIComponent(here)}`;
   const fullName = `${p.surname}${ge}`;
 
@@ -69,7 +73,11 @@ export default async function GoodsPage({
     <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-3xl space-y-8 px-6 py-12">
       <header className="space-y-2">
         <Button asChild variant="ghost" size="sm" className="-ml-3">
-          <Link href={`/naming/result?${qs}`}>← 추천 결과</Link>
+          {hid ? (
+            <Link href={`/mypage/names/${hid}`}>← 저장한 이름</Link>
+          ) : (
+            <Link href={`/naming/result?${qs}`}>← 추천 결과</Link>
+          )}
         </Button>
         <h1 className="font-serif text-3xl font-bold">
           {fullName}
@@ -93,6 +101,7 @@ export default async function GoodsPage({
         qs={qs}
         gh={gh}
         ge={ge}
+        hid={hid}
         fullName={fullName}
         loggedIn={!!user}
         loginHref={loginHref}
@@ -110,6 +119,7 @@ export default async function GoodsPage({
               qs={qs}
               gh={gh}
               ge={ge}
+              hid={hid}
               loggedIn={!!user}
               loginHref={loginHref}
             />

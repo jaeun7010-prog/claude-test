@@ -13,6 +13,7 @@ export function ReportPurchase({
   qs,
   gh,
   ge,
+  hid,
   fullName,
   loginHref,
   loggedIn,
@@ -20,6 +21,7 @@ export function ReportPurchase({
   qs: string;
   gh: string;
   ge: string;
+  hid?: string;
   fullName: string;
   loginHref: string;
   loggedIn: boolean;
@@ -81,7 +83,7 @@ export function ReportPurchase({
           <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>
             닫기
           </Button>
-          <Button onClick={() => pay({ kind: "report", qs, gh, ge })} disabled={busy}>
+          <Button onClick={() => pay({ kind: "report", qs, gh, ge, hid })} disabled={busy}>
             {busy ? "결제 진행 중…" : `${won(REPORT_PRICE)} 결제`}
           </Button>
         </div>

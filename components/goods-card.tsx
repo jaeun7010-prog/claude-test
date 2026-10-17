@@ -39,6 +39,7 @@ export function GoodsCard({
   qs,
   gh,
   ge,
+  hid,
   loggedIn,
   loginHref,
 }: {
@@ -49,6 +50,7 @@ export function GoodsCard({
   qs: string;
   gh: string;
   ge: string;
+  hid?: string;
   loggedIn: boolean;
   loginHref: string;
 }) {
@@ -228,6 +230,7 @@ export function GoodsCard({
                 qs,
                 gh,
                 ge,
+                hid,
                 product,
                 quantity,
                 embroideryText: text,

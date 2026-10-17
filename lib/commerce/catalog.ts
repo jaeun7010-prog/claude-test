@@ -48,6 +48,8 @@ interface NameRef {
   /** 이름 한자 / 한글 음 */
   gh: string;
   ge: string;
+  /** 마이페이지 저장 이름에서 주문한 경우 그 저장 id (본인 저장분이고 이름이 같을 때만 orders.history_id 로 남긴다) */
+  hid?: string;
 }
 
 export type CheckoutInput =

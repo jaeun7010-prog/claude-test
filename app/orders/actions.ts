@@ -67,6 +67,25 @@ export async function createOrder(input: CheckoutInput): Promise<CreateOrderResu
 
   const base = { name: { surname, given: ge, surnameHanja, givenHanja: gh }, qs: input.qs };
 
+  // 마이페이지 저장 이름에서 주문: 본인 저장분(RLS)이고 같은 이름일 때만 연결한다. 아니면 연결 없이 주문
+  let historyId: string | null = null;
+  const hid = String(input.hid ?? "");
+  if (isUuid(hid)) {
+    const { data: saved } = await supabase
+      .from("user_naming_history")
+      .select("id, surname, surname_hanja, given_name, given_name_hanja")
+      .eq("id", hid)
+      .maybeSingle();
+    if (
+      saved &&
+      saved.surname === surname &&
+      (saved.surname_hanja ?? "") === surnameHanja &&
+      saved.given_name === ge &&
+      (saved.given_name_hanja ?? "") === gh
+    )
+      historyId = saved.id;
+  }
+
   let row: Record<string, unknown>;
   let customer: Customer = { email: user.email ?? undefined };
 
@@ -145,7 +164,7 @@ export async function createOrder(input: CheckoutInput): Promise<CreateOrderResu
   }
   const { data, error } = await admin
     .from("orders")
-    .insert({ ...row, user_id: user.id, status: "pending" })
+    .insert({ ...row, user_id: user.id, history_id: historyId, status: "pending" })
     .select("id, amount, item_name")
     .single();
   if (error || !data) {
