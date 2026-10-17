@@ -1,5 +1,5 @@
 import type { BirthInput } from "@/lib/saju";
-import { resolveBirthplace, type Birthplace } from "@/lib/saju/birthplaces";
+import { CUSTOM_BIRTHPLACE_ID, resolveBirthplace, type Birthplace } from "@/lib/saju/birthplaces";
 import { COMPOUND_SURNAMES } from "./surnames";
 
 export interface NamingParams {
@@ -138,4 +138,44 @@ export function parseNamingParams(raw: Raw): ParseResult {
       rarity: one(raw.rarity) === "rare" ? "rare" : one(raw.rarity) === "common" ? "common" : "any",
     },
   };
+}
+
+/**
+ * NamingParams → 결과 화면 쿼리스트링 (parseNamingParams 의 역). 같은 조건이면 항상 같은 문자열이 나온다.
+ * 저장된 작명을 "최신 기준으로 다시 분석"할 때와 리포트 결제 여부(같은 조건인지)를 비교할 때 쓴다.
+ * withRarity=false 면 정렬에만 쓰는 rarity 를 뺀다 (분석 결과와 상관없음)
+ */
+export function toNamingQuery(p: NamingParams, withRarity = true): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const q = new URLSearchParams();
+  q.set("surname", p.surname);
+  q.set("sh", p.surnameHanja);
+  if (p.parentSurname) {
+    q.set("ps", p.parentSurname.hangul);
+    q.set("psh", p.parentSurname.hanja);
+  }
+  q.set("date", `${p.birth.year}-${pad(p.birth.month)}-${pad(p.birth.day)}`);
+  if (p.hasTime) q.set("time", `${pad(p.birth.hour!)}:${pad(p.birth.minute ?? 0)}`);
+  if (p.birth.lateNight === "same-day") q.set("late", "same-day");
+  q.set("place", p.birthplace.id);
+  if (p.birthplace.id === CUSTOM_BIRTHPLACE_ID) {
+    q.set("tz", p.birthplace.timeZone);
+    q.set("lon", String(p.birthplace.longitude));
+  }
+  q.set("gender", p.gender);
+  if (p.length !== "any") q.set("len", p.length);
+  if (p.dolrimja) {
+    q.set("dol", p.dolrimja.syllable);
+    q.set("dolpos", String(p.dolrimja.position));
+  }
+  if (p.globalFriendly) q.set("glob", "1");
+  if (p.neutral) q.set("neutral", "1");
+  if (withRarity && p.rarity !== "any") q.set("rarity", p.rarity);
+  return q.toString();
+}
+
+/** 쿼리스트링을 같은 조건끼리 비교할 수 있는 키로 바꾼다 (읽을 수 없으면 null) */
+export function namingConditionKey(qs: string): string | null {
+  const parsed = parseNamingParams(Object.fromEntries(new URLSearchParams(qs)));
+  return parsed.ok ? toNamingQuery(parsed.value, false) : null;
 }

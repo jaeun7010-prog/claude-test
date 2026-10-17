@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { civilToUtcMs } from "@/lib/saju/calendar";
 import { parseNamingParams } from "@/lib/naming/params";
 import { analyzeChosen } from "@/lib/naming/service";
+import { buildReportSnapshot } from "@/lib/commerce/report-snapshot";
+import { savedQueryOf } from "@/lib/naming/saved";
 import { createClient } from "@/lib/supabase/server";
 
 /** 추천 결과 중 하나를 마이페이지(작명 이력)에 저장. 점수는 서버에서 다시 계산한다. */
@@ -65,8 +67,12 @@ export async function saveName(formData: FormData) {
           : null,
         birthDate: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
       },
+      // 2026-10-18부터: 저장 당시 분석 전체(한자 훈·뜻, 사주 상세)를 리포트 스냅숏 형식으로 함께 둔다 (lib/naming/saved.ts)
+      snapshot: buildReportSnapshot(p, r),
     },
     filters: {
+      // 입력 조건 원문 (최신 기준으로 다시 분석·리포트 결제 여부 확인용)
+      qs: savedQueryOf(p),
       length: p.length,
       dolrimja: p.dolrimja,
       // 부모 성 함께 쓰기: given_name 에는 이 성을 포함한 법적 이름이 들어간다
