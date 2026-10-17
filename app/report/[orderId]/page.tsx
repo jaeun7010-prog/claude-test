@@ -73,7 +73,8 @@ export default async function ReportPage({ params }: { params: { orderId: string
     `${year}년 ${month}월 ${day}일` +
     (p.hasTime
       ? ` ${String(p.birth.hour).padStart(2, "0")}시 ${String(p.birth.minute ?? 0).padStart(2, "0")}분`
-      : " (시각 미상)");
+      : " (시각 미상)") +
+    ` · ${p.birthplace.label} 출생`;
   const issued = new Date(order.paid_at ?? order.created_at);
 
   const data: ReportData = {

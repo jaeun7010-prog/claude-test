@@ -11,7 +11,8 @@ export interface BirthInput {
   /** 출생지 IANA 시간대 (기본 Asia/Seoul) */
   timeZone?: string;
   /**
-   * 출생지 경도(동경, 도). 평균태양시 보정에 사용 (기본: 서울 126.978).
+   * 출생지 경도(동경 +, 서경 −, 도). 평균태양시 보정에 사용 (기본: 서울 126.978).
+   * 균시차는 반영하지 않는다 (국내 작명가·사주 앱 대부분과 시주를 맞추기 위해).
    * null이면 보정하지 않고 입력한 벽시계 시각 그대로 일주·시주를 계산합니다.
    */
   longitude?: number | null;
@@ -45,6 +46,8 @@ export interface FourPillars {
     monthTerm: { name: string; ko: string; utcMs: number };
     /** 일주·시주 계산에 사용한 지방 평균태양시 (UTC 필드로 읽을 것) */
     localSolarDate: Date;
+    /** 경도 보정량(분): 평균태양시 − 입력한 시계 시각. 서머타임 포함. 보정하지 않았으면 0 */
+    correctionMinutes: number;
     /** 사주상 연도 (입춘 기준) */
     sajuYear: number;
   };
@@ -147,6 +150,11 @@ export function calculateFourPillars(input: BirthInput): FourPillars {
     meta: {
       monthTerm: { name: current.name, ko: JIE_KO[current.name], utcMs: current.utcMs },
       localSolarDate: local,
+      correctionMinutes: Math.round(
+        (local.getTime() -
+          Date.UTC(civil.year, civil.month - 1, civil.day, civil.hour, civil.minute)) /
+          60_000
+      ),
       sajuYear,
     },
   };

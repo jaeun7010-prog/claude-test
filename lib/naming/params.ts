@@ -1,10 +1,13 @@
 import type { BirthInput } from "@/lib/saju";
+import { resolveBirthplace, type Birthplace } from "@/lib/saju/birthplaces";
 import { COMPOUND_SURNAMES } from "./surnames";
 
 export interface NamingParams {
   surname: string; // 한글 성
   surnameHanja: string; // 한자 성 (글자 수는 surname과 동일)
   birth: BirthInput;
+  /** 출생지. 예전 링크처럼 place가 없으면 서울 */
+  birthplace: Birthplace;
   hasTime: boolean;
   gender: "male" | "female" | "neutral";
   length: "1" | "2" | "any";
@@ -65,6 +68,13 @@ export function parseNamingParams(raw: Raw): ParseResult {
 
   const lateNight = one(raw.late) === "same-day" ? "same-day" : "next-day";
 
+  const birthplace = resolveBirthplace(one(raw.place), {
+    timeZone: one(raw.tz),
+    longitude: one(raw.lon),
+  });
+  if (!birthplace)
+    return { ok: false, error: "출생지를 확인해 주세요. 기타 해외는 시간대와 경도를 모두 입력해야 합니다." };
+
   const g = one(raw.gender);
   const gender = g === "male" || g === "female" ? g : "neutral";
 
@@ -86,7 +96,17 @@ export function parseNamingParams(raw: Raw): ParseResult {
     value: {
       surname,
       surnameHanja,
-      birth: { year, month, day, hour, minute, lateNight },
+      birth: {
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        lateNight,
+        timeZone: birthplace.timeZone,
+        longitude: birthplace.longitude,
+      },
+      birthplace,
       hasTime,
       gender,
       length,

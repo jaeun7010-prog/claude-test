@@ -30,7 +30,7 @@ export async function saveName(formData: FormData) {
   const birthDatetime =
     hour !== undefined
       ? new Date(
-          civilToUtcMs({ year, month, day, hour, minute: minute ?? 0 }, "Asia/Seoul")
+          civilToUtcMs({ year, month, day, hour, minute: minute ?? 0 }, p.birthplace.timeZone)
         ).toISOString()
       : null;
 
@@ -68,6 +68,11 @@ export async function saveName(formData: FormData) {
       neutral: p.neutral,
       rarity: p.rarity,
       lateNight: p.birth.lateNight,
+      birthplace: {
+        id: p.birthplace.id,
+        timeZone: p.birthplace.timeZone,
+        longitude: p.birthplace.longitude,
+      },
     },
   });
   if (error) redirect(`/naming/result?${qs}&saveError=1`);

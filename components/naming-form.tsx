@@ -6,6 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { COMMON_SURNAMES } from "@/lib/naming/surnames";
+import {
+  BIRTHPLACES,
+  CUSTOM_BIRTHPLACE_ID,
+  DEFAULT_BIRTHPLACE_ID,
+} from "@/lib/saju/birthplaces";
 import { createClient } from "@/lib/supabase/client";
 
 interface SurnameOption {
@@ -24,6 +29,7 @@ export function NamingForm() {
   const [options, setOptions] = useState<SurnameOption[]>([]);
   const [surnameHanja, setSurnameHanja] = useState("");
   const [noTime, setNoTime] = useState(false);
+  const [place, setPlace] = useState(DEFAULT_BIRTHPLACE_ID);
   const [length, setLength] = useState<"any" | "1" | "2">("any");
   const [loadError, setLoadError] = useState(false);
 
@@ -84,6 +90,12 @@ export function NamingForm() {
       cancelled = true;
     };
   }, [surname, supabase]);
+
+  // 기타 해외 출생: 브라우저가 아는 IANA 시간대 목록 (선택했을 때만 렌더링)
+  const timeZones = useMemo(
+    () => (place === CUSTOM_BIRTHPLACE_ID ? Intl.supportedValuesOf("timeZone") : []),
+    [place]
+  );
 
   return (
     <form action="/naming/result" method="get" className="space-y-6">
@@ -150,14 +162,69 @@ export function NamingForm() {
           </div>
         </div>
         <div className="space-y-2">
+          <Label htmlFor="place">태어난 곳</Label>
+          <select
+            id="place"
+            name="place"
+            className={selectClass}
+            value={place}
+            onChange={(e) => setPlace(e.target.value)}
+          >
+            {(["국내", "해외"] as const).map((group) => (
+              <optgroup key={group} label={group}>
+                {BIRTHPLACES.filter((b) => b.group === group).map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.label}
+                  </option>
+                ))}
+                {group === "해외" && (
+                  <option value={CUSTOM_BIRTHPLACE_ID}>기타 (시간대·경도 직접 입력)</option>
+                )}
+              </optgroup>
+            ))}
+          </select>
+          {place === CUSTOM_BIRTHPLACE_ID && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="tz">시간대</Label>
+                <select id="tz" name="tz" className={selectClass} required defaultValue="">
+                  <option value="" disabled>
+                    시간대를 고르세요
+                  </option>
+                  {timeZones.map((tz) => (
+                    <option key={tz} value={tz}>
+                      {tz}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lon">경도 (동경 +, 서경 −)</Label>
+                <Input
+                  id="lon"
+                  name="lon"
+                  type="number"
+                  step="0.001"
+                  min={-180}
+                  max={180}
+                  placeholder="예: -73.94"
+                  required
+                />
+              </div>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            태어난 곳의 경도로 해의 실제 위치에 맞춰 출생 시각을 보정합니다. 시·도까지만 고르면 됩니다.
+          </p>
+        </div>
+        <div className="space-y-2">
           <Label htmlFor="late">자시(23:00~24:00) 처리</Label>
           <select id="late" name="late" className={selectClass} defaultValue="next-day">
             <option value="next-day">23시부터 다음 날로 계산 (기본)</option>
             <option value="same-day">야자시: 당일로 계산 (23~24시)</option>
           </select>
           <p className="text-xs text-muted-foreground">
-            23시 이후 출생이 아니면 결과에 영향이 없습니다. 출생시는 서울(동경 126.98°) 기준 평균
-            태양시로 보정하여 계산합니다.
+            23시 이후 출생이 아니면 결과에 영향이 없습니다.
           </p>
         </div>
         <div className="space-y-2">

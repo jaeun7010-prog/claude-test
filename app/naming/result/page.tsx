@@ -7,6 +7,7 @@ import { NameStatsBasic } from "@/components/name-stats-basic";
 import { TierBadge } from "@/components/name-stats-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResultList, type ResultItem } from "@/components/naming/result-list";
+import { TimeCorrectionNote } from "@/components/naming/time-correction-note";
 import { parseNamingParams, type NamingParams } from "@/lib/naming/params";
 import { parsePriorities, type Priorities } from "@/lib/naming/priorities";
 import { hunEum, type NameGroup, type Recommendation } from "@/lib/naming/recommend";
@@ -330,7 +331,7 @@ export default async function ResultPage({
             {p.hasTime
               ? ` ${String(p.birth.hour).padStart(2, "0")}:${String(p.birth.minute).padStart(2, "0")}`
               : " (시각 미상)"}{" "}
-            · 월주 기준 절기 {result.saju.pillars.meta.monthTerm.ko}
+            · {p.birthplace.label} 출생 · 월주 기준 절기 {result.saju.pillars.meta.monthTerm.ko}
           </p>
         </div>
         <Button asChild variant="outline" size="sm">
@@ -361,6 +362,14 @@ export default async function ResultPage({
             <PillarCell label="월주" pillar={pillars.month} />
             <PillarCell label="연주" pillar={pillars.year} />
           </div>
+
+          <TimeCorrectionNote
+            correction={result.saju.timeCorrection}
+            birthplace={p.birthplace}
+            input={p.hasTime ? { hour: p.birth.hour!, minute: p.birth.minute ?? 0 } : null}
+            hourPillar={pillars.hour}
+            dayPillar={pillars.day}
+          />
 
           <div className="space-y-2">
             {(["목", "화", "토", "금", "수"] as const).map((e) => (
