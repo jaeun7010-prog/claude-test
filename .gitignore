@@ -38,3 +38,6 @@ next-env.d.ts
 
 # playwright MCP 산출물
 .playwright-mcp/
+
+# 검토용 산출물 (제외 한자 목록 등)
+/data/review/
