@@ -1,8 +1,8 @@
 /**
  * 한자 뜻이 이름에 어울리는지 판정 (영문 뜻풀이 · 한글 훈 · 교육용 여부 기반).
  *
- *   제외     부정적·불분명한 뜻(영문 뜻풀이 또는 한글 훈), 또는 사물·도구·무기·신체·지명/성씨 전용·어조사 뜻인
- *            비교육용 글자 → 후보에서 뺀다
+ *   제외     부정적·불분명한 뜻(영문 뜻풀이 또는 한글 훈), 칠하다·진흙·먼지 뜻(교육용 포함), 드문 읽기(rare-readings.ts),
+ *            또는 사물·도구·무기·신체·지명/성씨 전용·어조사 뜻인 비교육용 글자 → 후보에서 뺀다
  *   어색     사물 등의 뜻이지만 교육용인 글자 → 후보에 남기고 순위에서 크게 감점
  *   애매     교육용도 아니고 뜻이 긍정적이지도 않은 글자 → 감점
  *   보통     교육용 글자, 또는 뜻이 긍정적인 비교육용 글자
@@ -10,6 +10,7 @@
  */
 import { hasAcceptableMeaning, hasPositiveMeaning } from "./hanja-meaning";
 import { isAllowedNameHanja } from "./name-hanja-allowlist";
+import { isRareReading } from "./rare-readings";
 
 export type Suitability = "exclude" | "awkward" | "obscure" | "normal" | "good";
 
@@ -86,6 +87,19 @@ export function hasNegativeHun(hun: string | null): boolean {
   return hun.split(/[\s,()]+/).some((w) => NEGATIVE_HUN.has(w));
 }
 
+/**
+ * 칠하다·바르다·진흙·먼지처럼 이름에 어색한 뜻 (塗 "smear"가 교육용 + 무난한 뜻으로 보통 등급이 되어 S등급 2위에 오른 사례).
+ * 훈 "바를"은 正(바를 정)과 겹쳐 쓰지 않고, 영문 뜻풀이 첫 뜻과 아래 훈 단어로만 본다. 교육용이어도 제외한다.
+ */
+const MESSY_GLOSS =
+  /\b(smear|smeared|daub|plaster|mud|muddy|slush|mire|dust|soot|ashes|varnish|lacquer|grease|glue|paste|to soil)\b/i;
+const MESSY_HUN = new Set("진흙 찰진흙 흙손 더럽힐 티끌 띠끌 먼지 그을음 앙금 얼룩 옻칠할 맥질할 칠할".split(" "));
+
+export function isMessyMeaning(meaning: string | null, hun: string | null): boolean {
+  if (MESSY_GLOSS.test(firstSense(meaning))) return true;
+  return !!hun && hun.split(/[\s,()]+/).some((w) => MESSY_HUN.has(w));
+}
+
 /** 지명·인명 전용 글자와 어조사 */
 const NAME_OR_PARTICLE_HUN = /(땅|물|강|산|나라|고을|사람)\s?이름|어조사/;
 
@@ -107,7 +121,8 @@ export function classifyHanja(c: {
   isEdu: boolean;
 }): Suitability {
   if (isAllowedNameHanja(c.hanja, c.eum)) return "good";
-  if (!hasAcceptableMeaning(c.meaning) || hasNegativeHun(c.hun)) return "exclude";
+  if (isRareReading(c.hanja, c.eum)) return "exclude";
+  if (!hasAcceptableMeaning(c.meaning) || hasNegativeHun(c.hun) || isMessyMeaning(c.meaning, c.hun)) return "exclude";
   if (isObjectLike(c.meaning, c.hun)) return c.isEdu ? "awkward" : "exclude";
   // 뜻풀이가 긍정적이어도 교육용이 아니면 이름에 잘 안 쓰는 글자가 많아(瑭·璐 등 옥 이름) 보통으로 본다
   if (hasPositiveMeaning(c.meaning)) return c.isEdu ? "good" : "normal";
