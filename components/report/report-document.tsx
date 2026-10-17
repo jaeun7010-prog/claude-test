@@ -217,6 +217,12 @@ export function ReportDocument({ data }: { data: ReportData }) {
             ))}
           </tbody>
         </table>
+        {data.texts.nameMeaning && (
+          <p style={{ margin: "14px 0 0", fontSize: "15px", lineHeight: 1.7 }}>
+            <span style={{ color: C.muted }}>이름 뜻 · {data.texts.nameMeaning.chars} →</span>{" "}
+            {data.texts.nameMeaning.sentence}
+          </p>
+        )}
 
         <h2 style={{ ...h2, marginTop: sectionGap }}>五. 수리 81수 사격(四格)</h2>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "15px" }}>

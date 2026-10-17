@@ -16,6 +16,7 @@ import { TimeCorrectionNote } from "@/components/naming/time-correction-note";
 import { loadEntitlement, type Entitlement } from "@/lib/commerce/entitlement";
 import { parseNamingParams, toNamingQuery, type NamingParams } from "@/lib/naming/params";
 import { parsePriorities, type Priorities } from "@/lib/naming/priorities";
+import { nameMeaningOf } from "@/lib/naming/name-meaning";
 import { hunEum, type NameGroup, type Recommendation } from "@/lib/naming/recommend";
 import { registrationCaveat, registrationText } from "@/lib/naming/registration";
 import { GRADE_MIN, SCORE_WEIGHTS } from "@/lib/naming/score";
@@ -70,6 +71,17 @@ function LegalDetails({ r, p, unlocked }: { r: Recommendation; p: NamingParams; 
         </p>
       </div>
     </details>
+  );
+}
+
+/** 이름 전체 뜻 한 줄 (무료). 부모 성 함께 쓰기는 새로 고르는 글자만 본다. 문장이 없으면 그리지 않는다 (훈음은 위 줄에 있음) */
+function NameMeaningLine({ r, p }: { r: Recommendation; p: NamingParams }) {
+  const m = nameMeaningOf(r.givenName.slice(p.parentSurname ? [...p.parentSurname.hanja].length : 0));
+  if (!m) return null;
+  return (
+    <p className="mt-1 text-sm">
+      <span className="text-muted-foreground">이름 뜻 · {m.chars} →</span> {m.sentence}
+    </p>
   );
 }
 
@@ -147,6 +159,7 @@ function NameCardBody({
             </span>
           </p>
           <p className="mt-1 text-sm text-muted-foreground">{charLine(best)}</p>
+          <NameMeaningLine r={best} p={p} />
           {p.parentSurname && (
             <p className="mt-1 text-xs text-muted-foreground">
               {registrationText({
@@ -231,6 +244,7 @@ function NameCardBody({
                       {hanjaOf(r)}
                     </p>
                     <p className="text-sm text-muted-foreground">{charLine(r)}</p>
+                    <NameMeaningLine r={r} p={p} />
                   </div>
                   <GradeBadge grade={r.analysis.grade} score={r.analysis.totalScore} size="sm" />
                 </div>

@@ -146,6 +146,10 @@ export const NAME_HANJA_ALLOWLIST: readonly AllowedNameHanja[] = [
   { hanja: "利", eum: "이", reason: DISPLAY, nameHun: "이로울", displayOnly: true },
   { hanja: "仁", eum: "인", reason: POPULAR },
   { hanja: "寅", eum: "인", reason: POPULAR, nameHun: "셋째 지지" },
+  // 이름 뜻 한 줄(name-meaning.ts)의 문구와 화면 훈을 맞추려고 풀이만 바꾼다 (2026-10-18 사용자 승인)
+  { hanja: "燃", eum: "연", reason: DISPLAY, nameHun: "타오를", displayOnly: true },
+  { hanja: "淡", eum: "담", reason: DISPLAY, nameHun: "맑을", displayOnly: true },
+  { hanja: "璐", eum: "로", reason: DISPLAY, nameHun: "아름다운 옥", displayOnly: true },
   // ㅈ
   { hanja: "在", eum: "재", reason: POPULAR },
   { hanja: "載", eum: "재", reason: POPULAR },
