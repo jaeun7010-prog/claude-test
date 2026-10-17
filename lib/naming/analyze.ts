@@ -1,4 +1,13 @@
 import { evaluateFlow, pronunciationElement, strokeElement } from "./elements";
+import {
+  GYEOK_WEIGHTS,
+  PRONUNCIATION_FLOW_WEIGHTS,
+  SAJU_CHAR_SCORE,
+  SCORE_WEIGHTS,
+  SURI_PARTS,
+  gradeOf,
+  sajuCharScore,
+} from "./score";
 import { isLuckySuri, reduceSuri } from "./suri81";
 import type {
   Element,
@@ -7,6 +16,7 @@ import type {
   HanjaChar,
   NamingAnalysis,
   NamingInput,
+  ScoreBreakdown,
 } from "./types";
 
 const sum = (chars: HanjaChar[]) => chars.reduce((s, c) => s + c.strokes, 0);
@@ -54,24 +64,30 @@ function validate({ surname, givenName }: NamingInput) {
   }
 }
 
-// 가중치: 수리 40 + 발음오행 30 + 자원오행 30. 자원오행 정보가 없으면 70점 만점 기준으로 환산
-const W_SURI = 40;
-const W_PRON = 30;
-const W_RES = 30;
+const round1 = (n: number) => Math.round(n * 10) / 10;
 
 export function analyzeName(input: NamingInput): NamingAnalysis {
   validate(input);
-  const { surname, givenName, neededElement } = input;
+  const { surname, givenName, neededElement, favorableElement, unfavorableElement } = input;
 
   const gyeoks = fourGyeok(surname, givenName);
-  const luckyCount = Object.values(gyeoks).filter((g) => g.lucky).length;
-  const suriScore = (luckyCount / 4) * 100;
+  const luck =
+    (Object.keys(gyeoks) as FourGyeokKey[]).reduce(
+      (s, k) => s + (gyeoks[k].lucky ? GYEOK_WEIGHTS[k] : 0),
+      0
+    ) * 100;
+  const suriFlow = evaluateFlow([gyeoks.won.element, gyeoks.hyeong.element, gyeoks.i.element]).score;
+  // 획수 홀수=양, 짝수=음. 성·이름 글자가 모두 같은 쪽이면 음양이 치우친 것으로 본다
+  const parity = new Set([...surname, ...givenName].map((c) => c.strokes % 2));
+  const yinYang = parity.size === 2 ? 100 : 0;
+  const suriScore =
+    luck * SURI_PARTS.luck + suriFlow * SURI_PARTS.flow + yinYang * SURI_PARTS.yinYang;
 
   // 발음오행: 성의 첫 글자 + 이름 글자들의 초성
   const pronElements = [surname[0], ...givenName]
     .map((c) => pronunciationElement(c.eum))
     .filter((e): e is Element => e !== null);
-  const pronunciation = evaluateFlow(pronElements);
+  const pronunciation = evaluateFlow(pronElements, PRONUNCIATION_FLOW_WEIGHTS);
 
   // 자원오행: 오행을 아는 글자만으로 평가한다. 이름 글자 중 하나라도 오행을 알아야 의미가 있다.
   // needMatched: 용신 글자가 있으면 true, 이름 글자가 모두 확인됐는데 없으면 false, 판단 불가면 null
@@ -88,21 +104,42 @@ export function analyzeName(input: NamingInput): NamingAnalysis {
     resource = { ...flow, needMatched };
   }
 
-  let resScore = resource?.score ?? 0;
-  if (resource?.needMatched === true) resScore = Math.min(100, resScore + 30);
-  if (resource?.needMatched === false) resScore = Math.max(0, resScore - 20);
+  // 사주 보완: 이름 글자마다 용신·희신·중립·기신을 따로 반영한다. 오행을 모르는 글자는 중립으로 본다
+  let sajuScore: number | null = null;
+  if (neededElement && knownGiven.length > 0) {
+    const saju = { needed: neededElement, favorable: favorableElement, unfavorable: unfavorableElement };
+    const per = givenName.map((c) => sajuCharScore(c.element, saju) ?? SAJU_CHAR_SCORE.neutral);
+    sajuScore = round1((per.reduce((a, b) => a + b, 0) / per.length) * 100);
+  }
 
-  const weights = W_SURI + W_PRON + (resource ? W_RES : 0);
-  const total =
-    (suriScore * W_SURI +
-      pronunciation.score * W_PRON +
-      (resource ? resScore * W_RES : 0)) /
-    weights;
+  const breakdown: ScoreBreakdown = {
+    saju: sajuScore,
+    suri: round1(suriScore),
+    pronunciation: pronunciation.score,
+    resource: resource ? resource.score : null,
+  };
+
+  const parts: [number | null, number][] = [
+    [breakdown.saju, SCORE_WEIGHTS.saju],
+    [breakdown.suri, SCORE_WEIGHTS.suri],
+    [breakdown.pronunciation, SCORE_WEIGHTS.pronunciation],
+    [breakdown.resource, SCORE_WEIGHTS.resource],
+  ];
+  let sum = 0;
+  let weights = 0;
+  for (const [score, w] of parts) {
+    if (score === null) continue;
+    sum += score * w;
+    weights += w;
+  }
+  const totalScore = round1(sum / weights);
 
   return {
     fourGyeok: gyeoks,
     pronunciation,
     resource,
-    totalScore: Math.round(total * 10) / 10,
+    breakdown,
+    totalScore,
+    grade: gradeOf(totalScore),
   };
 }

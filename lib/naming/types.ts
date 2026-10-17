@@ -17,8 +17,26 @@ export interface NamingInput {
   surname: HanjaChar[];
   /** 이름 (1자 외자 또는 2자) */
   givenName: HanjaChar[];
-  /** 사주에서 구한 용신(보강이 필요한 오행). 있으면 자원오행 점수에 반영 */
+  /** 사주에서 구한 용신(보강이 필요한 오행). 있으면 사주 보완 점수에 반영 */
   neededElement?: Element;
+  /** 희신 (용신을 돕는 오행) */
+  favorableElement?: Element;
+  /** 기신 (피하면 좋은 오행) */
+  unfavorableElement?: Element;
+}
+
+export type Grade = "S" | "A" | "B" | "C";
+
+/** 성명학 점수의 항목별 점수 (각 0~100). 판단할 정보가 없으면 null */
+export interface ScoreBreakdown {
+  /** 사주 보완: 이름 글자의 자원오행이 용신·희신인가 */
+  saju: number | null;
+  /** 수리: 4격 길흉(격별 가중치) + 수리오행 흐름 + 획수 음양 조화 */
+  suri: number;
+  /** 발음오행 흐름 (성 → 이름 첫 글자 관계에 가중치) */
+  pronunciation: number;
+  /** 자원오행 흐름 */
+  resource: number | null;
 }
 
 export type FourGyeokKey = "won" | "hyeong" | "i" | "jeong";
@@ -49,6 +67,9 @@ export interface NamingAnalysis {
   pronunciation: ElementFlow;
   /** 자원오행 (한자 고유 오행). 사전에 오행 정보가 없는 글자가 있으면 null */
   resource: (ElementFlow & { needMatched: boolean | null }) | null;
-  /** 100점 만점 종합 점수 */
+  /** 항목별 점수 */
+  breakdown: ScoreBreakdown;
+  /** 100점 만점 성명학 점수 (소수 첫째 자리). 등급·리포트·저장에는 이 점수만 쓴다 */
   totalScore: number;
+  grade: Grade;
 }

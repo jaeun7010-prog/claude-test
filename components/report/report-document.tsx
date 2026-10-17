@@ -221,6 +221,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
         )}
         <p style={{ margin: "14px 0 0", fontSize: "26px", fontWeight: 800 }}>
           종합 점수 <span style={{ fontSize: "40px" }}>{analysis.totalScore}</span> / 100
+          {analysis.grade && <span style={{ marginLeft: "16px" }}>{analysis.grade}등급</span>}
         </p>
 
         <p style={{ margin: "34px 0 0", fontSize: "12px", lineHeight: 1.7, color: C.muted }}>

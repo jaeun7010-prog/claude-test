@@ -6,7 +6,8 @@ import { analyzeName } from "./analyze";
 import { fetchByEum, fetchPool, fetchSurname } from "./hanja-repo";
 import type { NamingParams } from "./params";
 import { hasAcceptableMeaning } from "./hanja-meaning";
-import { recommendNames, type NameHanja, type Recommendation } from "./recommend";
+import { recommendNames, type NameGroup, type NameHanja } from "./recommend";
+import { compareAnalysis } from "./score";
 import { TREND_MIN } from "./trend";
 
 export type NamingResult =
@@ -14,7 +15,8 @@ export type NamingResult =
       ok: true;
       saju: ReturnType<typeof analyzeSaju>;
       surname: NameHanja[];
-      recommendations: Recommendation[];
+      /** 한글 이름별 묶음 (대표 조합의 성명학 점수 순) */
+      groups: NameGroup[];
       /** 이름(성 제외) → 출생 통계 요약. 통계 데이터가 적재되지 않았으면 null */
       stats: Map<string, NameStatSummary> | null;
       /** 사용자에게 알릴 안내 (예: 통계 미적재로 필터 미적용) */
@@ -57,7 +59,7 @@ async function runNamingUnsafe(
     };
   }
   const { surname, saju } = base;
-  const needed = saju.yongsin.yongsin;
+  const { yongsin: needed, huisin, gisin } = saju.yongsin;
 
   // 대법원 인명용 한자 전체 (불용한자와 부정적·불분명한 뜻 제외)
   const pool = await fetchPool(supabase);
@@ -87,6 +89,8 @@ async function runNamingUnsafe(
       second: p.length === "1" ? [] : second,
       single: p.length === "2" || p.dolrimja ? [] : pool,
       neededElement: needed,
+      favorableElement: huisin,
+      unfavorableElement: gisin,
       requireNeeded: true,
       minLuckyGyeok,
       minGlobalScore: p.globalFriendly ? 70 : 0,
@@ -97,9 +101,9 @@ async function runNamingUnsafe(
     });
 
   // 4격이 모두 길수이고 요즘 어감인 이름을 우선하고, 후보가 부족하면 단계적으로 완화한다
-  let recommendations = run(4, TREND_MIN);
-  if (recommendations.length < 10) recommendations = run(3, TREND_MIN);
-  if (recommendations.length < 10) recommendations = run(3, 0);
+  let groups = run(4, TREND_MIN);
+  if (groups.length < 10) groups = run(3, TREND_MIN);
+  if (groups.length < 10) groups = run(3, 0);
 
   // 출생 통계 연동 (희소성 표시 + 젠더 뉴트럴/희소성 필터)
   let stats: Map<string, NameStatSummary> | null = null;
@@ -107,12 +111,24 @@ async function runNamingUnsafe(
   try {
     const loaded = await loadNameSummaries(
       supabase,
-      recommendations.map((r) => r.hangul)
+      groups.map((g) => g.hangul)
     );
     stats = loaded?.summaries ?? null;
   } catch (e) {
     console.error("[naming] 통계 조회 실패", e);
   }
+
+  // 대표 조합의 성명학 점수 순. 동점이면 사주 보완 → 수리 → 발음오행 → 희소성(누적 건수가 적은 이름) 순
+  const births = (g: NameGroup) => {
+    const c = stats?.get(g.hangul)?.cumulative;
+    return c ? c.male + c.female : 0;
+  };
+  groups.sort(
+    (a, b) =>
+      compareAnalysis(a.options[0].analysis, b.options[0].analysis) ||
+      births(a) - births(b) ||
+      a.hangul.localeCompare(b.hangul, "ko")
+  );
 
   if (wantsStatsFilter) {
     if (!stats) {
@@ -120,29 +136,29 @@ async function runNamingUnsafe(
     } else {
       if (p.neutral) {
         // 통계에 한 번도 오르지 않은 이름은 성비를 알 수 없어 제외한다
-        recommendations = recommendations.filter((r) => stats!.get(r.hangul)?.neutral);
+        groups = groups.filter((g) => stats!.get(g.hangul)?.neutral);
       }
       if (p.rarity !== "any") {
         const order = { "매우 드묾": 0, 드묾: 1, 보통: 2, 흔함: 3 } as const;
-        const key = (r: Recommendation) => {
-          const t = stats!.get(r.hangul)?.tier;
+        const key = (g: NameGroup) => {
+          const t = stats!.get(g.hangul)?.tier;
           return t ? order[t] : 0;
         };
         const sign = p.rarity === "rare" ? 1 : -1;
         // 안정 정렬: 등급이 같으면 기존 점수 순서를 유지
-        recommendations = recommendations
-          .map((r, i) => ({ r, i }))
-          .sort((a, b) => sign * (key(a.r) - key(b.r)) || a.i - b.i)
-          .map((x) => x.r);
+        groups = groups
+          .map((g, i) => ({ g, i }))
+          .sort((a, b) => sign * (key(a.g) - key(b.g)) || a.i - b.i)
+          .map((x) => x.g);
       }
-      if (p.neutral && recommendations.length === 0) {
+      if (p.neutral && groups.length === 0) {
         notice = "젠더 뉴트럴 조건을 만족하는 추천 이름이 없습니다. 조건을 완화해 보세요.";
       }
     }
   }
-  recommendations = recommendations.slice(0, RESULT_LIMIT);
+  groups = groups.slice(0, RESULT_LIMIT);
 
-  return { ok: true, saju, surname, recommendations, stats, notice };
+  return { ok: true, saju, surname, groups, stats, notice };
 }
 
 /** 저장 시 서버에서 다시 분석 (클라이언트가 보낸 점수를 신뢰하지 않음) */
@@ -156,10 +172,13 @@ export async function analyzeChosen(
   if (!base) return null;
   const given = await fetchSurname(supabase, [...givenHanja], [...givenEum]);
   if (!given) return null;
+  const { yongsin, huisin, gisin } = base.saju.yongsin;
   const analysis = analyzeName({
     surname: base.surname,
     givenName: given,
-    neededElement: base.saju.yongsin.yongsin,
+    neededElement: yongsin,
+    favorableElement: huisin,
+    unfavorableElement: gisin,
   });
   return { ...base, given, analysis };
 }

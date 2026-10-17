@@ -63,8 +63,11 @@ const RELATION_SCORE: Record<Relation, number> = {
   극: 0,
 };
 
-/** 오행 배열의 인접 관계를 평가. 모든 글자가 같은 오행이면 편중으로 감점 */
-export function evaluateFlow(elements: Element[]): ElementFlow {
+/**
+ * 오행 배열의 인접 관계를 평가. 모든 글자가 같은 오행이면 편중으로 감점.
+ * `weights`를 주면 앞쪽 관계부터 차례로 가중 평균한다 (모자라면 마지막 값을 반복).
+ */
+export function evaluateFlow(elements: Element[], weights?: readonly number[]): ElementFlow {
   const relations: Relation[] = [];
   for (let i = 0; i < elements.length - 1; i++) {
     relations.push(relation(elements[i], elements[i + 1]));
@@ -72,8 +75,9 @@ export function evaluateFlow(elements: Element[]): ElementFlow {
   if (relations.length === 0) {
     return { elements, relations, score: 70 };
   }
-  let score =
-    relations.reduce((sum, r) => sum + RELATION_SCORE[r], 0) / relations.length;
+  const w = relations.map((_, i) => weights?.[Math.min(i, weights.length - 1)] ?? 1);
+  const wSum = w.reduce((a, b) => a + b, 0);
+  let score = relations.reduce((sum, r, i) => sum + RELATION_SCORE[r] * w[i], 0) / wSum;
   if (elements.length >= 3 && new Set(elements).size === 1) score = 40;
-  return { elements, relations, score: Math.round(score) };
+  return { elements, relations, score: Math.round(score * 10) / 10 };
 }
