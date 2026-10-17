@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { GradeBadge } from "@/components/naming/analysis-parts";
+import { SavedList } from "@/components/mypage/saved-list";
 import { registrationText } from "@/lib/naming/registration";
 import { readSaved, SAVED_COLUMNS, type SavedRow } from "@/lib/naming/saved";
 import { createClient } from "@/lib/supabase/server";
@@ -90,54 +90,30 @@ export default async function MyPage() {
         <CardHeader>
           <CardTitle>저장된 작명 결과</CardTitle>
           <CardDescription>
-            {saved.length}건이 저장되어 있습니다. 이름을 누르면 저장할 때의 분석을 볼 수 있습니다.
+            {saved.length}건이 저장되어 있습니다. 이름을 누르면 저장할 때의 분석을, 2~3개를 고르면 나란히 비교해 볼 수 있습니다.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {saved.length > 0 ? (
-            <ul className="divide-y">
-              {saved.map((h) => (
-                <li key={h.id}>
-                  <Link
-                    href={`/mypage/names/${h.id}`}
-                    className="-mx-2 flex items-center gap-4 rounded-md px-2 py-3 hover:bg-secondary"
-                  >
-                    {h.grade && h.totalScore != null ? (
-                      <GradeBadge grade={h.grade} score={h.totalScore} size="sm" />
-                    ) : (
-                      <span className="w-10 shrink-0 text-center text-xs text-muted-foreground">-</span>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="font-serif text-lg font-bold">
-                        {h.surname}
-                        {h.given}
-                        {h.isFavorite && " ★"}
-                      </p>
-                      {(h.surnameHanja || h.givenHanja) && (
-                        <p className="font-serif text-sm text-muted-foreground">
-                          {h.surnameHanja}
-                          {h.givenHanja}
-                        </p>
-                      )}
-                      {h.parentSurname && (
-                        <p className="text-xs text-muted-foreground">
-                          {registrationText({
-                            surname: h.surname,
-                            surnameHanja: h.surnameHanja,
-                            given: h.given,
-                            givenHanja: h.givenHanja,
-                          })}
-                        </p>
-                      )}
-                    </div>
-                    <div className="shrink-0 text-right text-sm text-muted-foreground">
-                      <p>{new Date(h.createdAt).toLocaleDateString("ko-KR")}</p>
-                      <p className="text-primary">자세히 ›</p>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <SavedList
+              items={saved.map((h) => ({
+                id: h.id,
+                name: `${h.surname}${h.given}`,
+                hanja: `${h.surnameHanja}${h.givenHanja}`,
+                grade: h.grade,
+                score: h.totalScore,
+                favorite: h.isFavorite,
+                registration: h.parentSurname
+                  ? registrationText({
+                      surname: h.surname,
+                      surnameHanja: h.surnameHanja,
+                      given: h.given,
+                      givenHanja: h.givenHanja,
+                    })
+                  : null,
+                createdAt: h.createdAt,
+              }))}
+            />
           ) : (
             <div className="space-y-3 py-6 text-center text-sm text-muted-foreground">
               <p>아직 저장된 작명 결과가 없습니다.</p>

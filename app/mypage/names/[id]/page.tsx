@@ -13,9 +13,8 @@ import { loadEntitlement } from "@/lib/commerce/entitlement";
 import { namingConditionKey, parseNamingParams } from "@/lib/naming/params";
 import { hunEum } from "@/lib/naming/recommend";
 import { registrationCaveat, registrationText } from "@/lib/naming/registration";
-import { fetchSurname } from "@/lib/naming/hanja-repo";
-import { nameMeaningOf } from "@/lib/naming/name-meaning";
-import { readSaved, SAVED_COLUMNS, type SavedNaming, type SavedRow } from "@/lib/naming/saved";
+import { savedNameMeaning } from "@/lib/naming/saved-meaning";
+import { readSaved, SAVED_COLUMNS, type SavedRow } from "@/lib/naming/saved";
 import type { NamingAnalysis } from "@/lib/naming/types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -53,20 +52,6 @@ function AnalysisDetail({ a, flows }: { a: NamingAnalysis; flows: boolean }) {
       )}
     </div>
   );
-}
-
-/** 새로 고르는 글자(부모 성 제외)의 훈을 사전에서 읽어 지금 문구 표로 이름 뜻을 만든다 */
-async function currentNameMeaning(supabase: ReturnType<typeof createClient>, s: SavedNaming) {
-  const skip = s.parentSurname ? [...s.parentSurname.hanja].length : 0;
-  const hanja = [...s.givenHanja].slice(skip);
-  const eum = [...s.given].slice(skip);
-  if (hanja.length === 0 || hanja.length !== eum.length) return null;
-  try {
-    const chars = await fetchSurname(supabase, hanja, eum);
-    return chars ? nameMeaningOf(chars) : null;
-  } catch {
-    return null;
-  }
 }
 
 /**
@@ -127,8 +112,7 @@ export default async function SavedNamePage({
   const ent = await loadEntitlement(supabase, true, s.qs ? namingConditionKey(s.qs) : null, s.id);
   const nameOpen = ent.name(s.givenHanja, s.given);
   const lockHref = goodsHref ?? "/naming";
-  // 이름 뜻 한 줄 (무료): 저장 스냅숏(version 4~)에 있으면 그 문장, 없는 예전 저장분은 지금 문구 표로 만든다 (2026-10-18 사용자 결정)
-  const nameMeaning = snap?.texts.nameMeaning ?? (await currentNameMeaning(supabase, s));
+  const nameMeaning = await savedNameMeaning(supabase, s);
 
   return (
     <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-3xl space-y-6 px-6 py-12">

@@ -233,6 +233,11 @@
 - 저장 이름에서 주문하면(`/goods?…&hid=`) `createOrder`가 본인 저장분이고 이름이 같을 때만 `orders.history_id`에 넣는다.
 - 항목을 무료↔유료로 옮길 때는 사용자에게 먼저 확인받는다.
 
+## 마이페이지 (`app/mypage`)
+- 목록(`components/mypage/saved-list.tsx`): 등급 배지, 행 → 상세(`/mypage/names/[id]`), 체크박스 2~3개(`lib/naming/compare.ts`의 `COMPARE_MAX`) → 나란히 비교(`/mypage/compare?ids=a,b,c`).
+- 상세·비교는 저장값만 그린다 (`lib/naming/saved.ts`의 `readSaved`). 예외: 이름 뜻 한 줄(예전 저장분은 지금 문구 표), 희소성(지금 통계 + 기준일).
+- 비교는 무료 항목만: 등급·성명학 점수, 이름 뜻, 항목별 점수(가장 높은 값 굵게), 4격 수·길흉, 법적 기준 등급·총점, 희소성, 출생, 저장일. 입력 조건(`namingConditionKey`)이 다른 이름이 섞이면 사주 보완 점수를 그대로 비교하기 어렵다고 알린다.
+
 ## 남은 작업
 - 결제 기능 점검: 포트원 테스트 결제로 결제 후 유료 내용이 열리는지 확인, `SUPABASE_SERVICE_ROLE_KEY` 설정 (지금 로컬 `.env.local`에 없어 주문 생성·결제 반영이 안 된다)
 - 81수 풀이 문구 작성 (검토 필요): 4격 각 수리의 풀이 문장과 한자 상세 풀이 문구. 문구는 사용자에게 먼저 보여 주고 검토받는다.

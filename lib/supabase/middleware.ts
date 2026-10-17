@@ -43,7 +43,8 @@ export async function updateSession(request: NextRequest) {
 
   // 비로그인 상태에서 마이페이지 접근 → 로그인 페이지
   if (!user && pathname.startsWith("/mypage")) {
-    return redirectTo("/login", `?next=${encodeURIComponent(pathname)}`);
+    // 쿼리도 함께 넘긴다 (예: /mypage/compare?ids=… 로그인 후 같은 비교로 돌아오기)
+    return redirectTo("/login", `?next=${encodeURIComponent(pathname + request.nextUrl.search)}`);
   }
 
   // 로그인 상태에서 로그인/회원가입 페이지 접근 → 마이페이지
