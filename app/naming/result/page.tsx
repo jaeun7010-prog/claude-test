@@ -9,10 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResultList, type ResultItem } from "@/components/naming/result-list";
 import { GradeBadge, GyeokGrid, ScoreBreakdownLine } from "@/components/naming/analysis-parts";
 import { CombinationNote } from "@/components/naming/combination-note";
+import { LockedPreview } from "@/components/naming/locked-preview";
 import { GeokgukNote } from "@/components/naming/geokguk-note";
 import { RelationsNote } from "@/components/naming/relations-note";
 import { TimeCorrectionNote } from "@/components/naming/time-correction-note";
-import { parseNamingParams, type NamingParams } from "@/lib/naming/params";
+import { loadEntitlement, type Entitlement } from "@/lib/commerce/entitlement";
+import { parseNamingParams, toNamingQuery, type NamingParams } from "@/lib/naming/params";
 import { parsePriorities, type Priorities } from "@/lib/naming/priorities";
 import { hunEum, type NameGroup, type Recommendation } from "@/lib/naming/recommend";
 import { REGISTRATION_CAVEAT, registrationText } from "@/lib/naming/registration";
@@ -30,13 +32,23 @@ const ELEMENT_HANJA: Record<string, string> = { 목: "木", 화: "火", 토: "�
 
 const hanjaOf = (r: Recommendation) => r.givenName.map((c) => c.hanja).join("");
 const eumOf = (r: Recommendation) => r.givenName.map((c) => c.eum).join("");
+const goodsHref = (qs: string, r: Recommendation) =>
+  `/goods?${qs}&gh=${encodeURIComponent(hanjaOf(r))}&ge=${encodeURIComponent(eumOf(r))}`;
 const charLine = (r: Recommendation) =>
   r.givenName.map((c) => `${c.hanja} ${hunEum(c)} ${c.strokes}획`).join(" · ");
 
 /** 부모 성 함께 쓰기: 법적 이름 전체 기준 점수 (참고). 등급은 새로 고르는 부분 기준이라 따로 보여 준다 */
-function LegalDetails({ r, p }: { r: Recommendation; p: NamingParams }) {
+function LegalDetails({ r, p, unlocked }: { r: Recommendation; p: NamingParams; unlocked: boolean }) {
   const l = r.legalAnalysis;
   if (!l) return null;
+  // 등급·총점은 무료, 항목별 점수·4격·오행 흐름은 이 이름의 리포트를 결제해야 그린다
+  if (!unlocked) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        법적 이름 전체 기준 (참고): {l.grade}등급 {l.totalScore.toFixed(1)}점 · 상세는 프리미엄 리포트에 있습니다
+      </p>
+    );
+  }
   return (
     <details className="rounded-md border">
       <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-primary">
@@ -61,14 +73,14 @@ function LegalDetails({ r, p }: { r: Recommendation; p: NamingParams }) {
   );
 }
 
-function MeaningList({ r }: { r: Recommendation }) {
+function MeaningList({ r, unlocked }: { r: Recommendation; unlocked: boolean }) {
   return (
     <ul className="text-xs text-muted-foreground">
       {r.givenName.map((c) => (
         <li key={c.hanja}>
           {c.hanja} {hunEum(c)}
           {/* 훈 데이터가 없는 글자는 영문 뜻풀이를 참고용으로 보여 준다 */}
-          {!c.hun && c.meaning ? ` — ${c.meaning}` : ""}
+          {unlocked && !c.hun && c.meaning ? ` — ${c.meaning}` : ""}
         </li>
       ))}
     </ul>
@@ -93,7 +105,7 @@ function OptionActions({ r, qs, loggedIn }: { r: Recommendation; qs: string; log
         </Button>
       )}
       <Button asChild size="sm" variant="outline">
-        <Link href={`/goods?${qs}&gh=${encodeURIComponent(hanjaOf(r))}&ge=${encodeURIComponent(eumOf(r))}`}>
+        <Link href={goodsHref(qs, r)}>
           리포트 · 맞춤 굿즈
         </Link>
       </Button>
@@ -109,6 +121,7 @@ function NameCardBody({
   asOfDate,
   qs,
   loggedIn,
+  ent,
 }: {
   group: NameGroup;
   p: NamingParams;
@@ -116,9 +129,11 @@ function NameCardBody({
   asOfDate: string | null;
   qs: string;
   loggedIn: boolean;
+  ent: Entitlement;
 }) {
   const [best, ...others] = g.options;
   const a = best.analysis;
+  const unlocked = (r: Recommendation) => ent.name(hanjaOf(r), eumOf(r));
   return (
     <>
       <div className="flex items-start justify-between gap-4">
@@ -154,21 +169,34 @@ function NameCardBody({
       )}
 
       <GyeokGrid analysis={a} />
-      <p className="text-sm">
-        <span className="text-muted-foreground">발음오행</span> {a.pronunciation.elements.join("→")}
-        {a.resource && (
-          <>
-            {" · "}
-            <span className="text-muted-foreground">자원오행</span>{" "}
-            {best.givenName.map((c) => c.element ?? "?").join("·")}
-            {a.resource.needMatched && " (용신 보강)"}
-            {a.resource.arrangement === "통관" && " · 성씨와 용신을 잇는 배치(통관)"}
-            {a.resource.arrangement === "희신 배치" && " · 용신을 돕는 기운을 사이에 둔 배치"}
-          </>
-        )}
-        {" · "}
-        <span className="text-muted-foreground">글로벌 발음</span> {best.globalScore}
-      </p>
+      {unlocked(best) ? (
+        <p className="text-sm">
+          <span className="text-muted-foreground">발음오행</span> {a.pronunciation.elements.join("→")}
+          {a.resource && (
+            <>
+              {" · "}
+              <span className="text-muted-foreground">자원오행</span>{" "}
+              {best.givenName.map((c) => c.element ?? "?").join("·")}
+              {a.resource.needMatched && " (용신 보강)"}
+              {a.resource.arrangement === "통관" && " · 성씨와 용신을 잇는 배치(통관)"}
+              {a.resource.arrangement === "희신 배치" && " · 용신을 돕는 기운을 사이에 둔 배치"}
+            </>
+          )}
+          {" · "}
+          <span className="text-muted-foreground">글로벌 발음</span> {best.globalScore}
+        </p>
+      ) : (
+        <>
+          <p className="text-sm">
+            <span className="text-muted-foreground">글로벌 발음</span> {best.globalScore}
+          </p>
+          <LockedPreview
+            size="inline"
+            what={best.legalAnalysis ? "발음·자원오행 흐름 · 법적 기준 상세" : "발음·자원오행 흐름"}
+            href={goodsHref(qs, best)}
+          />
+        </>
+      )}
       {st && (
         <div className="space-y-2 rounded-md border p-3">
           <NameStatsBasic stat={st} asOfDate={asOfDate} />
@@ -182,8 +210,8 @@ function NameCardBody({
           </div>
         </div>
       )}
-      <MeaningList r={best} />
-      <LegalDetails r={best} p={p} />
+      <MeaningList r={best} unlocked={unlocked(best)} />
+      <LegalDetails r={best} p={p} unlocked={unlocked(best)} />
 
       <OptionActions r={best} qs={qs} loggedIn={loggedIn} />
 
@@ -207,8 +235,8 @@ function NameCardBody({
                   <GradeBadge grade={r.analysis.grade} score={r.analysis.totalScore} size="sm" />
                 </div>
                 <ScoreBreakdownLine analysis={r.analysis} />
-                <MeaningList r={r} />
-                <LegalDetails r={r} p={p} />
+                <MeaningList r={r} unlocked={unlocked(r)} />
+                <LegalDetails r={r} p={p} unlocked={unlocked(r)} />
                 <OptionActions r={r} qs={qs} loggedIn={loggedIn} />
               </li>
             ))}
@@ -277,7 +305,11 @@ export default async function ResultPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const snapshot = result.stats ? await getLatestSnapshot() : null;
+  const [snapshot, ent] = await Promise.all([
+    result.stats ? getLatestSnapshot() : null,
+    // 유료 내용(사주 상세·이름 상세)은 결제한 리포트가 있을 때만 그린다 (lib/commerce/entitlement.ts)
+    loadEntitlement(supabase, !!user, toNamingQuery(p, false)),
+  ]);
 
   const { pillars, yongsin } = result.saju;
   const qs = new URLSearchParams(
@@ -314,6 +346,7 @@ export default async function ResultPage({
           asOfDate={snapshot?.asOfDate ?? null}
           qs={qs}
           loggedIn={!!user}
+          ent={ent}
         />
       ),
     };
@@ -357,7 +390,11 @@ export default async function ResultPage({
       )}
 
       {result.combination && p.parentSurname && (
-        <CombinationNote items={result.combination} label={`${p.surname} + ${p.parentSurname.hangul}`} />
+        <CombinationNote
+          items={result.combination}
+          label={`${p.surname} + ${p.parentSurname.hangul}`}
+          lockedHref={ent.saju ? null : "#names"}
+        />
       )}
 
       {result.notice && (
@@ -392,28 +429,35 @@ export default async function ResultPage({
             dayPillar={pillars.day}
           />
 
-          <div className="space-y-2">
-            {(["목", "화", "토", "금", "수"] as const).map((e) => (
-              <div key={e} className="flex items-center gap-3 text-sm">
-                <span className="w-8 font-serif">
-                  {ELEMENT_HANJA[e]}
-                  {e}
-                </span>
-                <div className="h-2 flex-1 rounded-full bg-secondary">
-                  <div
-                    className="h-2 rounded-full bg-primary"
-                    style={{ width: `${Math.round((yongsin.scores[e] / total) * 100)}%` }}
-                  />
+          {ent.saju && (
+            <div className="space-y-2">
+              {(["목", "화", "토", "금", "수"] as const).map((e) => (
+                <div key={e} className="flex items-center gap-3 text-sm">
+                  <span className="w-8 font-serif">
+                    {ELEMENT_HANJA[e]}
+                    {e}
+                  </span>
+                  <div className="h-2 flex-1 rounded-full bg-secondary">
+                    <div
+                      className="h-2 rounded-full bg-primary"
+                      style={{ width: `${Math.round((yongsin.scores[e] / total) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="w-10 text-right text-muted-foreground">
+                    {Math.round((yongsin.scores[e] / total) * 100)}%
+                  </span>
                 </div>
-                <span className="w-10 text-right text-muted-foreground">
-                  {Math.round((yongsin.scores[e] / total) * 100)}%
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
-          <RelationsNote relations={yongsin.relations} rawScores={yongsin.rawScores} scores={yongsin.scores} />
-          <GeokgukNote yongsin={yongsin} />
+          <RelationsNote
+            relations={yongsin.relations}
+            rawScores={yongsin.rawScores}
+            scores={yongsin.scores}
+            detailed={ent.saju}
+          />
+          <GeokgukNote yongsin={yongsin} detailed={ent.saju} />
 
           <div className="rounded-md border p-4 text-sm">
             <p>
@@ -424,8 +468,15 @@ export default async function ResultPage({
             <p className="mt-1 text-muted-foreground">
               희신 {yongsin.huisin} · 피하면 좋은 기운 {yongsin.gisin}
             </p>
-            <p className="mt-2 text-muted-foreground">{yongsin.reason}</p>
+            {ent.saju && <p className="mt-2 text-muted-foreground">{yongsin.reason}</p>}
           </div>
+          {!ent.saju && (
+            <LockedPreview
+              what="오행 비율 · 기운 관계와 격국의 근거 · 용신을 고른 이유"
+              href="#names"
+              label="이름을 고르고 프리미엄 리포트로 보기"
+            />
+          )}
           <p className="text-xs text-muted-foreground">
             사주의 강약, 계절 균형, 합충, 격국을 기준으로 아이에게 필요한 기운을 찾았습니다. 학파에 따라 해석이 다를 수
             있습니다.
@@ -433,7 +484,7 @@ export default async function ResultPage({
         </CardContent>
       </Card>
 
-      <section className="space-y-4">
+      <section id="names" className="scroll-mt-16 space-y-4">
         {result.groups.length === 0 ? (
           <>
             <h2 className="font-serif text-2xl font-bold">추천 이름</h2>

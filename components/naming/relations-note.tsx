@@ -12,10 +12,13 @@ export function RelationsNote({
   relations,
   rawScores,
   scores,
+  detailed = true,
 }: {
   relations: SajuRelation[];
   rawScores: ElementScores;
   scores: ElementScores;
+  /** false면 쉬운 설명만 그린다 (용어·근거·비율은 프리미엄 리포트 결제 후) */
+  detailed?: boolean;
 }) {
   if (relations.length === 0) {
     return (
@@ -39,6 +42,7 @@ export function RelationsNote({
           <li key={t}>{t}</li>
         ))}
       </ul>
+      {detailed && (
       <details className="text-xs text-muted-foreground">
         <summary className="cursor-pointer">자세히 보기</summary>
         <ul className="mt-2 space-y-1">
@@ -59,6 +63,7 @@ export function RelationsNote({
           줄입니다.
         </p>
       </details>
+      )}
     </div>
   );
 }

@@ -24,7 +24,14 @@ export function geokgukEasy(yongsin: YongsinResult): string | null {
 }
 
 /** 격국 안내. 쉬운 설명을 먼저 보여 주고 격 이름·근거·상신은 자세히 보기로 */
-export function GeokgukNote({ yongsin }: { yongsin: YongsinResult }) {
+export function GeokgukNote({
+  yongsin,
+  detailed = true,
+}: {
+  yongsin: YongsinResult;
+  /** false면 쉬운 설명만 그린다 (격 이름·근거·상신은 프리미엄 리포트 결제 후) */
+  detailed?: boolean;
+}) {
   const g = yongsin.geokguk;
   if (!g) return null;
   const border = g.borderline.length > 0;
@@ -36,6 +43,7 @@ export function GeokgukNote({ yongsin }: { yongsin: YongsinResult }) {
         <li>{geokgukEasy(yongsin)}</li>
         {g.outer && <li>{OUTER_NOTICE}</li>}
       </ul>
+      {detailed && (
       <details className="text-xs text-muted-foreground">
         <summary className="cursor-pointer">자세히 보기</summary>
         <ul className="mt-2 space-y-1">
@@ -70,6 +78,7 @@ export function GeokgukNote({ yongsin }: { yongsin: YongsinResult }) {
           화·수 기운이 크게 부족하면 계절 균형(조후)을 마지막에 우선합니다.
         </p>
       </details>
+      )}
     </div>
   );
 }

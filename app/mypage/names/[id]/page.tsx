@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isUuid } from "@/lib/commerce/payment-sync";
 import { birthTextOf } from "@/lib/commerce/report-snapshot";
-import { parseNamingParams } from "@/lib/naming/params";
+import { LockedPreview } from "@/components/naming/locked-preview";
+import { loadEntitlement } from "@/lib/commerce/entitlement";
+import { namingConditionKey, parseNamingParams } from "@/lib/naming/params";
 import { hunEum } from "@/lib/naming/recommend";
 import { REGISTRATION_CAVEAT, registrationText } from "@/lib/naming/registration";
 import { readSaved, SAVED_COLUMNS, type SavedRow } from "@/lib/naming/saved";
@@ -35,15 +37,18 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-function AnalysisDetail({ a }: { a: NamingAnalysis }) {
+/** 항목별 점수·4격은 무료, 발음·자원오행 흐름은 이 이름의 리포트를 결제했을 때만 (flows) */
+function AnalysisDetail({ a, flows }: { a: NamingAnalysis; flows: boolean }) {
   return (
     <div className="space-y-2">
       <ScoreBreakdownLine analysis={a} />
       <GyeokGrid analysis={a} />
-      <p className="text-sm text-muted-foreground">
-        발음오행 {a.pronunciation.elements.join("→")}
-        {a.resource && ` · 자원오행 ${a.resource.elements.join("→")}`}
-      </p>
+      {flows && (
+        <p className="text-sm text-muted-foreground">
+          발음오행 {a.pronunciation.elements.join("→")}
+          {a.resource && ` · 자원오행 ${a.resource.elements.join("→")}`}
+        </p>
+      )}
     </div>
   );
 }
@@ -102,6 +107,10 @@ export default async function SavedNamePage({
   const goodsHref = s.qs
     ? `/goods?${s.qs}&gh=${encodeURIComponent(s.givenHanja)}&ge=${encodeURIComponent(s.given)}&hid=${s.id}`
     : null;
+  // 유료 내용: 이 저장 이름과 연결된 리포트이거나 같은 조건·같은 이름의 리포트를 결제했을 때만 그린다
+  const ent = await loadEntitlement(supabase, true, s.qs ? namingConditionKey(s.qs) : null, s.id);
+  const nameOpen = ent.name(s.givenHanja, s.given);
+  const lockHref = goodsHref ?? "/naming";
 
   return (
     <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-3xl space-y-6 px-6 py-12">
@@ -240,7 +249,7 @@ export default async function SavedNamePage({
               <span className="text-muted-foreground"> ({yongsin.method} 기준)</span>
             </p>
           )}
-          {yongsin?.geokguk && (
+          {ent.saju && yongsin?.geokguk && (
             <p className="text-sm text-muted-foreground">
               격국: {yongsin.geokguk.name} · {yongsin.geokguk.status}
               {!yongsin.geokguk.applied && " (용신은 강약 기준으로 정함)"}
@@ -255,7 +264,14 @@ export default async function SavedNamePage({
           <CardTitle>성명학 점수</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {s.analysis ? <AnalysisDetail a={s.analysis} /> : <NoRecord />}
+          {s.analysis ? <AnalysisDetail a={s.analysis} flows={nameOpen} /> : <NoRecord />}
+          {s.analysis && !nameOpen && (
+            <LockedPreview
+              size="inline"
+              what={s.parentSurname ? "발음·자원오행 흐름 · 법적 기준 상세" : "발음·자원오행 흐름"}
+              href={lockHref}
+            />
+          )}
           {s.parentSurname && (
             <div className="space-y-2 rounded-md border p-3">
               <p className="text-sm font-medium">법적 이름 전체 기준 (참고)</p>
@@ -268,7 +284,7 @@ export default async function SavedNamePage({
                     </b>
                     입니다.
                   </p>
-                  <AnalysisDetail a={legal} />
+                  {nameOpen && <AnalysisDetail a={legal} flows />}
                 </>
               ) : (
                 <NoRecord />
@@ -279,7 +295,11 @@ export default async function SavedNamePage({
       </Card>
 
       {s.parentSurname && combination && combination.length > 0 && (
-        <CombinationNote items={combination} label={`${s.surname} + ${s.parentSurname.hangul}`} />
+        <CombinationNote
+          items={combination}
+          label={`${s.surname} + ${s.parentSurname.hangul}`}
+          lockedHref={ent.saju ? null : lockHref}
+        />
       )}
     </main>
   );
