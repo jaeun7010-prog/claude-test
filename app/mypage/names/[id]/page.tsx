@@ -12,7 +12,7 @@ import { LockedPreview } from "@/components/naming/locked-preview";
 import { loadEntitlement } from "@/lib/commerce/entitlement";
 import { namingConditionKey, parseNamingParams } from "@/lib/naming/params";
 import { hunEum } from "@/lib/naming/recommend";
-import { REGISTRATION_CAVEAT, registrationText } from "@/lib/naming/registration";
+import { registrationCaveat, registrationText } from "@/lib/naming/registration";
 import { readSaved, SAVED_COLUMNS, type SavedRow } from "@/lib/naming/saved";
 import type { NamingAnalysis } from "@/lib/naming/types";
 import { createClient } from "@/lib/supabase/server";
@@ -146,7 +146,7 @@ export default async function SavedNamePage({
                 givenHanja: s.givenHanja,
               })}
             </p>
-            <p className="text-xs text-muted-foreground">{REGISTRATION_CAVEAT}</p>
+            <p className="text-xs text-muted-foreground">{registrationCaveat(!nameOpen)}</p>
           </div>
         )}
         {searchParams.deleteError && (
@@ -298,7 +298,7 @@ export default async function SavedNamePage({
         <CombinationNote
           items={combination}
           label={`${s.surname} + ${s.parentSurname.hangul}`}
-          lockedHref={ent.saju ? null : lockHref}
+          locked={!nameOpen}
         />
       )}
     </main>

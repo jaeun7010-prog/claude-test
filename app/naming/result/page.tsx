@@ -17,7 +17,7 @@ import { loadEntitlement, type Entitlement } from "@/lib/commerce/entitlement";
 import { parseNamingParams, toNamingQuery, type NamingParams } from "@/lib/naming/params";
 import { parsePriorities, type Priorities } from "@/lib/naming/priorities";
 import { hunEum, type NameGroup, type Recommendation } from "@/lib/naming/recommend";
-import { REGISTRATION_CAVEAT, registrationText } from "@/lib/naming/registration";
+import { registrationCaveat, registrationText } from "@/lib/naming/registration";
 import { GRADE_MIN, SCORE_WEIGHTS } from "@/lib/naming/score";
 import { DISPLAY_LIMIT, runNaming } from "@/lib/naming/service";
 import type { NameStatSummary } from "@/lib/stats/name-stats";
@@ -385,7 +385,7 @@ export default async function ResultPage({
             </b>
             을 이름으로 등록합니다.
           </p>
-          <p className="text-xs text-muted-foreground">{REGISTRATION_CAVEAT}</p>
+          <p className="text-xs text-muted-foreground">{registrationCaveat(!ent.saju)}</p>
         </div>
       )}
 
@@ -393,7 +393,7 @@ export default async function ResultPage({
         <CombinationNote
           items={result.combination}
           label={`${p.surname} + ${p.parentSurname.hangul}`}
-          lockedHref={ent.saju ? null : "#names"}
+          locked={!ent.saju}
         />
       )}
 

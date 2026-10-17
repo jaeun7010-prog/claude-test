@@ -1,18 +1,16 @@
-import Link from "next/link";
-
-import { COMBINATION_GUIDE, type CombinationItem } from "@/lib/naming/combination";
+import { combinationGuide, type CombinationItem } from "@/lib/naming/combination";
 
 /** 부모 성 함께 쓰기의 조합 진단 (고정된 부분의 약점을 쉬운 말로) */
 export function CombinationNote({
   items,
   label,
-  lockedHref = null,
+  locked = false,
 }: {
   items: CombinationItem[];
   /** 예: 김 + 박 */
   label: string;
-  /** 결제 전이면 리포트로 가는 링크. "괜찮은 점"은 그리지 않는다 (약점은 무료) */
-  lockedHref?: string | null;
+  /** 결제 전: 안내 문구에서 "자세히 보기" 대신 프리미엄 리포트로 안내한다 (내용은 모두 무료) */
+  locked?: boolean;
 }) {
   const weak = items.filter((x) => x.tone === "weak");
   const good = items.filter((x) => x.tone === "good");
@@ -34,26 +32,17 @@ export function CombinationNote({
           </ul>
         </div>
       )}
-      {good.length > 0 &&
-        (lockedHref ? (
-          <p className="text-muted-foreground">
-            {weak.length === 0 && "눈에 띄는 약점은 없습니다. "}
-            괜찮은 점 {good.length}가지는 프리미엄 리포트에서 볼 수 있습니다.{" "}
-            <Link href={lockedHref} className="font-medium text-primary underline-offset-4 hover:underline">
-              프리미엄 리포트로 보기 ›
-            </Link>
-          </p>
-        ) : (
-          <div>
-            <p className="font-medium">괜찮은 점</p>
-            <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
-              {good.map((x) => (
-                <li key={x.text}>{x.text}</li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      <p className="text-xs text-muted-foreground">{COMBINATION_GUIDE}</p>
+      {good.length > 0 && (
+        <div>
+          <p className="font-medium">괜찮은 점</p>
+          <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+            {good.map((x) => (
+              <li key={x.text}>{x.text}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">{combinationGuide(locked)}</p>
     </section>
   );
 }

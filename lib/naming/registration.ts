@@ -34,3 +34,12 @@ export function registrationText(r: Registration): string {
 export const REGISTRATION_CAVEAT =
   "다른 부모의 성은 법적으로 이름의 일부입니다. 이름 등급은 새로 고르는 부분 기준으로 매겼고, 법적 이름 전체 기준 점수는 각 이름의 자세히 보기에 있습니다. " +
   "이름은 성을 빼고 5자 이내, 한자는 인명용 한자만 쓸 수 있습니다. 실제 수리 여부는 관할 시·구·읍·면사무소에서 확인해 주세요.";
+
+/** 웹 화면용 확인 문구. 결제 전에는 법적 기준 상세가 잠겨 있어 "자세히 보기" 대신 리포트로 안내한다 */
+export const registrationCaveat = (locked: boolean) =>
+  locked
+    ? REGISTRATION_CAVEAT.replace(
+        "법적 이름 전체 기준 점수는 각 이름의 자세히 보기에 있습니다.",
+        "법적 이름 전체 기준 점수는 프리미엄 리포트에서 확인할 수 있습니다."
+      )
+    : REGISTRATION_CAVEAT;

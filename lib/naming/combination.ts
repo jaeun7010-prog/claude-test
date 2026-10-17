@@ -105,3 +105,10 @@ export function diagnoseCombination(
 export const COMBINATION_GUIDE =
   "함께 쓰기를 원하시면 이 점을 참고하세요. 이름 등급은 새로 고르는 부분이 얼마나 잘 맞는지로 매겼고, " +
   "법적 이름 전체 기준의 4격과 점수는 각 이름의 ‘자세히 보기’와 PDF 리포트에 참고로 담았습니다.";
+
+/** 웹 화면용 조합 진단 안내. 결제 전에는 법적 기준 상세가 잠겨 있어 "자세히 보기" 대신 리포트로 안내한다 */
+export const combinationGuide = (locked: boolean) =>
+  locked
+    ? "함께 쓰기를 원하시면 이 점을 참고하세요. 이름 등급은 새로 고르는 부분이 얼마나 잘 맞는지로 매겼고, " +
+      "법적 이름 전체 기준의 4격과 점수는 프리미엄 리포트에서 확인할 수 있습니다."
+    : COMBINATION_GUIDE;
