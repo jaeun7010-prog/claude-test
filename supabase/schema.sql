@@ -56,6 +56,9 @@ create table if not exists public.profiles (
   updated_at  timestamptz not null default now()
 );
 
+-- 작명 결과 "우리 집 우선순위" (supabase/migrations/20261017000000_naming_priorities.sql 과 같은 내용)
+alter table public.profiles add column if not exists naming_priorities jsonb;
+
 drop trigger if exists profiles_set_updated_at on public.profiles;
 create trigger profiles_set_updated_at
   before update on public.profiles

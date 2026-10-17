@@ -14,7 +14,7 @@ export type NamingResult =
       ok: true;
       saju: ReturnType<typeof analyzeSaju>;
       surname: NameHanja[];
-      /** 한글 이름별 묶음 (대표 조합의 성명학 점수 순) */
+      /** 한글 이름별 묶음 (대표 조합의 기본 순위 점수 순, 최대 CANDIDATE_LIMIT개) */
       groups: NameGroup[];
       /** 이름(성 제외) → 출생 통계 요약. 통계 데이터가 적재되지 않았으면 null */
       stats: Map<string, NameStatSummary> | null;
@@ -22,6 +22,11 @@ export type NamingResult =
       notice?: string;
     }
   | { ok: false; error: string };
+
+/** 화면에 보여 줄 이름 수 */
+export const DISPLAY_LIMIT = 30;
+/** 서버에서 넘기는 후보 이름 수. 우선순위를 바꾸면 이 안에서 맞춤 점수 상위 DISPLAY_LIMIT개를 보여 준다 */
+export const CANDIDATE_LIMIT = 60;
 
 /** 성씨 한자 + 사주 계산. 추천/저장에서 공통으로 사용 */
 export async function prepare(supabase: SupabaseClient, p: NamingParams) {
@@ -78,8 +83,6 @@ async function runNamingUnsafe(
     else second = fixed;
   }
 
-  const wantsStatsFilter = p.neutral || p.rarity !== "any";
-  const RESULT_LIMIT = 30;
 
   const run = (minLuckyGyeok: number, minTrend: number) =>
     recommendNames({
@@ -95,8 +98,8 @@ async function runNamingUnsafe(
       minGlobalScore: p.globalFriendly ? 70 : 0,
       minTrend,
       allowSyllables,
-      // 통계로 거를 때는 후보를 넉넉히 뽑는다
-      limit: wantsStatsFilter ? 150 : RESULT_LIMIT,
+      // 젠더 뉴트럴은 통계로 거르므로 후보를 넉넉히 뽑는다
+      limit: p.neutral ? 150 : CANDIDATE_LIMIT,
     });
 
   // 4격이 모두 길수이고 요즘 어감인 이름을 우선하고, 후보가 부족하면 단계적으로 완화한다
@@ -104,7 +107,7 @@ async function runNamingUnsafe(
   if (groups.length < 10) groups = run(3, TREND_MIN);
   if (groups.length < 10) groups = run(3, 0);
 
-  // 출생 통계 연동 (희소성 표시 + 젠더 뉴트럴/희소성 필터)
+  // 출생 통계 연동 (희소성 표시·우선순위 + 젠더 뉴트럴 필터)
   let stats: Map<string, NameStatSummary> | null = null;
   let notice: string | undefined;
   try {
@@ -131,33 +134,19 @@ async function runNamingUnsafe(
       a.hangul.localeCompare(b.hangul, "ko")
   );
 
-  if (wantsStatsFilter) {
+  if (p.neutral) {
     if (!stats) {
-      notice = "출생 통계 데이터가 아직 적재되지 않아 젠더 뉴트럴·희소성 조건은 적용되지 않았습니다.";
+      notice = "출생 통계 데이터가 아직 적재되지 않아 젠더 뉴트럴 조건은 적용되지 않았습니다.";
     } else {
-      if (p.neutral) {
-        // 통계에 한 번도 오르지 않은 이름은 성비를 알 수 없어 제외한다
-        groups = groups.filter((g) => stats!.get(g.hangul)?.neutral);
-      }
-      if (p.rarity !== "any") {
-        const order = { "매우 드묾": 0, 드묾: 1, 보통: 2, 흔함: 3 } as const;
-        const key = (g: NameGroup) => {
-          const t = stats!.get(g.hangul)?.tier;
-          return t ? order[t] : 0;
-        };
-        const sign = p.rarity === "rare" ? 1 : -1;
-        // 안정 정렬: 등급이 같으면 기존 점수 순서를 유지
-        groups = groups
-          .map((g, i) => ({ g, i }))
-          .sort((a, b) => sign * (key(a.g) - key(b.g)) || a.i - b.i)
-          .map((x) => x.g);
-      }
-      if (p.neutral && groups.length === 0) {
+      // 통계에 한 번도 오르지 않은 이름은 성비를 알 수 없어 제외한다
+      groups = groups.filter((g) => stats!.get(g.hangul)?.neutral);
+      if (groups.length === 0) {
         notice = "젠더 뉴트럴 조건을 만족하는 추천 이름이 없습니다. 조건을 완화해 보세요.";
       }
     }
   }
-  groups = groups.slice(0, RESULT_LIMIT);
+  // 희귀/인기 정렬과 우선순위 가점은 결과 화면에서 바로 바꿀 수 있도록 브라우저에서 처리한다
+  groups = groups.slice(0, CANDIDATE_LIMIT);
 
   return { ok: true, saju, surname, groups, stats, notice };
 }

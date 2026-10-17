@@ -13,7 +13,10 @@ export interface NamingParams {
   globalFriendly: boolean;
   /** 젠더 뉴트럴(성비가 한쪽으로 치우치지 않은) 이름만 */
   neutral: boolean;
-  /** 희소성 선호: 희소한 이름 우선 / 익숙한 이름 우선 */
+  /**
+   * 희소성 선호 (예전 입력 폼의 값). 폼에서는 빠졌고, 예전 링크로 들어오면 결과 화면의 첫 정렬로 이어받는다
+   * (rare → 희귀한 이름순, common → 인기 이름순)
+   */
   rarity: "any" | "rare" | "common";
 }
 

@@ -22,6 +22,7 @@ SQL Editor에서 순서대로 실행합니다 (모두 여러 번 실행해도 �
 3. `supabase/seed/hanja_hun_01.sql` ~ `05.sql` → `select count(*) from hanja_dict where hun is not null;` ≈ **7335**
 4. 출생 통계(`name_stats`)는 원본이 저장소에 없습니다. 관리자 지정 후 `/admin/name-stats`에서 CSV를 업로드합니다. 적재 전에는 희소성 화면이 비어 있는 것이 정상입니다 (`supabase/seed/README.md`).
    - 이전 버전 스키마를 쓰던 DB는 `supabase/migrations/20261011000000_name_stats_snapshots.sql`만 실행하면 됩니다.
+5. 작명 결과 "우리 집 우선순위" 저장 컬럼(`profiles.naming_priorities`)은 `schema.sql`에 포함되어 있습니다. 이미 운영 중인 DB는 `supabase/migrations/20261017000000_naming_priorities.sql`만 실행하면 됩니다. 실행 전에는 우선순위가 저장되지 않을 뿐 화면은 정상 동작합니다.
 
 Auth 설정 (Authentication → URL Configuration)
 

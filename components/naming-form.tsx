@@ -220,20 +220,15 @@ export function NamingForm() {
         </div>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="glob" value="1" />
-          외국에서도 발음하기 쉬운 이름
+          글로벌 발음 친화 이름만 보기
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="neutral" value="1" />
           남녀 공용 (중성적인 이름만)
         </label>
-        <div className="space-y-2">
-          <Label htmlFor="rarity">희소성</Label>
-          <select id="rarity" name="rarity" className={selectClass} defaultValue="any">
-            <option value="any">상관없음</option>
-            <option value="rare">희소한 이름 우선 (동명이인이 적은 이름)</option>
-            <option value="common">익숙한 이름 우선</option>
-          </select>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          희귀한 이름·인기 이름 순서와 우리 집 우선순위는 결과 화면에서 바로 고를 수 있습니다.
+        </p>
       </section>
 
       <Button type="submit" size="lg" className="w-full">

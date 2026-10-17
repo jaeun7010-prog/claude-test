@@ -6,11 +6,14 @@ import { DataSourceNote } from "@/components/data-source-note";
 import { NameStatsBasic } from "@/components/name-stats-basic";
 import { TierBadge } from "@/components/name-stats-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { parseNamingParams } from "@/lib/naming/params";
-import { hunEum, type Recommendation } from "@/lib/naming/recommend";
+import { ResultList, type ResultItem } from "@/components/naming/result-list";
+import { parseNamingParams, type NamingParams } from "@/lib/naming/params";
+import { parsePriorities, type Priorities } from "@/lib/naming/priorities";
+import { hunEum, type NameGroup, type Recommendation } from "@/lib/naming/recommend";
 import { GRADE_MIN, SCORE_WEIGHTS } from "@/lib/naming/score";
 import type { Grade, NamingAnalysis } from "@/lib/naming/types";
-import { runNaming } from "@/lib/naming/service";
+import { DISPLAY_LIMIT, runNaming } from "@/lib/naming/service";
+import type { NameStatSummary } from "@/lib/stats/name-stats";
 import { getLatestSnapshot } from "@/lib/name-stats/snapshot";
 import { BRANCHES_KO, STEMS_KO, type Pillar } from "@/lib/saju";
 import { createClient } from "@/lib/supabase/server";
@@ -108,6 +111,112 @@ function OptionActions({ r, qs, loggedIn }: { r: Recommendation; qs: string; log
   );
 }
 
+/** 이름 카드 본문 (서버에서 그려 ResultList 에 넘긴다) */
+function NameCardBody({
+  group: g,
+  p,
+  stat: st,
+  asOfDate,
+  qs,
+  loggedIn,
+}: {
+  group: NameGroup;
+  p: NamingParams;
+  stat: NameStatSummary | undefined;
+  asOfDate: string | null;
+  qs: string;
+  loggedIn: boolean;
+}) {
+  const [best, ...others] = g.options;
+  const a = best.analysis;
+  return (
+    <>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="font-serif text-2xl font-bold">
+            {p.surname}
+            {g.hangul}
+            <span className="ml-2 text-lg text-muted-foreground">
+              {p.surnameHanja}
+              {hanjaOf(best)}
+            </span>
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{charLine(best)}</p>
+        </div>
+        <GradeBadge grade={a.grade} score={a.totalScore} />
+      </div>
+
+      <ScoreBreakdownLine analysis={a} />
+
+      <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
+        {(Object.keys(GYEOK_LABEL) as (keyof typeof GYEOK_LABEL)[]).map((k) => (
+          <p key={k}>
+            <span className="text-muted-foreground">{GYEOK_LABEL[k]}</span> {a.fourGyeok[k].suri}수{" "}
+            {a.fourGyeok[k].lucky ? "길" : "흉"}
+          </p>
+        ))}
+      </div>
+      <p className="text-sm">
+        <span className="text-muted-foreground">발음오행</span> {a.pronunciation.elements.join("→")}
+        {a.resource && (
+          <>
+            {" · "}
+            <span className="text-muted-foreground">자원오행</span>{" "}
+            {best.givenName.map((c) => c.element ?? "?").join("·")}
+            {a.resource.needMatched && " (용신 보강)"}
+          </>
+        )}
+        {" · "}
+        <span className="text-muted-foreground">글로벌 발음</span> {best.globalScore}
+      </p>
+      {st && (
+        <div className="space-y-2 rounded-md border p-3">
+          <NameStatsBasic stat={st} asOfDate={asOfDate} />
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <span className="text-muted-foreground">희소성</span>
+            <TierBadge tier={st.tier} />
+            {st.neutral && <span className="text-muted-foreground">남녀 공용</span>}
+            <Link href={`/stats?name=${encodeURIComponent(g.hangul)}`} className="ml-auto text-primary underline">
+              연도별 상세 통계
+            </Link>
+          </div>
+        </div>
+      )}
+      <MeaningList r={best} />
+
+      <OptionActions r={best} qs={qs} loggedIn={loggedIn} />
+
+      {others.length > 0 && (
+        <details className="group rounded-md border">
+          <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-primary">
+            <span className="group-open:hidden">다른 한자 조합 {others.length}개 보기</span>
+            <span className="hidden group-open:inline">다른 한자 조합 접기</span>
+          </summary>
+          <ul className="divide-y border-t">
+            {others.map((r) => (
+              <li key={hanjaOf(r)} className="space-y-2 p-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-serif text-lg font-bold">
+                      {p.surnameHanja}
+                      {hanjaOf(r)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">{charLine(r)}</p>
+                  </div>
+                  <GradeBadge grade={r.analysis.grade} score={r.analysis.totalScore} size="sm" />
+                </div>
+                <ScoreBreakdownLine analysis={r.analysis} />
+                <MeaningList r={r} />
+                <OptionActions r={r} qs={qs} loggedIn={loggedIn} />
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </>
+  );
+}
+
 function PillarCell({ label, pillar }: { label: string; pillar: Pillar | null }) {
   return (
     <div className="rounded-md bg-secondary p-3 text-center">
@@ -175,6 +284,38 @@ export default async function ResultPage({
     )
   ).toString();
   const total = Object.values(yongsin.scores).reduce((a, b) => a + b, 0);
+
+  // 로그인 사용자의 저장된 우선순위 (컬럼이 아직 없거나 값이 없으면 null)
+  let saved: Priorities | null = null;
+  if (user) {
+    const { data } = await supabase.from("profiles").select("naming_priorities").eq("id", user.id).maybeSingle();
+    if (data?.naming_priorities) saved = parsePriorities(data.naming_priorities);
+  }
+
+  const items: ResultItem[] = result.groups.map((g) => {
+    const best = g.options[0];
+    const st = result.stats?.get(g.hangul);
+    return {
+      hangul: g.hangul,
+      grade: best.analysis.grade,
+      metrics: {
+        baseScore: best.baseScore,
+        globalScore: best.globalScore,
+        births: result.stats ? (st ? st.cumulative.male + st.cumulative.female : 0) : null,
+        everListed: result.stats ? (st?.everListed ?? false) : null,
+      },
+      body: (
+        <NameCardBody
+          group={g}
+          p={p}
+          stat={st}
+          asOfDate={snapshot?.asOfDate ?? null}
+          qs={qs}
+          loggedIn={!!user}
+        />
+      ),
+    };
+  });
 
   return (
     <main className="mx-auto min-h-screen max-w-3xl space-y-8 px-6 py-12">
@@ -259,118 +400,33 @@ export default async function ResultPage({
       </Card>
 
       <section className="space-y-4">
-        <h2 className="font-serif text-2xl font-bold">추천 이름 {result.groups.length}개</h2>
-        {result.groups.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            조건에 맞는 이름이 없습니다. 돌림자나 발음·남녀 공용 조건을 완화해 보세요.
-          </p>
+        {result.groups.length === 0 ? (
+          <>
+            <h2 className="font-serif text-2xl font-bold">추천 이름</h2>
+            <p className="text-sm text-muted-foreground">
+              조건에 맞는 이름이 없습니다. 돌림자나 발음·남녀 공용 조건을 완화해 보세요.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-xs text-muted-foreground">
+              성명학 등급은 사주 보완 {SCORE_WEIGHTS.saju} · 수리 {SCORE_WEIGHTS.suri} · 발음오행{" "}
+              {SCORE_WEIGHTS.pronunciation} · 자원오행 {SCORE_WEIGHTS.resource}점 배점의 100점 만점 점수로
+              정합니다 (S {GRADE_MIN.S}점 이상 · A {GRADE_MIN.A}점 이상 · B {GRADE_MIN.B}점 이상 · 그 밖은 C).
+              맞춤 점수는 성명학 점수에 한자 뜻과 요즘 어감, 우리 집이 고른 항목의 가점을 더한 값으로 순서를
+              정하는 데만 쓰입니다. 같은 한글 이름의 한자 조합은 한 카드에 묶었습니다.
+            </p>
+            {result.stats && <DataSourceNote />}
+            <ResultList
+              items={items}
+              limit={DISPLAY_LIMIT}
+              loggedIn={!!user}
+              saved={saved}
+              sortOverride={p.rarity === "rare" ? "rare" : p.rarity === "common" ? "popular" : null}
+              rareAvailable={!!result.stats}
+            />
+          </>
         )}
-        {result.groups.length > 0 && (
-          <p className="text-xs text-muted-foreground">
-            성명학 등급은 사주 보완 {SCORE_WEIGHTS.saju} · 수리 {SCORE_WEIGHTS.suri} · 발음오행{" "}
-            {SCORE_WEIGHTS.pronunciation} · 자원오행 {SCORE_WEIGHTS.resource}점 배점의 100점 만점 점수로 정합니다
-            (S {GRADE_MIN.S}점 이상 · A {GRADE_MIN.A}점 이상 · B {GRADE_MIN.B}점 이상 · 그 밖은 C). 순서는 성명학
-            점수에 한자 뜻과 요즘 어감을 더해 정하고, 같은 한글 이름의 한자 조합은 한 카드에 묶었습니다.
-          </p>
-        )}
-        {result.stats && result.groups.length > 0 && <DataSourceNote />}
-        {result.groups.map((g) => {
-          const [best, ...others] = g.options;
-          const a = best.analysis;
-          const st = result.stats?.get(g.hangul);
-          return (
-            <Card key={g.hangul}>
-              <CardContent className="space-y-3 p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-serif text-2xl font-bold">
-                      {p.surname}
-                      {g.hangul}
-                      <span className="ml-2 text-lg text-muted-foreground">
-                        {p.surnameHanja}
-                        {hanjaOf(best)}
-                      </span>
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">{charLine(best)}</p>
-                  </div>
-                  <GradeBadge grade={a.grade} score={a.totalScore} />
-                </div>
-
-                <ScoreBreakdownLine analysis={a} />
-
-                <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
-                  {(Object.keys(GYEOK_LABEL) as (keyof typeof GYEOK_LABEL)[]).map((k) => (
-                    <p key={k}>
-                      <span className="text-muted-foreground">{GYEOK_LABEL[k]}</span>{" "}
-                      {a.fourGyeok[k].suri}수 {a.fourGyeok[k].lucky ? "길" : "흉"}
-                    </p>
-                  ))}
-                </div>
-                <p className="text-sm">
-                  <span className="text-muted-foreground">발음오행</span>{" "}
-                  {a.pronunciation.elements.join("→")}
-                  {a.resource && (
-                    <>
-                      {" · "}
-                      <span className="text-muted-foreground">자원오행</span>{" "}
-                      {best.givenName.map((c) => c.element ?? "?").join("·")}
-                      {a.resource.needMatched && " (용신 보강)"}
-                    </>
-                  )}
-                  {" · "}
-                  <span className="text-muted-foreground">외국어 발음</span> {best.globalScore}
-                </p>
-                {st && (
-                  <div className="space-y-2 rounded-md border p-3">
-                    <NameStatsBasic stat={st} asOfDate={snapshot?.asOfDate ?? null} />
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                      <span className="text-muted-foreground">희소성</span>
-                      <TierBadge tier={st.tier} />
-                      {st.neutral && <span className="text-muted-foreground">남녀 공용</span>}
-                      <Link
-                        href={`/stats?name=${encodeURIComponent(g.hangul)}`}
-                        className="ml-auto text-primary underline"
-                      >
-                        연도별 상세 통계
-                      </Link>
-                    </div>
-                  </div>
-                )}
-                <MeaningList r={best} />
-
-                <OptionActions r={best} qs={qs} loggedIn={!!user} />
-
-                {others.length > 0 && (
-                  <details className="group rounded-md border">
-                    <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-primary">
-                      <span className="group-open:hidden">다른 한자 조합 {others.length}개 보기</span>
-                      <span className="hidden group-open:inline">다른 한자 조합 접기</span>
-                    </summary>
-                    <ul className="divide-y border-t">
-                      {others.map((r) => (
-                        <li key={hanjaOf(r)} className="space-y-2 p-3">
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <p className="font-serif text-lg font-bold">
-                                {p.surnameHanja}
-                                {hanjaOf(r)}
-                              </p>
-                              <p className="text-sm text-muted-foreground">{charLine(r)}</p>
-                            </div>
-                            <GradeBadge grade={r.analysis.grade} score={r.analysis.totalScore} size="sm" />
-                          </div>
-                          <ScoreBreakdownLine analysis={r.analysis} />
-                          <MeaningList r={r} />
-                          <OptionActions r={r} qs={qs} loggedIn={!!user} />
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
       </section>
     </main>
   );
