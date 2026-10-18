@@ -100,6 +100,20 @@ export function isMessyMeaning(meaning: string | null, hun: string | null): bool
   return !!hun && hun.split(/[\s,()]+/).some((w) => MESSY_HUN.has(w));
 }
 
+/**
+ * 성별과 관계없이 빼는 글자 (2026-10-18 사용자 확인). 한자 기준이라 읽기가 여럿이어도 모두 뺀다.
+ *  - 가족 관계·혼인: 아비·지아비·아재비·형·사위·아내·어미·며느리·누이·이모·외숙모·후궁·첩실·정실·시집·장가들 등
+ *  - 동물 암수: 수컷·암컷·암양·암사슴
+ *  - 부정적인 신분·호칭: 첩, 몸 파는 여자, 무당, 여자를 욕하는 말
+ */
+const KIN_OR_SEX_HANJA = new Set([
+  ..."夫父叔兄壻婿昆爸爹爺牡",
+  ..."妻婦母姑妹姊姉姐婆嫂媳姨姒媽媼媪嫗姥娣嫁媵",
+  ..."嬪姞媍嫡妗妲娶婣甥舅媤",
+  ..."雌牝牸麀牂",
+  ..."妾娼巫㜯",
+]);
+
 /** 지명·인명 전용 글자와 어조사 */
 const NAME_OR_PARTICLE_HUN = /(땅|물|강|산|나라|고을|사람)\s?이름|어조사/;
 
@@ -121,7 +135,7 @@ export function classifyHanja(c: {
   isEdu: boolean;
 }): Suitability {
   if (isAllowedNameHanja(c.hanja, c.eum)) return "good";
-  if (isRareReading(c.hanja, c.eum)) return "exclude";
+  if (isRareReading(c.hanja, c.eum) || KIN_OR_SEX_HANJA.has(c.hanja)) return "exclude";
   if (!hasAcceptableMeaning(c.meaning) || hasNegativeHun(c.hun) || isMessyMeaning(c.meaning, c.hun)) return "exclude";
   if (isObjectLike(c.meaning, c.hun)) return c.isEdu ? "awkward" : "exclude";
   // 뜻풀이가 긍정적이어도 교육용이 아니면 이름에 잘 안 쓰는 글자가 많아(瑭·璐 등 옥 이름) 보통으로 본다

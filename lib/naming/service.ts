@@ -4,6 +4,7 @@ import { analyzeSaju } from "@/lib/saju";
 import { loadNameSummaries, type NameStatSummary } from "@/lib/stats/name-stats";
 import { analyzeName, analyzeWithPrefix } from "./analyze";
 import { diagnoseCombination, type CombinationItem } from "./combination";
+import { applyGender } from "./gender-hanja";
 import { fetchByEum, fetchPool, fetchSurname } from "./hanja-repo";
 import type { NamingParams } from "./params";
 import { recommendNames, type NameGroup, type NameHanja } from "./recommend";
@@ -81,7 +82,8 @@ async function runNamingUnsafe(
   const { yongsin: needed, huisin, gisin } = saju.yongsin;
 
   // 대법원 인명용 한자 전체 (불용한자와 부정적·불분명한 뜻 제외)
-  const pool = await fetchPool(supabase);
+  // 성별 뜻이 뚜렷한 글자는 아이 성별에 맞게 빼거나 감점한다 (gender-hanja.ts)
+  const pool = applyGender(await fetchPool(supabase), p.gender);
   let first = pool;
   let second = pool;
   const allowSyllables = new Set<string>();

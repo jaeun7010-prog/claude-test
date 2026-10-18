@@ -1,12 +1,13 @@
 /**
- * 등급 분포 점검: npx tsx --env-file=.env.local scripts/grade-distribution.ts
+ * 등급 분포 점검: npx tsx --env-file=.env.local scripts/grade-distribution.ts [male|female|neutral]
  * 성씨 5개 × 테스트 사주 10개의 추천 상위 DISPLAY_LIMIT개 등급(S/A/B/C)과 통관 배치 수.
- * 사주 엔진·점수 규칙을 바꾼 뒤 git stash로 전후를 각각 돌려 비교한다.
+ * 사주 엔진·점수 규칙을 바꾼 뒤 git stash로 전후를 각각 돌려 비교한다. 성별을 주지 않으면 성별 무관.
  */
 import { createClient } from "@supabase/supabase-js";
 import { parseNamingParams } from "@/lib/naming/params";
 import { DISPLAY_LIMIT, runNaming } from "@/lib/naming/service";
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
+const GENDER = process.argv[2];
 const SURNAMES: [string, string][] = [["김", "金"], ["이", "李"], ["박", "朴"], ["최", "崔"], ["정", "鄭"]];
 const BIRTHS = [
   ["2024-11-20", "09:33", "jeju"], ["2024-11-20", "09:33", "seoul"], ["2024-05-10", "07:28", "seoul"],
@@ -18,7 +19,7 @@ const BIRTHS = [
   const total: Record<string, number> = { S: 0, A: 0, B: 0, C: 0 };
   const lines: string[] = [];
   for (const [s, sh] of SURNAMES) for (const [date, time, place] of BIRTHS) {
-    const p = parseNamingParams({ surname: s, sh, date, time, place });
+    const p = parseNamingParams({ surname: s, sh, date, time, place, ...(GENDER ? { gender: GENDER } : {}) });
     if (!p.ok) throw p.error;
     const r = await runNaming(supabase, p.value);
     if (!r.ok) throw r.error;
