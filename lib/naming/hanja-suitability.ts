@@ -114,6 +114,12 @@ const KIN_OR_SEX_HANJA = new Set([
   ..."妾娼巫㜯",
 ]);
 
+/**
+ * 사물 뜻이 첫 뜻이지만 이름에 쓰는 좋은 뜻도 있어 빼지 않고 "어색"(뜻 점수 0)으로 감점하는 글자 (2026-10-18 사용자 확인).
+ * 陶: 질그릇 → 도야하다
+ */
+const AWKWARD_HANJA = new Set([..."陶"]);
+
 /** 지명·인명 전용 글자와 어조사 */
 const NAME_OR_PARTICLE_HUN = /(땅|물|강|산|나라|고을|사람)\s?이름|어조사/;
 
@@ -137,6 +143,7 @@ export function classifyHanja(c: {
   if (isAllowedNameHanja(c.hanja, c.eum)) return "good";
   if (isRareReading(c.hanja, c.eum) || KIN_OR_SEX_HANJA.has(c.hanja)) return "exclude";
   if (!hasAcceptableMeaning(c.meaning) || hasNegativeHun(c.hun) || isMessyMeaning(c.meaning, c.hun)) return "exclude";
+  if (AWKWARD_HANJA.has(c.hanja)) return "awkward";
   if (isObjectLike(c.meaning, c.hun)) return c.isEdu ? "awkward" : "exclude";
   // 뜻풀이가 긍정적이어도 교육용이 아니면 이름에 잘 안 쓰는 글자가 많아(瑭·璐 등 옥 이름) 보통으로 본다
   if (hasPositiveMeaning(c.meaning)) return c.isEdu ? "good" : "normal";
