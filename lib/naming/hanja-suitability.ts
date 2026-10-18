@@ -115,10 +115,38 @@ const KIN_OR_SEX_HANJA = new Set([
 ]);
 
 /**
- * 사물 뜻이 첫 뜻이지만 이름에 쓰는 좋은 뜻도 있어 빼지 않고 "어색"(뜻 점수 0)으로 감점하는 글자 (2026-10-18 사용자 확인).
- * 陶: 질그릇 → 도야하다
+ * 교육용 "보통" 글자 중 뜻이 이름에 어색한 글자 (2026-10-18 사용자 검토·확인, 한자 기준).
+ * 어색(뜻 점수 0, 후보에 남김): 사물이 첫 뜻이지만 이름에 쓰는 좋은 뜻도 있는 글자 (陶 질그릇 → 도야하다, 家 → 가문, 橋 → 잇다 등)와
+ *   뜰·한정할·막을·다를·머무를처럼 뜻이 어색한 글자.
+ * 제외: 다른 좋은 뜻이 없는 사물 뜻(닭·벌레·술·소금·자물쇠·비석·관청·옷·실·돈·구리·납 등)과
+ *   없을·묻을·험할·섞일·끊을·불탈·연기·영(0)·벼락·더울.
+ * 이름에 흔하고 좋은 뜻이 분명한 사물 글자(龍·鶴·燕·園·庭·宮·堂·鑑·衡·冠·錦·果 등)는 그대로 둔다.
  */
-const AWKWARD_HANJA = new Set([..."陶"]);
+const AWKWARD_HANJA = new Set([
+  ..."陶",
+  // 그릇·도구
+  ..."鐘符鏡弓旗燈墨船舟印尺筆絃窓",
+  // 건물
+  ..."壇家館校橋樓臺門舍城院殿塔戶",
+  // 동물·음식·옷
+  ..."龜鹿雁羊蝶栗李茶桃稻梨禾帶履裝布",
+  // 뜻이 어색한 글자
+  ..."浮漂限防異留",
+]);
+const AWKWARD_MEANING_EXCLUDE = new Set([
+  // 그릇·도구·재물
+  ..."錢鉛銅株碑鎖瓦紙",
+  // 건물·장소
+  ..."陵街庫廟寺署市屋場墻店廳巷屯里",
+  // 동물
+  ..."鷄禽馬蜂獸魚漁烏鳥畜蟲",
+  // 음식·곡식
+  ..."菜麻卵畓糖豆糧麥米飯粉蔬粟食鹽乳油酒丸",
+  // 옷
+  ..."服衣絲線",
+  // 뜻이 어색한 글자
+  ..."無埋險錯切燒煙零震暑",
+]);
 
 /** 지명·인명 전용 글자와 어조사 */
 const NAME_OR_PARTICLE_HUN = /(땅|물|강|산|나라|고을|사람)\s?이름|어조사/;
@@ -141,7 +169,8 @@ export function classifyHanja(c: {
   isEdu: boolean;
 }): Suitability {
   if (isAllowedNameHanja(c.hanja, c.eum)) return "good";
-  if (isRareReading(c.hanja, c.eum) || KIN_OR_SEX_HANJA.has(c.hanja)) return "exclude";
+  if (isRareReading(c.hanja, c.eum) || KIN_OR_SEX_HANJA.has(c.hanja) || AWKWARD_MEANING_EXCLUDE.has(c.hanja))
+    return "exclude";
   if (!hasAcceptableMeaning(c.meaning) || hasNegativeHun(c.hun) || isMessyMeaning(c.meaning, c.hun)) return "exclude";
   if (AWKWARD_HANJA.has(c.hanja)) return "awkward";
   if (isObjectLike(c.meaning, c.hun)) return c.isEdu ? "awkward" : "exclude";
