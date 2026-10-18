@@ -18,7 +18,10 @@ import type { Grade } from "@/lib/naming/types";
 
 export interface ResultItem {
   hangul: string;
-  grade: Grade;
+  /** 한자 이름의 성명학 등급. 순우리말 이름은 등급을 쓰지 않아 비운다 */
+  grade?: Grade;
+  /** 점수와 관계없이 맨 뒤로 보낼 항목 (순우리말 강한 놀림말 이름) */
+  demoted?: boolean;
   metrics: NameMetrics;
   /** 서버에서 그린 카드 본문 */
   body: ReactNode;
@@ -44,19 +47,15 @@ function writeStored(p: Priorities) {
 }
 
 /**
- * 추천 이름 목록. 우선순위를 바꾸면 서버를 거치지 않고 맞춤 점수로 다시 정렬한다.
- * items 는 기본 순위 점수 순으로 넉넉히(표시 개수보다 많이) 받아, 맞춤 점수 상위 limit개를 보여 준다.
+ * 우선순위 선택 상태. 한자·순우리말 탭이 같은 선택을 함께 쓴다.
+ * 로그인 사용자는 서버(profiles.naming_priorities)에, 비로그인은 이 브라우저에 기억한다.
  */
-export function ResultList({
-  items,
-  limit,
+export function usePriorities({
   loggedIn,
   saved,
   sortOverride,
   rareAvailable,
 }: {
-  items: ResultItem[];
-  limit: number;
   loggedIn: boolean;
   /** 로그인 사용자의 저장된 우선순위 (없으면 null) */
   saved: Priorities | null;
@@ -98,21 +97,52 @@ export function ResultList({
     });
   };
 
+  return { priorities, change, status };
+}
+
+/** 우선순위 패널 (선택 상태는 usePriorities로 받는다) */
+export function ResultPriorityPanel({
+  state,
+  rareAvailable,
+}: {
+  state: ReturnType<typeof usePriorities>;
+  rareAvailable: boolean;
+}) {
+  return (
+    <PriorityPanel value={state.priorities} onChange={state.change} rareAvailable={rareAvailable} status={state.status} />
+  );
+}
+
+/**
+ * 추천 이름 목록. 우선순위를 바꾸면 서버를 거치지 않고 맞춤 점수로 다시 정렬한다.
+ * items 는 기본 순위 점수 순으로 넉넉히(표시 개수보다 많이) 받아, 맞춤 점수 상위 limit개를 보여 준다.
+ * grade가 있는 항목(한자 이름)은 성명학 등급을 함께 보여 주고, demoted 항목은 맨 뒤로 보낸다.
+ */
+export function ResultList({
+  items,
+  limit,
+  priorities,
+  rareAvailable,
+}: {
+  items: ResultItem[];
+  limit: number;
+  priorities: Priorities;
+  rareAvailable: boolean;
+}) {
   const shown = useMemo(
-    () => rankByPriorities(items, priorities, rareAvailable, limit),
+    () => rankByPriorities(items, priorities, rareAvailable, limit, (item) => !!item.demoted),
     [items, priorities, rareAvailable, limit]
   );
 
   return (
     <div className="space-y-4">
-      <PriorityPanel value={priorities} onChange={change} rareAvailable={rareAvailable} status={status} />
       <h2 className="font-serif text-2xl font-bold">추천 이름 {shown.length}개</h2>
       {shown.map(({ item, score }) => (
         <Card key={item.hangul}>
-          <CardContent className="space-y-3 p-5">
+          <CardContent className="space-y-3 p-4 sm:p-5">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
               <span className="font-medium">
-                성명학 {item.grade}등급 · 내 기준 맞춤 {Math.round(score)}점
+                {item.grade && `성명학 ${item.grade}등급 · `}내 기준 맞춤 {Math.round(score)}점
               </span>
               {badgesOf(item.metrics, priorities, rareAvailable).map((b) => (
                 <span key={b} className="rounded-full bg-secondary px-2 py-0.5 text-xs">

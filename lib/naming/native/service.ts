@@ -55,6 +55,8 @@ export interface NativeNamingResult {
   /** 화면에 보여 줄 안내 (돌림자, 외자 부족, 젠더 뉴트럴 통계 없음 등) */
   notices: string[];
   excluded: NativeFilterCounts;
+  /** 법적 이름(부모 성 + 이름) 기준 출생 통계. 적재 전이면 null */
+  stats: Map<string, NameStatSummary> | null;
 }
 
 const LENGTH_MODE: Record<NamingParams["length"], NativeLength> = { "1": "single", "2": "double", any: "any" };
@@ -143,7 +145,7 @@ export function buildNativeCandidates(
   if (p.dolrimja) notices.push(NATIVE_DOLRIMJA_NOTICE);
   if (mode === "single" && list.length < NATIVE_DISPLAY_LIMIT) notices.push(NATIVE_SINGLE_SHORTAGE_NOTICE);
 
-  return { candidates: list.slice(0, NATIVE_CANDIDATE_LIMIT), notices, excluded };
+  return { candidates: list.slice(0, NATIVE_CANDIDATE_LIMIT), notices, excluded, stats };
 }
 
 /** 통계를 불러와 순우리말 이름 후보를 만든다. 사주는 한자 쪽 runNaming 결과를 그대로 넘긴다 */

@@ -335,7 +335,11 @@
     - 우선순위: 후보마다 `metrics`(`NameMetrics`, baseScore = 우리말 이름 점수)를 넣어 `priorities.ts`를 그대로 쓴다. **4단계 주의**: `rankByPriorities`는 맞춤 점수로만 정렬하므로 강한 놀림말 이름을 맨 뒤로 다시 보내야 한다.
     - 생일 없음: 지금 입력 폼은 생년월일이 필수라 쓰이지 않는다. 점수 쪽 분기(saju null)만 유지한다 (2026-10-18 사용자 결정).
     - 검증: `npx tsx --env-file=.env.local scripts/native-conditions.ts` (조건 조합별 결과 수·안내·제외 수).
-    - 4단계 화면: 서버에서 두 탭을 함께 만들고 브라우저에서 바꾼다. 사주 카드와 조합 진단은 탭 위에 둔다. 카드: 이름, 분류 배지("사전에 있는 말" / "~에서 따온 이름" / "널리 쓰이는 이름"), 뜻 한 줄, 우리말 이름 점수와 항목별 점수, 발음오행 흐름, 희소성, 저장 버튼.
+  - **4단계 화면 (완료, `components/naming/naming-tabs.tsx`·`native-card.tsx`)**: 결과 화면이 서버에서 한자(`runNaming`)·순우리말(`runNativeNaming`) 결과를 함께 만들고, 탭은 브라우저에서 바꾼다(`tab=native`를 주소에 남김, 기본 한자). 사주 카드·조합 진단은 탭 위, 우선순위 패널은 두 탭이 함께 쓴다(`result-list.tsx`의 `usePriorities`).
+    - 카드: 성 + 법적 이름, 분류 배지(`score.ts`의 `CATEGORY_LABEL`), 뜻 한 줄, 우리말 이름 점수(등급 없음)와 항목별 점수 4개, 놀림말·발음 어려움 안내, 발음오행 흐름, "항목별 설명 보기"(용신·뜻·부르기 쉬움 설명, 글로벌 발음), 희소성(통계 없으면 "준비 중", 목록 밖이면 매우 희귀).
+    - 강한 놀림말은 `rankByPriorities`의 `demoted`로 어떤 정렬에서도 맨 뒤. 잠금·PDF·리포트 버튼 없음, 저장 버튼은 5단계에서 붙인다(지금은 숨김).
+    - 탭 안내: `native.notices`(외자 부족·돌림자·젠더 뉴트럴), 점수 설명, "학파에 따라 보는 비중이 다릅니다". 한자 쪽 `result.notice`는 한자 탭 안으로 옮겼다.
+    - 한자 탭 결과: `dump-single-surname.ts` 전후 10,942줄 동일.
     - 5단계 저장: `given_name_hanja`는 비우고 `filters.nameKind = "native"`, 분석은 `analysis.native`. 마이페이지 목록·상세는 4격 없이 따로 그리고, 나란히 비교에 한자 이름과 섞이면 "점수 기준이 달라 직접 비교하기 어렵습니다"를 안내한다.
     - 6단계 검증: `scripts/native-distribution.ts`(무작위 사주 40개, seed 20261018, 성별 3가지)로 용신별 화면 이름 수(30개 채움), 점수 분포, 상위 10개를 본다. 한자 탭은 `scripts/dump-single-surname.ts` 전후가 같아야 한다. 단계마다 CLAUDE.md를 갱신하고 커밋·push한다.
 - 순우리말 프리미엄 리포트: 순우리말 이름용 PDF(한문 리포트와 다른 구성)와 유료 범위. 순우리말 탭 구현 뒤 사용자와 정한다.

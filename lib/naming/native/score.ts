@@ -30,7 +30,7 @@ export const HARD_TO_SAY_BELOW = 50;
 export const HARD_TO_SAY_PENALTY = 10;
 export const HARD_TO_SAY_LABEL = "성과 붙이면 발음이 조금 어려워요";
 
-const CATEGORY_LABEL: Record<NativeName["category"], string> = {
+export const CATEGORY_LABEL: Record<NativeName["category"], string> = {
   dictionary: "사전에 있는 말",
   coined: "이름용으로 만든 말",
   popular: "널리 쓰이는 이름",

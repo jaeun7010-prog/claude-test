@@ -41,8 +41,8 @@ export function PriorityPanel({
       <CardHeader>
         <CardTitle className="font-serif text-xl">우리 집이 중요하게 보는 것</CardTitle>
         <CardDescription>
-          고른 항목에 가점을 더한 &quot;맞춤 점수&quot;로 순서를 바꿉니다. 성명학 등급과 리포트 점수는 바뀌지
-          않습니다.
+          고른 항목에 가점을 더한 &quot;맞춤 점수&quot;로 순서를 바꿉니다. 성명학 등급·우리말 이름 점수와 리포트
+          점수는 바뀌지 않습니다.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

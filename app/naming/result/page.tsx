@@ -6,7 +6,9 @@ import { DataSourceNote } from "@/components/data-source-note";
 import { NameStatsBasic } from "@/components/name-stats-basic";
 import { TierBadge } from "@/components/name-stats-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ResultList, type ResultItem } from "@/components/naming/result-list";
+import type { ResultItem } from "@/components/naming/result-list";
+import { NamingTabs } from "@/components/naming/naming-tabs";
+import { NativeCardBody } from "@/components/naming/native-card";
 import { GradeBadge, GyeokGrid, ScoreBreakdownLine } from "@/components/naming/analysis-parts";
 import { CombinationNote } from "@/components/naming/combination-note";
 import { LockedPreview } from "@/components/naming/locked-preview";
@@ -16,6 +18,8 @@ import { TimeCorrectionNote } from "@/components/naming/time-correction-note";
 import { loadEntitlement, type Entitlement } from "@/lib/commerce/entitlement";
 import { parseNamingParams, toNamingQuery, type NamingParams } from "@/lib/naming/params";
 import { parsePriorities, type Priorities } from "@/lib/naming/priorities";
+import { NATIVE_SCORE_WEIGHTS } from "@/lib/naming/native/score";
+import { NATIVE_DISPLAY_LIMIT, runNativeNaming } from "@/lib/naming/native/service";
 import { nameMeaningOf } from "@/lib/naming/name-meaning";
 import { hunEum, type NameGroup, type Recommendation } from "@/lib/naming/recommend";
 import { registrationCaveat, registrationText } from "@/lib/naming/registration";
@@ -319,11 +323,13 @@ export default async function ResultPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [snapshot, ent] = await Promise.all([
-    result.stats ? getLatestSnapshot() : null,
+  // 순우리말 탭도 서버에서 함께 만든다 (사주는 한자 쪽 결과를 그대로 쓴다)
+  const [native, ent] = await Promise.all([
+    runNativeNaming(supabase, p, result.saju),
     // 유료 내용(사주 상세·이름 상세)은 결제한 리포트가 있을 때만 그린다 (lib/commerce/entitlement.ts)
     loadEntitlement(supabase, !!user, toNamingQuery(p, false)),
   ]);
+  const snapshot = result.stats || native.stats ? await getLatestSnapshot() : null;
 
   const { pillars, yongsin } = result.saju;
   const qs = new URLSearchParams(
@@ -366,11 +372,37 @@ export default async function ResultPage({
     };
   });
 
+  const nativeItems: ResultItem[] = native.candidates.map((c) => ({
+    hangul: c.legalName,
+    metrics: c.metrics,
+    // 강한 놀림말 이름은 맞춤 점수·정렬과 관계없이 맨 뒤 (compareNativeScore와 같은 규칙)
+    demoted: c.score.teasing?.level === "strong",
+    body: (
+      <NativeCardBody
+        candidate={c}
+        surname={p.surname}
+        stat={native.stats?.get(c.legalName)}
+        statsLoaded={!!native.stats}
+        asOfDate={snapshot?.asOfDate ?? null}
+      />
+    ),
+  }));
+  const nativeNotices = native.notices.map((n) => (
+    <p key={n} role="status" className="rounded-md bg-secondary p-3 text-sm">
+      {n}
+    </p>
+  ));
+  const hanjaNotice = result.notice && (
+    <p role="status" className="rounded-md bg-secondary p-3 text-sm">
+      {result.notice}
+    </p>
+  );
+
   return (
-    <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-3xl space-y-8 px-6 py-12">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="font-serif text-3xl font-bold">
+    <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-3xl space-y-8 px-4 py-8 sm:px-6 sm:py-12">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="font-serif text-2xl font-bold break-keep sm:text-3xl">
             {p.surname}
             {p.surnameHanja && ` (${p.surnameHanja})`}씨
             {p.parentSurname && ` · ${p.parentSurname.hangul}(${p.parentSurname.hanja}) 함께 쓰기`} 추천 이름
@@ -409,12 +441,6 @@ export default async function ResultPage({
           label={`${p.surname} + ${p.parentSurname.hangul}`}
           locked={!ent.saju}
         />
-      )}
-
-      {result.notice && (
-        <p role="status" className="rounded-md bg-secondary p-3 text-sm">
-          {result.notice}
-        </p>
       )}
 
       {searchParams.saveError && (
@@ -499,33 +525,67 @@ export default async function ResultPage({
       </Card>
 
       <section id="names" className="scroll-mt-16 space-y-4">
-        {result.groups.length === 0 ? (
-          <>
-            <h2 className="font-serif text-2xl font-bold">추천 이름</h2>
-            <p className="text-sm text-muted-foreground">
-              조건에 맞는 이름이 없습니다. 돌림자나 발음·남녀 공용 조건을 완화해 보세요.
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="text-xs text-muted-foreground">
-              성명학 등급은 사주 보완 {SCORE_WEIGHTS.saju} · 수리 {SCORE_WEIGHTS.suri} · 발음오행{" "}
-              {SCORE_WEIGHTS.pronunciation} · 자원오행 {SCORE_WEIGHTS.resource}점 배점의 100점 만점 점수로
-              정합니다 (S {GRADE_MIN.S}점 이상 · A {GRADE_MIN.A}점 이상 · B {GRADE_MIN.B}점 이상 · 그 밖은 C).
-              맞춤 점수는 성명학 점수에 한자 뜻과 요즘 어감, 우리 집이 고른 항목의 가점을 더한 값으로 순서를
-              정하는 데만 쓰입니다. 같은 한글 이름의 한자 조합은 한 카드에 묶었습니다.
-            </p>
-            {result.stats && <DataSourceNote />}
-            <ResultList
-              items={items}
-              limit={DISPLAY_LIMIT}
-              loggedIn={!!user}
-              saved={saved}
-              sortOverride={p.rarity === "rare" ? "rare" : p.rarity === "common" ? "popular" : null}
-              rareAvailable={!!result.stats}
-            />
-          </>
-        )}
+        <NamingTabs
+          initialTab={searchParams.tab === "native" ? "native" : "hanja"}
+          loggedIn={!!user}
+          saved={saved}
+          sortOverride={p.rarity === "rare" ? "rare" : p.rarity === "common" ? "popular" : null}
+          rareAvailable={!!result.stats}
+          hanja={{
+            items,
+            limit: DISPLAY_LIMIT,
+            intro: (
+              <>
+                {hanjaNotice}
+                <p className="text-xs text-muted-foreground">
+                  성명학 등급은 사주 보완 {SCORE_WEIGHTS.saju} · 수리 {SCORE_WEIGHTS.suri} · 발음오행{" "}
+                  {SCORE_WEIGHTS.pronunciation} · 자원오행 {SCORE_WEIGHTS.resource}점 배점의 100점 만점 점수로
+                  정합니다 (S {GRADE_MIN.S}점 이상 · A {GRADE_MIN.A}점 이상 · B {GRADE_MIN.B}점 이상 · 그 밖은 C).
+                  맞춤 점수는 성명학 점수에 한자 뜻과 요즘 어감, 우리 집이 고른 항목의 가점을 더한 값으로 순서를
+                  정하는 데만 쓰입니다. 같은 한글 이름의 한자 조합은 한 카드에 묶었습니다.
+                </p>
+                {result.stats && <DataSourceNote />}
+              </>
+            ),
+            empty: (
+              <>
+                {hanjaNotice}
+                <h2 className="font-serif text-2xl font-bold">추천 이름</h2>
+                <p className="text-sm text-muted-foreground">
+                  조건에 맞는 이름이 없습니다. 돌림자나 발음·남녀 공용 조건을 완화해 보세요.
+                </p>
+              </>
+            ),
+          }}
+          native={{
+            items: nativeItems,
+            limit: NATIVE_DISPLAY_LIMIT,
+            intro: (
+              <>
+                {nativeNotices}
+                <p className="text-xs text-muted-foreground">
+                  순우리말 이름은 한자가 없어 수리·자원오행 대신 소리와 뜻으로 봅니다. 우리말 이름 점수(100점)는 용신
+                  보완 {NATIVE_SCORE_WEIGHTS.yongsin} · 발음오행 흐름 {NATIVE_SCORE_WEIGHTS.flow} · 뜻{" "}
+                  {NATIVE_SCORE_WEIGHTS.meaning} · 부르기 쉬움 {NATIVE_SCORE_WEIGHTS.easy}점 배점이며, 한자 이름의 성명학
+                  등급과 기준이 달라 등급을 붙이지 않습니다. 순우리말 이름은 모두 무료로 볼 수 있습니다.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  발음오행으로 용신을 보완하는 방식은 학파에 따라 보는 비중이 다릅니다.
+                </p>
+                {native.stats && <DataSourceNote />}
+              </>
+            ),
+            empty: (
+              <>
+                {nativeNotices}
+                <h2 className="font-serif text-2xl font-bold">추천 이름</h2>
+                <p className="text-sm text-muted-foreground">
+                  조건에 맞는 순우리말 이름이 없습니다. 글자 수나 발음·남녀 공용 조건을 완화해 보세요.
+                </p>
+              </>
+            ),
+          }}
+        />
       </section>
     </main>
   );

@@ -120,12 +120,14 @@ export function customScore(m: NameMetrics, p: Priorities, rareAvailable = true)
 /**
  * 우선순위로 정렬해 상위 limit개를 돌려준다 (입력 순서는 기본 순위 점수 순이라고 가정).
  * 맞춤 점수순이 기본이고, 희귀/인기 이름순은 누적 건수로 먼저 비교한 뒤 맞춤 점수로 가른다.
+ * `demoted`가 참인 항목은 어떤 정렬에서도 맨 뒤로 보낸다 (순우리말 강한 놀림말 이름).
  */
 export function rankByPriorities<T extends { metrics: NameMetrics }>(
   items: readonly T[],
   p: Priorities,
   rareAvailable: boolean,
-  limit: number
+  limit: number,
+  demoted?: (item: T) => boolean
 ): { item: T; score: number }[] {
   const scored = items.map((item, index) => ({
     item,
@@ -134,8 +136,10 @@ export function rankByPriorities<T extends { metrics: NameMetrics }>(
   }));
   const births = (x: (typeof scored)[number]) => x.item.metrics.births ?? 0;
   const sign = !rareAvailable ? 0 : p.sort === "rare" ? 1 : p.sort === "popular" ? -1 : 0;
+  const last = (x: (typeof scored)[number]) => (demoted?.(x.item) ? 1 : 0);
   scored.sort(
     (a, b) =>
+      last(a) - last(b) ||
       sign * (births(a) - births(b)) ||
       b.score - a.score ||
       b.item.metrics.baseScore - a.item.metrics.baseScore ||
