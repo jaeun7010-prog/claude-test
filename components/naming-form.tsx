@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NATIVE_SINGLE_SHORTAGE_NOTICE } from "@/lib/naming/native/length";
 import { COMMON_SURNAMES, COMPOUND_SURNAMES } from "@/lib/naming/surnames";
 import {
   BIRTHPLACES,
@@ -21,6 +22,14 @@ interface SurnameOption {
   /** 복성의 글자별 획수 (예: 南9 + 宮10) */
   detail?: string;
 }
+
+type NameKind = "hanja" | "native";
+
+/** 이름 종류. 고른 쪽 탭이 결과 화면에서 먼저 열린다 (순우리말이면 tab=native, 다른 탭도 그대로 볼 수 있다) */
+const NAME_KINDS: { value: NameKind; label: string; hint: string }[] = [
+  { value: "hanja", label: "한자 이름", hint: "사주와 성명학으로 한자를 골라요" },
+  { value: "native", label: "순우리말 이름", hint: "뜻이 고운 우리말 이름을 골라요" },
+];
 
 const selectClass =
   "flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -177,6 +186,7 @@ export function NamingForm() {
   const [place, setPlace] = useState(DEFAULT_BIRTHPLACE_ID);
   const [length, setLength] = useState<"any" | "1" | "2">("any");
   const [withParent, setWithParent] = useState(false);
+  const [kind, setKind] = useState<NameKind>("hanja");
 
   // 기타 해외 출생: 브라우저가 아는 IANA 시간대 목록 (선택했을 때만 렌더링)
   const timeZones = useMemo(
@@ -311,6 +321,31 @@ export function NamingForm() {
       <section className="space-y-3">
         <h2 className="font-serif text-lg font-bold">이름 조건</h2>
         <div className="space-y-2">
+          <Label id="kind-label">이름 종류</Label>
+          <div role="radiogroup" aria-labelledby="kind-label" className="grid grid-cols-2 gap-2 sm:gap-3">
+            {NAME_KINDS.map((k) => {
+              const active = kind === k.value;
+              return (
+                <button
+                  key={k.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setKind(k.value)}
+                  className={`min-w-0 rounded-md border-2 px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    active ? "border-primary bg-secondary" : "border-input hover:bg-secondary/50"
+                  }`}
+                >
+                  <span className="block text-sm font-semibold sm:text-base">{k.label}</span>
+                  <span className="mt-1 block text-xs text-muted-foreground break-keep">{k.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+          {/* 한자 이름은 예전 주소와 같게 tab을 넣지 않는다 */}
+          {kind === "native" && <input type="hidden" name="tab" value="native" />}
+        </div>
+        <div className="space-y-2">
           <Label htmlFor="len">이름 글자 수</Label>
           <select
             id="len"
@@ -323,32 +358,39 @@ export function NamingForm() {
             <option value="2">두 글자 이름</option>
             <option value="1">외자 이름</option>
           </select>
+          {kind === "native" && length === "1" && (
+            <p className="text-xs text-muted-foreground">{NATIVE_SINGLE_SHORTAGE_NOTICE}</p>
+          )}
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="dol">돌림자 (선택)</Label>
-            <Input
-              id="dol"
-              name="dol"
-              placeholder="예: 준"
-              maxLength={1}
-              disabled={length === "1"}
-            />
+        {kind === "native" ? (
+          <p className="text-xs text-muted-foreground">돌림자는 한자 이름에만 적용돼요</p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="dol">돌림자 (선택)</Label>
+              <Input
+                id="dol"
+                name="dol"
+                placeholder="예: 준"
+                maxLength={1}
+                disabled={length === "1"}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dolpos">돌림자 위치</Label>
+              <select
+                id="dolpos"
+                name="dolpos"
+                className={selectClass}
+                defaultValue="1"
+                disabled={length === "1"}
+              >
+                <option value="1">이름의 첫째 글자</option>
+                <option value="2">이름의 둘째 글자</option>
+              </select>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="dolpos">돌림자 위치</Label>
-            <select
-              id="dolpos"
-              name="dolpos"
-              className={selectClass}
-              defaultValue="1"
-              disabled={length === "1"}
-            >
-              <option value="1">이름의 첫째 글자</option>
-              <option value="2">이름의 둘째 글자</option>
-            </select>
-          </div>
-        </div>
+        )}
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="glob" value="1" />
           글로벌 발음 친화 이름만 보기

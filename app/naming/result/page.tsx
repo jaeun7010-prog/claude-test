@@ -392,10 +392,25 @@ export default async function ResultPage({
       {n}
     </p>
   ));
-  const hanjaNotice = result.notice && (
-    <p role="status" className="rounded-md bg-secondary p-3 text-sm">
-      {result.notice}
-    </p>
+  // 순우리말 이름으로 시작하면 입력 화면에 돌림자 칸이 없어 한자 탭에도 돌림자가 빠져 있다
+  const startedNative = searchParams.tab === "native";
+  const hanjaNotice = (
+    <>
+      {startedNative && !p.dolrimja && p.length !== "1" && (
+        <p role="status" className="rounded-md bg-secondary p-3 text-sm">
+          순우리말 이름으로 골라 돌림자 없이 추천했습니다. 돌림자를 넣으려면{" "}
+          <Link href="/naming" className="text-primary underline">
+            조건을 바꿔 주세요
+          </Link>
+          .
+        </p>
+      )}
+      {result.notice && (
+        <p role="status" className="rounded-md bg-secondary p-3 text-sm">
+          {result.notice}
+        </p>
+      )}
+    </>
   );
 
   return (
@@ -526,7 +541,7 @@ export default async function ResultPage({
 
       <section id="names" className="scroll-mt-16 space-y-4">
         <NamingTabs
-          initialTab={searchParams.tab === "native" ? "native" : "hanja"}
+          initialTab={startedNative ? "native" : "hanja"}
           loggedIn={!!user}
           saved={saved}
           sortOverride={p.rarity === "rare" ? "rare" : p.rarity === "common" ? "popular" : null}
