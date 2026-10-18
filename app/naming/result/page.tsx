@@ -39,8 +39,6 @@ const hanjaOf = (r: Recommendation) => r.givenName.map((c) => c.hanja).join("");
 const eumOf = (r: Recommendation) => r.givenName.map((c) => c.eum).join("");
 const goodsHref = (qs: string, r: Recommendation) =>
   `/goods?${qs}&gh=${encodeURIComponent(hanjaOf(r))}&ge=${encodeURIComponent(eumOf(r))}`;
-const charLine = (r: Recommendation) =>
-  r.givenName.map((c) => `${c.hanja} ${hunEum(c)} ${c.strokes}획`).join(" · ");
 
 /** 부모 성 함께 쓰기: 법적 이름 전체 기준 점수 (참고). 등급은 새로 고르는 부분 기준이라 따로 보여 준다 */
 function LegalDetails({ r, p, unlocked }: { r: Recommendation; p: NamingParams; unlocked: boolean }) {
@@ -78,28 +76,33 @@ function LegalDetails({ r, p, unlocked }: { r: Recommendation; p: NamingParams; 
   );
 }
 
-/** 이름 전체 뜻 한 줄 (무료). 부모 성 함께 쓰기는 새로 고르는 글자만 본다. 문장이 없으면 그리지 않는다 (훈음은 위 줄에 있음) */
-function NameMeaningLine({ r, p }: { r: Recommendation; p: NamingParams }) {
+/**
+ * 이름 한자 (마이페이지 "이름 한자" 칸과 같은 모양): 글자마다 훈음·획수, 그 아래 이름 뜻 한 줄.
+ * 글자별 자원오행은 "자원오행 흐름"(유료)에 들어가므로 결제 후에만 붙인다.
+ * 훈이 없는 글자의 영문 뜻풀이도 결제 후에만 보여 준다.
+ * 이름 뜻은 부모 성 함께 쓰기면 새로 고르는 글자만 보고, 문장이 없으면 그리지 않는다.
+ */
+function HanjaChars({ r, p, unlocked }: { r: Recommendation; p: NamingParams; unlocked: boolean }) {
   const m = nameMeaningOf(r.givenName.slice(p.parentSurname ? [...p.parentSurname.hanja].length : 0));
-  if (!m) return null;
   return (
-    <p className="mt-1 text-sm">
-      <span className="text-muted-foreground">이름 뜻 · {m.chars} →</span> {m.sentence}
-    </p>
-  );
-}
-
-function MeaningList({ r, unlocked }: { r: Recommendation; unlocked: boolean }) {
-  return (
-    <ul className="text-xs text-muted-foreground">
-      {r.givenName.map((c) => (
-        <li key={c.hanja}>
-          {c.hanja} {hunEum(c)}
-          {/* 훈 데이터가 없는 글자는 영문 뜻풀이를 참고용으로 보여 준다 */}
-          {unlocked && !c.hun && c.meaning ? ` — ${c.meaning}` : ""}
-        </li>
-      ))}
-    </ul>
+    <div className="mt-2 space-y-1 text-sm">
+      <ul className="space-y-0.5">
+        {r.givenName.map((c, i) => (
+          <li key={`${c.hanja}${i}`}>
+            <span className="font-serif font-bold">{c.hanja}</span> {hunEum(c)} · {c.strokes}획
+            {unlocked && c.element && ` · ${ELEMENT_HANJA[c.element]}`}
+            {unlocked && !c.hun && c.meaning && (
+              <span className="text-xs text-muted-foreground"> — {c.meaning}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+      {m && (
+        <p>
+          <span className="text-muted-foreground">이름 뜻 ·</span> {m.sentence}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -162,8 +165,7 @@ function NameCardBody({
               {hanjaOf(best)}
             </span>
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">{charLine(best)}</p>
-          <NameMeaningLine r={best} p={p} />
+          <HanjaChars r={best} p={p} unlocked={unlocked(best)} />
           {p.parentSurname && (
             <p className="mt-1 text-xs text-muted-foreground">
               {registrationText({
@@ -227,7 +229,6 @@ function NameCardBody({
           </div>
         </div>
       )}
-      <MeaningList r={best} unlocked={unlocked(best)} />
       <LegalDetails r={best} p={p} unlocked={unlocked(best)} />
 
       <OptionActions r={best} qs={qs} loggedIn={loggedIn} />
@@ -247,13 +248,11 @@ function NameCardBody({
                       {p.surnameHanja}
                       {hanjaOf(r)}
                     </p>
-                    <p className="text-sm text-muted-foreground">{charLine(r)}</p>
-                    <NameMeaningLine r={r} p={p} />
+                    <HanjaChars r={r} p={p} unlocked={unlocked(r)} />
                   </div>
                   <GradeBadge grade={r.analysis.grade} score={r.analysis.totalScore} size="sm" />
                 </div>
                 <ScoreBreakdownLine analysis={r.analysis} />
-                <MeaningList r={r} unlocked={unlocked(r)} />
                 <LegalDetails r={r} p={p} unlocked={unlocked(r)} />
                 <OptionActions r={r} qs={qs} loggedIn={loggedIn} />
               </li>
