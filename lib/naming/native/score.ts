@@ -21,6 +21,15 @@ const MEANING_SCORE: Record<NativeName["meaningGrade"], number> = { good: 1, nor
 
 export const NO_BIRTH_NOTICE = "생일을 넣으면 사주 보완까지 반영돼요";
 
+/**
+ * 부르기 쉬움이 이 점수 미만이면 총점에서 HARD_TO_SAY_PENALTY를 더 뺀다 (2026-10-18 사용자 결정).
+ * 부르기 쉬움은 총점의 20%라 박꽃길처럼 소리가 거친 이름도 용신·흐름이 좋으면 상위에 올랐다. 점수 틀(35/25/20/20)은 그대로 둔다.
+ * 강한 놀림말 이름은 이미 맨 뒤로 가므로 빼지 않는다.
+ */
+export const HARD_TO_SAY_BELOW = 50;
+export const HARD_TO_SAY_PENALTY = 10;
+export const HARD_TO_SAY_LABEL = "성과 붙이면 발음이 조금 어려워요";
+
 const CATEGORY_LABEL: Record<NativeName["category"], string> = {
   dictionary: "사전에 있는 말",
   coined: "이름용으로 만든 말",
@@ -181,6 +190,11 @@ export function easeScore(
   const counts = new Map<string, number>();
   // ㅇ은 소리가 없는 첫소리라 세지 않는다
   for (const s of fullSyl) if (s && s.onset !== "ㅇ") counts.set(plain(s.onset), (counts.get(plain(s.onset)) ?? 0) + 1);
+  // 성 받침이 이름 첫소리와 같은 자리 소리면 그 받침도 한 번으로 센다 (박가꿈 [박까꿈]: ㄱ·ㄲ·ㄲ, 2026-10-18 사용자 결정)
+  if (last && first && HARD_CODA[last.coda] && SAME_PLACE[HARD_CODA[last.coda]].includes(first.onset)) {
+    const k = plain(first.onset);
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
   if (Math.max(0, ...counts.values()) >= 3) add("같은 첫소리가 여러 번 반복됨", P.repeatedOnset);
 
   for (let i = 0; i + 1 < fullSyl.length; i++) {
@@ -249,6 +263,10 @@ export interface NativeScore {
   };
   /** 성과 합쳤을 때 놀림말 (카드 표시용). 강한 놀림말이면 목록 맨 뒤로 보낸다 */
   teasing: Teasing | null;
+  /** 부르기 쉬움이 HARD_TO_SAY_BELOW 미만이라 총점에서 더 뺀 점수 (0 또는 HARD_TO_SAY_PENALTY) */
+  hardToSayPenalty: number;
+  /** 카드에 붙이는 발음 안내 (HARD_TO_SAY_LABEL). 해당 없으면 null */
+  hardToSay: string | null;
   /** 생일이 없어 용신 보완을 빼고 환산했을 때의 안내 */
   notice: string | null;
 }
@@ -315,13 +333,17 @@ export function scoreNativeName({ name, surname, prefix = "", saju }: NativeScor
     [easy.score, W.easy],
   ];
   const used = parts.filter((p): p is [number, number] => p[0] !== null);
-  const total = used.reduce((s, [v, w]) => s + v * w, 0) / used.reduce((s, [, w]) => s + w, 0);
+  const weighted = used.reduce((s, [v, w]) => s + v * w, 0) / used.reduce((s, [, w]) => s + w, 0);
+  const hard = easy.score < HARD_TO_SAY_BELOW && ease.teasing?.level !== "strong";
+  const hardToSayPenalty = hard ? HARD_TO_SAY_PENALTY : 0;
 
   return {
     name: name.name,
-    total: round1(total),
+    total: round1(Math.max(0, weighted - hardToSayPenalty)),
     items: { yongsin, flow, meaning, easy },
     teasing: ease.teasing,
+    hardToSayPenalty,
+    hardToSay: hard ? HARD_TO_SAY_LABEL : null,
     notice: saju ? null : NO_BIRTH_NOTICE,
   };
 }

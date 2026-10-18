@@ -140,7 +140,7 @@ export const NATIVE_NAMES: readonly NativeName[] = [
   N("한누리", "coined", "male", "good", "'한(크다)'과 '누리(세상)'에서 따온 이름"),
   N("늘찬", "coined", "male", "good", "'늘'과 '차다'에서 따온 이름"),
   N("해찬", "coined", "male", "good", "'해'와 '차다'에서 따온 이름"),
-  N("가꿈", "coined", "neutral", "good", "'가꾸다'에서 따온 이름"),
+  N("가꿈", "coined", "neutral", "normal", "'가꾸다'에서 따온 이름"),
   N("바른", "coined", "neutral", "good", "'바르다'에서 따온 이름"),
   // 널리 쓰이는 이름
   N("미리내", "popular", "female", "normal", "'은하수'라는 뜻으로 널리 알려진 이름이에요. 사전 근거는 확인되지 않았어요"),
