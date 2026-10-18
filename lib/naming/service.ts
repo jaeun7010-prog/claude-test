@@ -82,31 +82,33 @@ async function runNamingUnsafe(
   const { yongsin: needed, huisin, gisin } = saju.yongsin;
 
   // 대법원 인명용 한자 전체 (불용한자와 부정적·불분명한 뜻 제외)
-  // 성별 뜻이 뚜렷한 글자는 아이 성별에 맞게 빼거나 감점한다 (gender-hanja.ts)
-  const pool = applyGender(await fetchPool(supabase), p.gender);
-  let first = pool;
-  let second = pool;
+  // 성별 뜻이 뚜렷한 글자는 아이 성별에 맞게 빼거나 감점한다 (gender-hanja.ts).
+  // 애매 등급은 먼저 거른다: 남자아이의 男·郞은 applyGender에서 애매 점수로 낮추지만 후보에는 남아야 하므로
+  const raw = await fetchPool(supabase);
+  const fullPool = applyGender(raw, p.gender);
+  const strictPool = applyGender(
+    raw.filter((c) => c.suitability !== "obscure"),
+    p.gender
+  );
+  let fixed: NameHanja[] | null = null;
   const allowSyllables = new Set<string>();
   if (p.dolrimja) {
     allowSyllables.add(p.dolrimja.syllable);
-    let fixed = await fetchByEum(supabase, p.dolrimja.syllable);
-    // 돌림자는 사용자가 정한 글자이므로 후보를 넓게 두되, 품질 좋은 글자가 있으면 그쪽을 우선한다
+    fixed = await fetchByEum(supabase, p.dolrimja.syllable);
+    // 돌림자는 사용자가 정한 글자이므로 후보를 넓게 두되(애매 등급 포함), 품질 좋은 글자가 있으면 그쪽을 우선한다
     const good = fixed.filter((c) => c.suitability !== "exclude");
     if (good.length > 0) fixed = good;
     if (fixed.length === 0) {
       return { ok: false, error: `돌림자 '${p.dolrimja.syllable}'에 해당하는 한자가 없습니다.` };
     }
-    if (p.dolrimja.position === 1) first = fixed;
-    else second = fixed;
   }
 
-
-  const run = (minLuckyGyeok: number, minTrend: number) =>
+  const run = (pool: NameHanja[], minLuckyGyeok: number, minTrend: number) =>
     recommendNames({
       surname,
       prefix,
-      first: p.length === "1" ? [] : first,
-      second: p.length === "1" ? [] : second,
+      first: p.length === "1" ? [] : p.dolrimja?.position === 1 ? fixed! : pool,
+      second: p.length === "1" ? [] : p.dolrimja?.position === 2 ? fixed! : pool,
       single: p.length === "2" || p.dolrimja ? [] : pool,
       neededElement: needed,
       favorableElement: huisin,
@@ -121,9 +123,19 @@ async function runNamingUnsafe(
     });
 
   // 4격이 모두 길수이고 요즘 어감인 이름을 우선하고, 후보가 부족하면 단계적으로 완화한다
-  let groups = run(4, TREND_MIN);
-  if (groups.length < 10) groups = run(3, TREND_MIN);
-  if (groups.length < 10) groups = run(3, 0);
+  const generate = (pool: NameHanja[]) => {
+    let g = run(pool, 4, TREND_MIN);
+    if (g.length < 10) g = run(pool, 3, TREND_MIN);
+    if (g.length < 10) g = run(pool, 3, 0);
+    return g;
+  };
+  // 애매 등급(교육용도 아니고 뜻도 긍정적이지 않은 희귀 한자)은 자동 추천에서 뺀다. 화면에 보일 이름이 DISPLAY_LIMIT개보다 적을 때만
+  // (주로 외자·돌림자) 애매 등급까지 넣은 결과에서 모자란 이름을 채운다. 같은 한글 이름은 애매 등급 없는 쪽을 쓴다 (2026-10-18 사용자 결정)
+  let groups = generate(strictPool);
+  if (groups.length < DISPLAY_LIMIT) {
+    const have = new Set(groups.map((g) => g.hangul));
+    groups = [...groups, ...generate(fullPool).filter((g) => !have.has(g.hangul))];
+  }
 
   // 출생 통계 연동 (희소성 표시·우선순위 + 젠더 뉴트럴 필터)
   let stats: Map<string, NameStatSummary> | null = null;
