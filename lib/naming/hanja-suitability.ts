@@ -132,6 +132,9 @@ const AWKWARD_HANJA = new Set([
   ..."龜鹿雁羊蝶栗李茶桃稻梨禾帶履裝布",
   // 뜻이 어색한 글자
   ..."浮漂限防異留",
+  // 2026-10-18 2차 (상위 추천 표본 검토): 찰·돌무더기·벽·촛불·곰·책상·갈마들·진 칠·붙을·날카로울·위태로울·늦을·기우제·장마·피리,
+  // 朴(나무껍질, 이름 첫 글자 "박"이면 부모 성 함께 쓰기와 헷갈림)
+  ..."冽磊壁燭熊案番陣附銳岌晏雩霖篪朴",
 ]);
 const AWKWARD_MEANING_EXCLUDE = new Set([
   // 그릇·도구·재물
@@ -146,7 +149,16 @@ const AWKWARD_MEANING_EXCLUDE = new Set([
   ..."服衣絲線",
   // 뜻이 어색한 글자
   ..."無埋險錯切燒煙零震暑",
+  // 2026-10-18 2차 (상위 추천 표본 검토): 샐·물 끓일·상어·농어·생선뼈·목마를·우레·번개·볼기칠·티(흠)·숯·군대·곡식·
+  // (술) 거를·물 고일·낮은 옥돌·감출·평평치 아니할·솔(도구)
+  ..."漏湯鮪鱸鯁渴雷電笞瑕炭隊穀湑渟珷隩崴筅",
 ]);
+
+/**
+ * 첫 뜻이 중국 강 이름인 글자 (2026-10-18 사용자 확인). 뜻풀이의 "river"가 긍정 단어로 걸려 보통 등급이 되었다.
+ * 애매로 내려 자동 추천에서 뺀다. 허용 목록의 洙·岷은 허용 목록이 먼저라 그대로다.
+ */
+const RIVER_NAME_HANJA = new Set([..."淦潙漊漯涖漓汶洣涪汾湓灄涑濉瀼洹涔溱祊湟洨"]);
 
 /** 지명·인명 전용 글자와 어조사 */
 const NAME_OR_PARTICLE_HUN = /(땅|물|강|산|나라|고을|사람)\s?이름|어조사/;
@@ -165,15 +177,19 @@ export function classifyHanja(c: {
   hanja: string;
   eum: string;
   meaning: string | null;
-  hun: string | null;
+  /** 한글 훈. hun 컬럼이 아직 없는 DB면 undefined (이때는 훈 없음 규칙을 쓰지 않는다) */
+  hun?: string | null;
   isEdu: boolean;
 }): Suitability {
+  const hun = c.hun ?? null;
   if (isAllowedNameHanja(c.hanja, c.eum)) return "good";
   if (isRareReading(c.hanja, c.eum) || KIN_OR_SEX_HANJA.has(c.hanja) || AWKWARD_MEANING_EXCLUDE.has(c.hanja))
     return "exclude";
-  if (!hasAcceptableMeaning(c.meaning) || hasNegativeHun(c.hun) || isMessyMeaning(c.meaning, c.hun)) return "exclude";
+  if (!hasAcceptableMeaning(c.meaning) || hasNegativeHun(hun) || isMessyMeaning(c.meaning, hun)) return "exclude";
   if (AWKWARD_HANJA.has(c.hanja)) return "awkward";
-  if (isObjectLike(c.meaning, c.hun)) return c.isEdu ? "awkward" : "exclude";
+  if (isObjectLike(c.meaning, hun)) return c.isEdu ? "awkward" : "exclude";
+  // 훈이 없는 글자는 화면에 뜻 없이 음만 보이고(㷂 서), 대부분 표준 글자의 이체자다(徳·清·恵). 강 이름 글자와 함께 애매로 본다
+  if (RIVER_NAME_HANJA.has(c.hanja) || (c.hun !== undefined && !hun?.trim())) return "obscure";
   // 뜻풀이가 긍정적이어도 교육용이 아니면 이름에 잘 안 쓰는 글자가 많아(瑭·璐 등 옥 이름) 보통으로 본다
   if (hasPositiveMeaning(c.meaning)) return c.isEdu ? "good" : "normal";
   return c.isEdu ? "normal" : "obscure";

@@ -46,7 +46,7 @@ const toChar = (r: Row): NameHanja => ({
     hanja: r.hanja,
     eum: r.eum,
     meaning: r.meaning,
-    hun: r.hun ?? null,
+    hun: r.hun,
     isEdu: r.is_edu ?? false,
   }),
 });
