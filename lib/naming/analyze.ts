@@ -71,7 +71,7 @@ export function surnameElementChar(surname: HanjaChar[]): HanjaChar | null {
  * 발음오행 관계 가중치 (PRONUNCIATION_FLOW_WEIGHTS): 성 → 이름 첫 글자 관계에 junction,
  * 이름 안의 관계들에 given을 나눠 주고, 복성 두 글자 사이 관계에는 surname을 준다.
  */
-function pronunciationWeights(surnameLen: number, givenLen: number): number[] {
+export function pronunciationWeights(surnameLen: number, givenLen: number): number[] {
   const w = PRONUNCIATION_FLOW_WEIGHTS;
   return [
     ...Array<number>(surnameLen - 1).fill(w.surname),

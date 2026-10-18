@@ -40,7 +40,7 @@ export const isArchaicSyllable = (eum: string) => ARCHAIC_SET.has(eum);
 // 받침 인덱스: 없음(0) · ㄴ(4) · ㄹ(8) · ㅁ(16) · ㅇ(21)은 부드럽고, 나머지는 거센 받침
 const SOFT_CODA = new Set([0, 4, 8, 16, 21]);
 
-function harmony(chars: string[]): number {
+export function harmony(chars: string[]): number {
   const per = chars.map((ch) => {
     const code = ch.charCodeAt(0) - BASE;
     if (code < 0 || code > 11171) return 0.7;
