@@ -101,7 +101,7 @@ export const NATIVE_NAMES: readonly NativeName[] = [
   N("꽃송이", "dictionary", "female", "normal", "꽃자루 끝의 꽃 한 송이. 사전에는 '앞날이 기대되는 어린 사람'이라는 뜻도 있어요"),
   // 이름용 조어
   N("나눔", "coined", "neutral", "good", "'나누다'에서 따온 이름"),
-  N("초롱", "coined", "female", "normal", "'초롱초롱(눈빛이 맑고 또렷한 모양)'에서 따온 이름"),
+  N("초롱", "coined", "female", "good", "'초롱초롱(눈빛이 맑고 또렷한 모양)'에서 따온 이름"),
   N("온누리", "coined", "neutral", "good", "'온(모든)'과 '누리(세상)'에서 따온 이름"),
   N("한아름", "coined", "female", "good", "'한 아름(두 팔로 안을 만큼)'에서 따온 이름"),
   N("아름", "coined", "female", "good", "'아름답다'에서 따온 이름"),
