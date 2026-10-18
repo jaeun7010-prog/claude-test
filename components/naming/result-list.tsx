@@ -22,6 +22,8 @@ export interface ResultItem {
   grade?: Grade;
   /** 점수와 관계없이 맨 뒤로 보낼 항목 (순우리말 강한 놀림말 이름) */
   demoted?: boolean;
+  /** 같은 첫소리 제한에 쓰는 값 (`firstSoundKey`). 한자 이름만 넣는다 */
+  firstSound?: string;
   metrics: NameMetrics;
   /** 서버에서 그린 카드 본문 */
   body: ReactNode;
@@ -130,7 +132,14 @@ export function ResultList({
   rareAvailable: boolean;
 }) {
   const shown = useMemo(
-    () => rankByPriorities(items, priorities, rareAvailable, limit, (item) => !!item.demoted),
+    () => rankByPriorities(
+        items,
+        priorities,
+        rareAvailable,
+        limit,
+        (item) => !!item.demoted,
+        (item) => item.firstSound
+      ),
     [items, priorities, rareAvailable, limit]
   );
 

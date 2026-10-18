@@ -17,7 +17,7 @@ import { RelationsNote } from "@/components/naming/relations-note";
 import { TimeCorrectionNote } from "@/components/naming/time-correction-note";
 import { loadEntitlement, type Entitlement } from "@/lib/commerce/entitlement";
 import { parseNamingParams, toNamingQuery, type NamingParams } from "@/lib/naming/params";
-import { parsePriorities, type Priorities } from "@/lib/naming/priorities";
+import { firstSoundKey, parsePriorities, type Priorities } from "@/lib/naming/priorities";
 import { NATIVE_SCORE_WEIGHTS } from "@/lib/naming/native/score";
 import { NATIVE_DISPLAY_LIMIT, runNativeNaming } from "@/lib/naming/native/service";
 import { nameMeaningOf } from "@/lib/naming/name-meaning";
@@ -351,6 +351,8 @@ export default async function ResultPage({
     return {
       hangul: g.hangul,
       grade: best.analysis.grade,
+      // 같은 첫소리는 상위에 FIRST_SOUND_MAX개까지 (부모 성 함께 쓰기는 새로 고르는 첫 글자 기준)
+      firstSound: firstSoundKey([...g.hangul][p.parentSurname ? [...p.parentSurname.hangul].length : 0] ?? ""),
       metrics: {
         baseScore: best.baseScore,
         globalScore: best.globalScore,

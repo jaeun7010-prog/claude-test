@@ -118,16 +118,44 @@ export function customScore(m: NameMetrics, p: Priorities, rareAvailable = true)
 }
 
 /**
+ * 같은 첫소리 이름을 화면 상위에 몇 개까지 둘지 (2026-10-18 사용자 결정, 한자 이름만).
+ * 발음오행·자원오행 조건에 맞는 첫 글자가 적은 사주에서 린하·린한·린우…처럼 한 소리로 몰리는 것을 막는다.
+ */
+export const FIRST_SOUND_MAX = 3;
+
+const HANGUL_BASE = 0xac00;
+/** ㅣ와 ㅑ·ㅒ·ㅕ·ㅖ·ㅛ·ㅠ (두음법칙에서 ㄹ·ㄴ이 ㅇ이 되는 모음) */
+const Y_VOWELS = new Set([2, 3, 6, 7, 12, 17, 20]);
+
+/**
+ * 첫소리 비교용 음절: 두음법칙 형태로 바꾼다 (루→누, 뢰→뇌, 려·녀→여, 린→인, 렬→열).
+ * 같은 한자를 두 가지로 읽은 이름(누우·루우)이 따로 세어지지 않게 한다.
+ */
+export function firstSoundKey(syllable: string): string {
+  const code = syllable.charCodeAt(0) - HANGUL_BASE;
+  if (code < 0 || code > 11171) return syllable;
+  const onset = Math.floor(code / 588);
+  const vowel = Math.floor((code % 588) / 28);
+  const ㄴ = 2, ㄹ = 5, ㅇ = 11;
+  let to = onset;
+  if (onset === ㄹ) to = Y_VOWELS.has(vowel) ? ㅇ : ㄴ;
+  else if (onset === ㄴ && Y_VOWELS.has(vowel)) to = ㅇ;
+  return String.fromCharCode(HANGUL_BASE + to * 588 + (code % 588));
+}
+
+/**
  * 우선순위로 정렬해 상위 limit개를 돌려준다 (입력 순서는 기본 순위 점수 순이라고 가정).
  * 맞춤 점수순이 기본이고, 희귀/인기 이름순은 누적 건수로 먼저 비교한 뒤 맞춤 점수로 가른다.
  * `demoted`가 참인 항목은 어떤 정렬에서도 맨 뒤로 보낸다 (순우리말 강한 놀림말 이름).
+ * `firstSound`를 주면 같은 값(첫소리)의 항목은 FIRST_SOUND_MAX개까지만 앞에 두고 나머지는 그 뒤로 보낸다.
  */
 export function rankByPriorities<T extends { metrics: NameMetrics }>(
   items: readonly T[],
   p: Priorities,
   rareAvailable: boolean,
   limit: number,
-  demoted?: (item: T) => boolean
+  demoted?: (item: T) => boolean,
+  firstSound?: (item: T) => string | undefined
 ): { item: T; score: number }[] {
   const scored = items.map((item, index) => ({
     item,
@@ -145,7 +173,22 @@ export function rankByPriorities<T extends { metrics: NameMetrics }>(
       b.item.metrics.baseScore - a.item.metrics.baseScore ||
       a.index - b.index
   );
-  return scored.slice(0, limit).map(({ item, score }) => ({ item, score }));
+  let ordered = scored;
+  if (firstSound) {
+    const count = new Map<string, number>();
+    const head: typeof scored = [];
+    const rest: typeof scored = [];
+    for (const x of scored) {
+      const k = firstSound(x.item);
+      const n = k === undefined ? 0 : (count.get(k) ?? 0);
+      if (k === undefined || n < FIRST_SOUND_MAX) {
+        head.push(x);
+        if (k !== undefined) count.set(k, n + 1);
+      } else rest.push(x);
+    }
+    ordered = [...head, ...rest];
+  }
+  return ordered.slice(0, limit).map(({ item, score }) => ({ item, score }));
 }
 
 export type NameBadge = RarityStage | "글로벌 발음 우수";
