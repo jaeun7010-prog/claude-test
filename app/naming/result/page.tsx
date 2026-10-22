@@ -375,6 +375,12 @@ export default async function ResultPage({
     };
   });
 
+  // 순우리말 저장·로그인 후 돌아올 때 순우리말 탭이 열리도록
+  const nativeQs = (() => {
+    const q = new URLSearchParams(qs);
+    q.set("tab", "native");
+    return q.toString();
+  })();
   const nativeItems: ResultItem[] = native.candidates.map((c) => ({
     hangul: c.legalName,
     metrics: c.metrics,
@@ -387,6 +393,8 @@ export default async function ResultPage({
         stat={native.stats?.get(c.legalName)}
         statsLoaded={!!native.stats}
         asOfDate={snapshot?.asOfDate ?? null}
+        qs={nativeQs}
+        loggedIn={!!user}
       />
     ),
   }));

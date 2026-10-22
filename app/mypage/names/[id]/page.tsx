@@ -9,12 +9,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isUuid } from "@/lib/commerce/payment-sync";
 import { birthTextOf } from "@/lib/commerce/report-snapshot";
 import { LockedPreview } from "@/components/naming/locked-preview";
+import { NativeScoreDetail } from "@/components/naming/native-card";
+import { NativeCategoryBadge, NativeScoreBadge } from "@/components/naming/native-parts";
 import { loadEntitlement } from "@/lib/commerce/entitlement";
+import { CATEGORY_LABEL, NATIVE_SCORE_WEIGHTS } from "@/lib/naming/native/score";
 import { namingConditionKey, parseNamingParams } from "@/lib/naming/params";
 import { hunEum } from "@/lib/naming/recommend";
-import { registrationCaveat, registrationText } from "@/lib/naming/registration";
+import { nativeRegistrationText, registrationCaveat, registrationText } from "@/lib/naming/registration";
 import { savedNameMeaning } from "@/lib/naming/saved-meaning";
-import { readSaved, SAVED_COLUMNS, type SavedRow } from "@/lib/naming/saved";
+import { readSaved, SAVED_COLUMNS, savedResultHref, type SavedRow, type SavedSajuSummary } from "@/lib/naming/saved";
 import type { NamingAnalysis } from "@/lib/naming/types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -54,9 +57,74 @@ function AnalysisDetail({ a, flows }: { a: NamingAnalysis; flows: boolean }) {
   );
 }
 
+type SavedYongsin = Pick<SavedSajuSummary, "strength" | "yongsin" | "huisin" | "gisin" | "method" | "geokguk">;
+
+/** 사주 (한자·순우리말 공통). 격 이름·성격/파격은 같은 조건의 리포트를 결제했을 때만 (geokguk) */
+function SajuCard({
+  pillars,
+  yongsin,
+  geokguk,
+  geokgukText,
+}: {
+  pillars: SavedSajuSummary["pillars"] | null;
+  yongsin: SavedYongsin | null;
+  geokguk: boolean;
+  geokgukText: string | null;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>사주</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {pillars ? (
+          <div className="grid grid-cols-4 gap-2 text-center">
+            {(
+              [
+                ["시주", pillars.hour],
+                ["일주", pillars.day],
+                ["월주", pillars.month],
+                ["연주", pillars.year],
+              ] as const
+            ).map(([label, h]) => (
+              <div key={label} className="rounded-md bg-secondary p-3">
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="font-serif text-2xl font-bold">{h ?? "미상"}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <NoRecord />
+        )}
+        {yongsin && (
+          <p className="text-sm">
+            {yongsin.strength} · 용신{" "}
+            <b>
+              {ELEMENT_HANJA[yongsin.yongsin]}
+              {yongsin.yongsin}
+            </b>{" "}
+            · 희신 {ELEMENT_HANJA[yongsin.huisin]}
+            {yongsin.huisin} · 기신 {ELEMENT_HANJA[yongsin.gisin]}
+            {yongsin.gisin}
+            <span className="text-muted-foreground"> ({yongsin.method} 기준)</span>
+          </p>
+        )}
+        {geokguk && yongsin?.geokguk && (
+          <p className="text-sm text-muted-foreground">
+            격국: {yongsin.geokguk.name} · {yongsin.geokguk.status}
+            {!yongsin.geokguk.applied && " (용신은 강약 기준으로 정함)"}
+          </p>
+        )}
+        {geokgukText && <p className="text-sm">{geokgukText}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
 /**
  * 마이페이지에 저장한 이름 하나. 저장한 값만 그리고 지금 엔진으로 다시 계산하지 않는다 (lib/naming/saved.ts).
  * 최신 기준 결과는 "최신 기준으로 다시 분석"으로 결과 화면에서 본다.
+ * 순우리말 이름은 4격·등급 없이 우리말 이름 점수로 따로 그리고, 모두 무료라 잠금·리포트 버튼이 없다.
  */
 export default async function SavedNamePage({
   params,
@@ -108,21 +176,122 @@ export default async function SavedNamePage({
   const goodsHref = s.qs
     ? `/goods?${s.qs}&gh=${encodeURIComponent(s.givenHanja)}&ge=${encodeURIComponent(s.given)}&hid=${s.id}`
     : null;
-  // 유료 내용: 이 저장 이름과 연결된 리포트이거나 같은 조건·같은 이름의 리포트를 결제했을 때만 그린다
+  // 유료 내용: 이 저장 이름과 연결된 리포트이거나 같은 조건·같은 이름의 리포트를 결제했을 때만 그린다.
+  // 순우리말 이름도 사주 쪽 유료 항목(격 이름·성격/파격)은 같은 조건의 리포트를 결제했을 때만 보인다
   const ent = await loadEntitlement(supabase, true, s.qs ? namingConditionKey(s.qs) : null, s.id);
   const nameOpen = ent.name(s.givenHanja, s.given);
   const lockHref = goodsHref ?? "/naming";
+  const resultHref = savedResultHref(s);
+
+  const birthCard = (
+    <Card>
+      <CardHeader>
+        <CardTitle>입력 정보</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <dl className="space-y-1">
+          <Row label="출생">{birthText ?? "저장 당시 기록 없음"}</Row>
+          <Row label="성별">{p ? GENDER_LABEL[p.gender] : "저장 당시 기록 없음"}</Row>
+        </dl>
+      </CardContent>
+    </Card>
+  );
+  const sajuCard = (
+    <SajuCard pillars={pillars} yongsin={yongsin} geokguk={ent.saju} geokgukText={snap?.texts.geokguk ?? null} />
+  );
+  const deleteError = searchParams.deleteError && (
+    <p role="alert" className="text-sm text-destructive">
+      삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.
+    </p>
+  );
+
+  if (s.kind === "native") {
+    const n = s.native;
+    return (
+      <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-3xl space-y-6 px-4 py-8 sm:px-6 sm:py-12">
+        <header className="space-y-3">
+          <Button asChild variant="ghost" size="sm" className="-ml-3">
+            <Link href="/mypage">← 마이페이지</Link>
+          </Button>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 space-y-1">
+              <h1 className="font-serif text-3xl font-bold break-keep">
+                {fullName}
+                {s.isFavorite && " ★"}
+              </h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">순우리말 이름</span>
+                {n && <NativeCategoryBadge label={CATEGORY_LABEL[n.name.category]} />}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {new Date(s.createdAt).toLocaleDateString("ko-KR")} 저장
+              </p>
+            </div>
+            {n && <NativeScoreBadge total={n.score.total} />}
+          </div>
+          {s.parentSurname && (
+            <p className="rounded-md bg-secondary p-3 text-sm break-keep">
+              {nativeRegistrationText({ surname: s.surname, surnameHanja: s.surnameHanja, given: s.given })}
+            </p>
+          )}
+          {deleteError}
+        </header>
+
+        <div className="flex flex-wrap gap-2">
+          {resultHref ? (
+            <Button asChild size="sm">
+              <Link href={resultHref}>최신 기준으로 다시 분석</Link>
+            </Button>
+          ) : (
+            <p className="text-sm text-muted-foreground">입력 조건이 저장되지 않아 다시 분석할 수 없습니다.</p>
+          )}
+          <DeleteSavedButton id={s.id} name={fullName} />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          아래는 저장할 때의 분석입니다. 다시 분석하면 지금 기준으로 계산해 점수가 다를 수 있습니다. 순우리말 이름은 모두
+          무료로 볼 수 있습니다.
+        </p>
+
+        {birthCard}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>이름 뜻</CardTitle>
+          </CardHeader>
+          <CardContent>{n ? <p className="text-sm break-keep">{n.name.meaning}</p> : <NoRecord />}</CardContent>
+        </Card>
+
+        {sajuCard}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>우리말 이름 점수</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {n ? <NativeScoreDetail score={n.score} globalScore={n.globalScore} /> : <NoRecord />}
+            <p className="text-xs text-muted-foreground break-keep">
+              용신 보완 {NATIVE_SCORE_WEIGHTS.yongsin} · 발음오행 흐름 {NATIVE_SCORE_WEIGHTS.flow} · 뜻{" "}
+              {NATIVE_SCORE_WEIGHTS.meaning} · 부르기 쉬움 {NATIVE_SCORE_WEIGHTS.easy}점 배점의 100점 만점 점수입니다.
+              한자 이름의 성명학 등급과 기준이 달라 등급을 붙이지 않습니다. 발음오행으로 용신을 보완하는 방식은 학파에
+              따라 보는 비중이 다릅니다.
+            </p>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
   const nameMeaning = await savedNameMeaning(supabase, s);
 
   return (
-    <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-3xl space-y-6 px-6 py-12">
+    <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-3xl space-y-6 px-4 py-8 sm:px-6 sm:py-12">
       <header className="space-y-3">
         <Button asChild variant="ghost" size="sm" className="-ml-3">
           <Link href="/mypage">← 마이페이지</Link>
         </Button>
         <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="font-serif text-3xl font-bold">
+          <div className="min-w-0 space-y-1">
+            <h1 className="font-serif text-3xl font-bold break-keep">
               {fullName}
               {s.isFavorite && " ★"}
             </h1>
@@ -151,18 +320,14 @@ export default async function SavedNamePage({
             <p className="text-xs text-muted-foreground">{registrationCaveat(!nameOpen)}</p>
           </div>
         )}
-        {searchParams.deleteError && (
-          <p role="alert" className="text-sm text-destructive">
-            삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.
-          </p>
-        )}
+        {deleteError}
       </header>
 
       <div className="flex flex-wrap gap-2">
         {s.qs ? (
           <>
             <Button asChild size="sm">
-              <Link href={`/naming/result?${s.qs}`}>최신 기준으로 다시 분석</Link>
+              <Link href={resultHref!}>최신 기준으로 다시 분석</Link>
             </Button>
             <Button asChild size="sm" variant="outline">
               <Link href={goodsHref!}>프리미엄 리포트 · 맞춤 굿즈</Link>
@@ -182,17 +347,7 @@ export default async function SavedNamePage({
         </p>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>입력 정보</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl className="space-y-1">
-            <Row label="출생">{birthText ?? "저장 당시 기록 없음"}</Row>
-            <Row label="성별">{p ? GENDER_LABEL[p.gender] : "저장 당시 기록 없음"}</Row>
-          </dl>
-        </CardContent>
-      </Card>
+      {birthCard}
 
       <Card>
         <CardHeader>
@@ -219,52 +374,7 @@ export default async function SavedNamePage({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>사주</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {pillars ? (
-            <div className="grid grid-cols-4 gap-2 text-center">
-              {(
-                [
-                  ["시주", pillars.hour],
-                  ["일주", pillars.day],
-                  ["월주", pillars.month],
-                  ["연주", pillars.year],
-                ] as const
-              ).map(([label, h]) => (
-                <div key={label} className="rounded-md bg-secondary p-3">
-                  <p className="text-xs text-muted-foreground">{label}</p>
-                  <p className="font-serif text-2xl font-bold">{h ?? "미상"}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <NoRecord />
-          )}
-          {yongsin && (
-            <p className="text-sm">
-              {yongsin.strength} · 용신{" "}
-              <b>
-                {ELEMENT_HANJA[yongsin.yongsin]}
-                {yongsin.yongsin}
-              </b>{" "}
-              · 희신 {ELEMENT_HANJA[yongsin.huisin]}
-              {yongsin.huisin} · 기신 {ELEMENT_HANJA[yongsin.gisin]}
-              {yongsin.gisin}
-              <span className="text-muted-foreground"> ({yongsin.method} 기준)</span>
-            </p>
-          )}
-          {ent.saju && yongsin?.geokguk && (
-            <p className="text-sm text-muted-foreground">
-              격국: {yongsin.geokguk.name} · {yongsin.geokguk.status}
-              {!yongsin.geokguk.applied && " (용신은 강약 기준으로 정함)"}
-            </p>
-          )}
-          {snap?.texts.geokguk && <p className="text-sm">{snap.texts.geokguk}</p>}
-        </CardContent>
-      </Card>
+      {sajuCard}
 
       <Card>
         <CardHeader>

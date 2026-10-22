@@ -30,6 +30,11 @@ export function registrationText(r: Registration): string {
   return `출생신고 시에는 ${registrationLine(r)}${ro(r.given)} 등록됩니다.`;
 }
 
+/** 순우리말 이름: "출생신고 시에는 성 김(金) · 이름 박하늘로 등록됩니다." (이름에 한자가 없다) */
+export function nativeRegistrationText(r: Omit<Registration, "givenHanja">): string {
+  return `출생신고 시에는 성 ${r.surname}(${r.surnameHanja}) · 이름 ${r.given}${ro(r.given)} 등록됩니다.`;
+}
+
 /** 등록 안내에 붙이는 확인 문구. 법령 해석이 확정되지 않은 부분이 있어 함께 보여 준다 */
 export const REGISTRATION_CAVEAT =
   "다른 부모의 성은 법적으로 이름의 일부입니다. 이름 등급은 새로 고르는 부분 기준으로 매겼고, 법적 이름 전체 기준 점수는 각 이름의 자세히 보기에 있습니다. " +

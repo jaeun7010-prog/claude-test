@@ -365,7 +365,11 @@
   - **입력 화면 이름 종류 (완료, `components/naming-form.tsx`)**: "이름 조건" 맨 위에서 한자 이름(기본) / 순우리말 이름을 고른다. 순우리말이면 `tab=native`를 넘겨 결과 화면에서 순우리말 탭이 먼저 열리고, 한자 탭도 그대로 있다(한자는 `tab`을 넣지 않아 예전 주소와 같다).
     - 순우리말을 고르면 돌림자·위치 칸을 숨기고 "돌림자는 한자 이름에만 적용돼요", 외자를 고르면 `NATIVE_SINGLE_SHORTAGE_NOTICE`를 미리 보여 준다.
     - 결과 화면: `tab=native`로 들어왔고 돌림자가 없으면(외자 제외) 한자 탭에 "순우리말 이름으로 골라 돌림자 없이 추천했습니다. 돌림자를 넣으려면 조건을 바꿔 주세요"를 붙인다.
-    - 5단계 저장: `given_name_hanja`는 비우고 `filters.nameKind = "native"`, 분석은 `analysis.native`. 마이페이지 목록·상세는 4격 없이 따로 그리고, 나란히 비교에 한자 이름과 섞이면 "점수 기준이 달라 직접 비교하기 어렵습니다"를 안내한다.
+  - **5단계 저장·마이페이지 (완료, 2026-10-22)**: 순우리말 카드에 "마이페이지에 저장"(비로그인은 "로그인하고 저장", 돌아오면 `tab=native`). `app/naming/actions.ts`의 `saveNativeName`이 서버에서 `buildNativeCandidates`로 다시 계산해 저장한다(목록에 없거나 지금 조건을 통과하지 못하면 저장 안 함).
+    - 저장 형식 (`lib/naming/saved.ts`): `given_name` = 법적 이름(부모 성 포함), `given_name_hanja`·`total_score`는 null(성명학 점수가 아님), `filters.nameKind = "native"`, `analysis.native`(`SavedNative`: 이름·분류·뜻, 법적 이름, `NativeScore`, 글로벌 발음), `analysis.saju`(한자와 같은 사주 요약, `sajuSummaryOf`). 한자 저장도 `filters.nameKind = "hanja"`를 넣고, nameKind가 없는 예전 저장분은 한자로 읽는다(`SavedNaming.kind`).
+    - 목록: 우리말 점수 배지(`components/naming/native-parts.tsx`)와 "분류 · 뜻" 한 줄. 상세: 분류 배지, 이름 뜻, 사주(한자와 같은 카드), 우리말 이름 점수와 항목 4개·발음오행 흐름·항목별 설명(`NativeScoreDetail`, 결과 카드와 공통). 잠금·리포트·PDF 버튼 없음. "최신 기준으로 다시 분석"은 `savedResultHref`(순우리말이면 `tab=native`). 부모 성이면 `nativeRegistrationText`.
+    - 비교: 한자와 섞이면 "점수 기준이 달라 직접 비교하기 어렵습니다" 안내, "가장 높음" 표시 안 함. 한자 항목(사주 보완·수리·4격·법적 기준)과 우리말 항목(용신 보완·발음오행 흐름·뜻·부르기 쉬움)은 다른 쪽 칸에 "해당 없음".
+    - 확인: `npx tsx scripts/_tmp/native-saved-check.ts` (저장 행 → `readSaved` 왕복, 예전 한자 저장분).
     - 6단계 검증: `scripts/native-distribution.ts`(무작위 사주 40개, seed 20261018, 성별 3가지)로 용신별 화면 이름 수(30개 채움), 점수 분포, 상위 10개를 본다. 한자 탭은 `scripts/dump-single-surname.ts` 전후가 같아야 한다. 단계마다 CLAUDE.md를 갱신하고 커밋·push한다.
 - 순우리말 프리미엄 리포트: 순우리말 이름용 PDF(한문 리포트와 다른 구성)와 유료 범위. 순우리말 탭 구현 뒤 사용자와 정한다.
 - 어감 점수 개선 (`trend.ts`): "김린이"(다른 단어가 떠오름), "김린윤"(부르기 어색), "김당연"(일상 단어 "당연"), "김탑연"(어색한 조합) 사례. 김당연·김탑연은 통관 배치로 S등급(93점)이 나온 이름(2024-11-20 09:33 제주 출생, 용신 화). 사용자가 이 작업을 꺼내기 전에는 trend.ts를 고치지 않는다.

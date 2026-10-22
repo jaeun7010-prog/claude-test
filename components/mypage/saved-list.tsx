@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { GradeBadge } from "@/components/naming/analysis-parts";
+import { NativeScoreBadge } from "@/components/naming/native-parts";
 import { Button } from "@/components/ui/button";
 import { COMPARE_MAX } from "@/lib/naming/compare";
 import type { Grade } from "@/lib/naming/types";
@@ -18,6 +19,8 @@ export interface SavedListItem {
   favorite: boolean;
   /** 부모 성 함께 쓰기의 출생신고 등록 안내 */
   registration: string | null;
+  /** 순우리말 이름: 우리말 이름 점수와 "분류 · 뜻" 한 줄 (한자 이름이면 null) */
+  native: { score: number; line: string } | null;
   createdAt: string;
 }
 
@@ -73,17 +76,20 @@ export function SavedList({ items }: { items: SavedListItem[] }) {
                 href={`/mypage/names/${h.id}`}
                 className="-mx-2 flex min-w-0 flex-1 items-center gap-4 rounded-md px-2 py-3 hover:bg-secondary"
               >
-                {h.grade && h.score != null ? (
+                {h.native ? (
+                  <NativeScoreBadge total={h.native.score} size="sm" />
+                ) : h.grade && h.score != null ? (
                   <GradeBadge grade={h.grade} score={h.score} size="sm" />
                 ) : (
                   <span className="w-10 shrink-0 text-center text-xs text-muted-foreground">-</span>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="font-serif text-lg font-bold">
+                  <p className="font-serif text-lg font-bold break-keep">
                     {h.name}
                     {h.favorite && " ★"}
                   </p>
                   {h.hanja && <p className="font-serif text-sm text-muted-foreground">{h.hanja}</p>}
+                  {h.native && <p className="line-clamp-2 text-xs text-muted-foreground break-keep">{h.native.line}</p>}
                   {h.registration && <p className="text-xs text-muted-foreground">{h.registration}</p>}
                 </div>
                 <div className="shrink-0 text-right text-sm text-muted-foreground">

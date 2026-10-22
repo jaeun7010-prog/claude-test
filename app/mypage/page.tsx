@@ -11,7 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { SavedList } from "@/components/mypage/saved-list";
-import { registrationText } from "@/lib/naming/registration";
+import { CATEGORY_LABEL } from "@/lib/naming/native/score";
+import { nativeRegistrationText, registrationText } from "@/lib/naming/registration";
 import { readSaved, SAVED_COLUMNS, type SavedRow } from "@/lib/naming/saved";
 import { createClient } from "@/lib/supabase/server";
 
@@ -55,7 +56,7 @@ export default async function MyPage() {
   const saved = (history ?? []).map((h) => readSaved(h as SavedRow));
 
   return (
-    <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-3xl space-y-8 px-6 py-12">
+    <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-3xl space-y-8 px-4 py-8 sm:px-6 sm:py-12">
       <header className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-serif text-3xl font-bold">마이페이지</h1>
@@ -103,13 +104,21 @@ export default async function MyPage() {
                 grade: h.grade,
                 score: h.totalScore,
                 favorite: h.isFavorite,
-                registration: h.parentSurname
-                  ? registrationText({
+                registration: !h.parentSurname
+                  ? null
+                  : h.kind === "native"
+                  ? nativeRegistrationText({ surname: h.surname, surnameHanja: h.surnameHanja, given: h.given })
+                  : registrationText({
                       surname: h.surname,
                       surnameHanja: h.surnameHanja,
                       given: h.given,
                       givenHanja: h.givenHanja,
-                    })
+                    }),
+                native: h.native
+                  ? {
+                      score: h.native.score.total,
+                      line: `${CATEGORY_LABEL[h.native.name.category]} · ${h.native.name.meaning}`,
+                    }
                   : null,
                 createdAt: h.createdAt,
               }))}

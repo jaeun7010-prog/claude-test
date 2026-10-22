@@ -1,8 +1,11 @@
 import { isReportSnapshot, type ReportSnapshot } from "@/lib/commerce/report-snapshot";
 import type { CombinationItem } from "@/lib/naming/combination";
 import { namingConditionKey, toNamingQuery, type NamingParams } from "@/lib/naming/params";
+import type { NativeName } from "@/lib/naming/native-names";
+import type { NativeScore } from "@/lib/naming/native/score";
 import { gradeOf } from "@/lib/naming/score";
 import type { Element, Grade, NamingAnalysis } from "@/lib/naming/types";
+import type { analyzeSaju } from "@/lib/saju";
 import { DEFAULT_BIRTHPLACE_ID } from "@/lib/saju/birthplaces";
 
 /**
@@ -10,6 +13,8 @@ import { DEFAULT_BIRTHPLACE_ID } from "@/lib/saju/birthplaces";
  * 저장한 값을 그대로 보여 주고 다시 계산하지 않는다. 저장 형식이 시기마다 달라 빠진 값은 null 로 둔다.
  *  - 처음 형식: analysis(성명학 분석 + saju 요약), filters(입력 조건)
  *  - 2026-10-18부터: analysis.snapshot(리포트 스냅숏과 같은 형식: 한자 훈·뜻, 사주 전체 분석), filters.qs(입력 조건 원문)
+ *  - 순우리말 이름 (2026-10-22~): given_name_hanja 와 total_score 는 비우고(null), filters.nameKind = "native",
+ *    분석은 analysis.native(우리말 이름 점수). 성명학 점수·등급·4격·스냅숏은 없다. 사주 요약(analysis.saju)은 한자 이름과 같다
  */
 
 /** 마이페이지 목록·상세·비교에서 읽는 컬럼 */
@@ -43,8 +48,20 @@ export interface SavedSajuSummary {
   birthDate: string;
 }
 
+/** 저장할 때 analysis.native 에 넣는 순우리말 이름 분석 */
+export interface SavedNative {
+  name: Pick<NativeName, "name" | "category" | "meaning" | "meaningGrade">;
+  /** 법적 이름 (부모 성 + 이름, 성 제외) */
+  legalName: string;
+  score: NativeScore;
+  globalScore: number;
+}
+
+export type SavedNameKind = "hanja" | "native";
+
 interface SavedFilters {
   qs?: string;
+  nameKind?: SavedNameKind;
   length?: NamingParams["length"];
   dolrimja?: NamingParams["dolrimja"];
   parentSurname?: NamingParams["parentSurname"];
@@ -57,6 +74,10 @@ interface SavedFilters {
 
 export interface SavedNaming {
   id: string;
+  /** 한자 이름 / 순우리말 이름 (nameKind 가 없는 예전 저장분은 한자) */
+  kind: SavedNameKind;
+  /** 순우리말 이름 분석. 한자 이름이면 null */
+  native: SavedNative | null;
   createdAt: string;
   isFavorite: boolean;
   surname: string;
@@ -83,6 +104,12 @@ export interface SavedNaming {
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+
+function asNative(v: unknown): SavedNative | null {
+  return isObject(v) && isObject(v.name) && isObject(v.score) && typeof v.score.total === "number"
+    ? (v as unknown as SavedNative)
+    : null;
+}
 
 function asAnalysis(v: unknown): NamingAnalysis | null {
   return isObject(v) && isObject(v.breakdown) && isObject(v.fourGyeok) && typeof v.totalScore === "number"
@@ -160,9 +187,12 @@ export function readSaved(row: SavedRow): SavedNaming {
   const totalScore = row.total_score == null ? null : Number(row.total_score);
   const savedGrade = analysis?.grade ?? null;
   const qs = normalizeQs(typeof f.qs === "string" ? f.qs : rebuildQs(row, f, saju));
+  const kind: SavedNameKind = f.nameKind === "native" ? "native" : "hanja";
 
   return {
     id: row.id,
+    kind,
+    native: kind === "native" ? asNative(a.native) : null,
     createdAt: row.created_at,
     isFavorite: row.is_favorite,
     surname: row.surname,
@@ -184,3 +214,30 @@ export function readSaved(row: SavedRow): SavedNaming {
 
 /** 저장 시 filters.qs 에 넣는 값 */
 export const savedQueryOf = (p: NamingParams) => toNamingQuery(p);
+
+/** 저장한 이름을 결과 화면에서 다시 볼 때의 주소 (순우리말 이름은 순우리말 탭이 먼저 열린다) */
+export const savedResultHref = (s: Pick<SavedNaming, "qs" | "kind">) =>
+  s.qs ? `/naming/result?${s.qs}${s.kind === "native" ? "&tab=native" : ""}` : null;
+
+/** 저장할 때 analysis.saju 에 넣는 사주 요약 (한자·순우리말 공통) */
+export function sajuSummaryOf(p: NamingParams, saju: ReturnType<typeof analyzeSaju>): SavedSajuSummary {
+  const { pillars, yongsin } = saju;
+  const { year, month, day } = p.birth;
+  return {
+    pillars: {
+      year: pillars.year.hanja,
+      month: pillars.month.hanja,
+      day: pillars.day.hanja,
+      hour: pillars.hour?.hanja ?? null,
+    },
+    strength: yongsin.strength,
+    yongsin: yongsin.yongsin,
+    huisin: yongsin.huisin,
+    gisin: yongsin.gisin,
+    method: yongsin.method,
+    geokguk: yongsin.geokguk
+      ? { name: yongsin.geokguk.name, status: yongsin.geokguk.status, applied: yongsin.geokguk.applied }
+      : null,
+    birthDate: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+  };
+}
