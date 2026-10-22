@@ -2,6 +2,7 @@ import { analyzeName, analyzeWithPrefix } from "./analyze";
 import { compareAnalysis } from "./score";
 import { globalPronunciationScore } from "./global-pronunciation";
 import type { Suitability } from "./hanja-suitability";
+import type { SoundRule } from "./name-sounds";
 import { baseRankScore, meaningScore } from "./ranking";
 import { isLuckyRaw } from "./suri81";
 import { trendScore } from "./trend";
@@ -50,6 +51,8 @@ export interface RecommendOptions {
   minTrend?: number;
   /** 예스러운 음절이어도 제외하지 않을 음절 (사용자가 지정한 돌림자 등) */
   allowSyllables?: ReadonlySet<string>;
+  /** 이름 소리 규칙 (name-sounds.ts). 목록 소리는 가점, 반대 성별·자리가 맞지 않는 소리는 제외. 없으면 적용하지 않음 */
+  soundRule?: SoundRule;
   /** 한글 이름(그룹) 최대 개수 */
   limit?: number;
 }
@@ -65,6 +68,8 @@ export interface Recommendation {
   legalAnalysis?: NamingAnalysis;
   /** 0~1: 요즘 이름 트렌드·발음 조화 점수 */
   trend: number;
+  /** 이름 소리 목록에 있는 소리인가 (기본 순위 점수 가점) */
+  listedSound: boolean;
   /** 0~1: 한자 뜻 점수 (글자별 뜻 등급의 평균) */
   meaning: number;
   /** 기본 순위 점수 (성명학 + 한자 뜻 + 요즘 어감, ranking.ts). 화면 순서에만 쓴다 */
@@ -75,6 +80,8 @@ export interface Recommendation {
 export interface NameGroup {
   hangul: string;
   options: Recommendation[];
+  /** 소리 자리 확인을 풀고 채운 이름 (화면 이름이 모자랄 때만). 어떤 정렬에서도 맨 뒤로 보낸다 */
+  soundFill?: boolean;
 }
 
 const hangulOf = (chars: NameHanja[]) => chars.map((c) => c.eum).join("");
@@ -111,6 +118,7 @@ export function recommendNames(opts: RecommendOptions): NameGroup[] {
     maxPerName = 5,
     minTrend = 0,
     allowSyllables,
+    soundRule,
     limit = 30,
   } = opts;
 
@@ -137,7 +145,7 @@ export function recommendNames(opts: RecommendOptions): NameGroup[] {
 
   const prefixHangul = hangulOf(prefix);
 
-  const accept = (chosen: NameHanja[], trend: number) => {
+  const accept = (chosen: NameHanja[], trend: number, listedSound: boolean) => {
     const givenName = [...prefix, ...chosen];
     const hangul = hangulOf(givenName);
     const globalScore = globalPronunciationScore(hangul);
@@ -151,8 +159,8 @@ export function recommendNames(opts: RecommendOptions): NameGroup[] {
       analysis = analyzeName({ surname, givenName, ...saju });
     }
     const meaning = meaningScore(chosen);
-    const baseScore = baseRankScore(analysis.totalScore, meaning, trend);
-    scored.push({ givenName, hangul, analysis, legalAnalysis, globalScore, trend, meaning, baseScore });
+    const baseScore = baseRankScore(analysis.totalScore, meaning, trend, listedSound);
+    scored.push({ givenName, hangul, analysis, legalAnalysis, globalScore, trend, listedSound, baseScore, meaning });
     if (scored.length >= KEEP * 4) prune();
   };
 
@@ -174,14 +182,27 @@ export function recommendNames(opts: RecommendOptions): NameGroup[] {
     return m;
   };
 
+  /**
+   * 요즘 어감 점수와 이름 소리 목록 여부. 후보에서 뺄 소리면 null.
+   * 목록 소리는 요즘 어감 하한에 걸리지 않는다 (어감 점수가 하한보다 낮으면 하한으로 본다)
+   */
+  const soundOf = (given: string): { trend: number; listed: boolean } | null => {
+    const t = trendScore(given, allowSyllables);
+    if (t < 0) return null;
+    if (!soundRule) return t < minTrend ? null : { trend: t, listed: false };
+    if (soundRule.listed(given)) return { trend: Math.max(t, minTrend), listed: true };
+    if (t < minTrend || !soundRule.allows(given, allowSyllables)) return null;
+    return { trend: t, listed: false };
+  };
+
   for (const [eum, group] of groupByEum(single)) {
     if (repeatsPrefix(eum)) continue;
-    const trend = trendScore(eum, allowSyllables);
-    if (trend < 0 || trend < minTrend) continue;
+    const sound = soundOf(eum);
+    if (!sound) continue;
     for (const c of group) {
       if (needFilter && !hasNeed(c)) continue;
       if (luckyCount(c.strokes, null) < minLuckyGyeok) continue;
-      accept([c], trend);
+      accept([c], sound.trend, sound.listed);
     }
   }
 
@@ -189,8 +210,8 @@ export function recommendNames(opts: RecommendOptions): NameGroup[] {
   for (const [eumA, groupA] of groupByEum(first)) {
     if (repeatsPrefix(eumA)) continue;
     for (const [eumB, groupB] of secondGroups) {
-      const trend = trendScore(eumA + eumB, allowSyllables);
-      if (trend < 0 || trend < minTrend) continue;
+      const sound = soundOf(eumA + eumB);
+      if (!sound) continue;
       for (const a of groupA) {
         const aHasNeed = hasNeed(a);
         for (const b of groupB) {
@@ -198,7 +219,7 @@ export function recommendNames(opts: RecommendOptions): NameGroup[] {
           if (needFilter && !aHasNeed && !hasNeed(b)) continue;
           if (luckyCount(a.strokes, b.strokes) < minLuckyGyeok) continue;
           if (a.hanja === b.hanja) continue;
-          accept([a, b], trend);
+          accept([a, b], sound.trend, sound.listed);
         }
       }
     }

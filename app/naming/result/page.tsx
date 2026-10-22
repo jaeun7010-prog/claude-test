@@ -351,6 +351,8 @@ export default async function ResultPage({
     return {
       hangul: g.hangul,
       grade: best.analysis.grade,
+      // 소리 자리 확인을 풀고 채운 이름은 어떤 정렬에서도 맨 뒤 (name-sounds.ts)
+      demoted: g.soundFill,
       // 같은 첫소리는 상위에 FIRST_SOUND_MAX개까지 (부모 성 함께 쓰기는 새로 고르는 첫 글자 기준)
       firstSound: firstSoundKey([...g.hangul][p.parentSurname ? [...p.parentSurname.hangul].length : 0] ?? ""),
       metrics: {

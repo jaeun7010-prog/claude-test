@@ -1,11 +1,16 @@
 /**
  * 추천 순위 점수 (100점 만점). 화면 순서를 정하는 데만 쓰고, 등급·리포트·저장에는 성명학 점수만 쓴다.
  *
- *   기본 순위 점수 = 성명학 점수 × NAMING + 한자 뜻(0~1) × MEANING + 요즘 어감(0~1) × TREND
+ *   기본 순위 점수 = (성명학 점수 × NAMING + 한자 뜻(0~1) × MEANING + 요즘 어감(0~1) × TREND + 소리 가점)
+ *                    ÷ (100 + NAME_SOUND_BONUS) × 100
+ *
+ * 소리 가점은 이름 소리 목록(name-sounds.ts)에 있는 소리면 NAME_SOUND_BONUS, 아니면 0.
+ * 100점 만점을 유지하려고 전체를 나누므로 순서는 가점을 그대로 더한 것과 같다.
  *
  * 비중을 조정하려면 BASE_RANK_WEIGHTS 와 MEANING_CHAR_SCORE 만 바꾸면 된다.
  */
 import type { Suitability } from "./hanja-suitability";
+import { NAME_SOUND_BONUS } from "./name-sounds";
 
 export const BASE_RANK_WEIGHTS = {
   /** 성명학 점수(0~100)에 곱하는 비율 */
@@ -35,7 +40,8 @@ export function meaningScore(chars: { suitability: Suitability }[]): number {
 }
 
 /** 기본 순위 점수 (소수 첫째 자리) */
-export function baseRankScore(namingScore: number, meaning: number, trend: number): number {
+export function baseRankScore(namingScore: number, meaning: number, trend: number, listedSound = false): number {
   const w = BASE_RANK_WEIGHTS;
-  return Math.round((namingScore * w.naming + meaning * w.meaning + trend * w.trend) * 10) / 10;
+  const raw = namingScore * w.naming + meaning * w.meaning + trend * w.trend + (listedSound ? NAME_SOUND_BONUS : 0);
+  return Math.round((raw / (100 + NAME_SOUND_BONUS)) * 1000) / 10;
 }

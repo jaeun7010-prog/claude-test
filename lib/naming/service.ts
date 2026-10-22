@@ -7,6 +7,7 @@ import { diagnoseCombination, type CombinationItem } from "./combination";
 import { applyGender } from "./gender-hanja";
 import { fetchByEum, fetchPool, fetchSurname } from "./hanja-repo";
 import type { NamingParams } from "./params";
+import { buildSoundRule, type SoundRule } from "./name-sounds";
 import { recommendNames, type NameGroup, type NameHanja } from "./recommend";
 import { compareAnalysis } from "./score";
 import { TREND_MIN } from "./trend";
@@ -103,7 +104,12 @@ async function runNamingUnsafe(
     }
   }
 
-  const run = (pool: NameHanja[], minLuckyGyeok: number, minTrend: number) =>
+  // 소리 먼저 (name-sounds.ts): 아이 성별에 맞는 이름 소리 쪽으로 모은다. 돌림자 음절은 자리 확인에서 뺀다.
+  // 자리 확인으로 화면 이름이 모자라면(주로 외자·돌림자) 자리 확인 없이 만든 결과로 채운다 (반대 성별 소리는 계속 뺀다)
+  const strictSound = buildSoundRule(p.gender, p.neutral);
+  const looseSound = buildSoundRule(p.gender, p.neutral, { checkPosition: false });
+
+  const run = (pool: NameHanja[], soundRule: SoundRule, minLuckyGyeok: number, minTrend: number) =>
     recommendNames({
       surname,
       prefix,
@@ -118,23 +124,32 @@ async function runNamingUnsafe(
       minGlobalScore: p.globalFriendly ? 70 : 0,
       minTrend,
       allowSyllables,
+      soundRule,
       // 젠더 뉴트럴은 통계로 거르므로 후보를 넉넉히 뽑는다
       limit: p.neutral ? 150 : CANDIDATE_LIMIT,
     });
 
   // 4격이 모두 길수이고 요즘 어감인 이름을 우선하고, 후보가 부족하면 단계적으로 완화한다
-  const generate = (pool: NameHanja[]) => {
-    let g = run(pool, 4, TREND_MIN);
-    if (g.length < 10) g = run(pool, 3, TREND_MIN);
-    if (g.length < 10) g = run(pool, 3, 0);
+  const generate = (pool: NameHanja[], sound: SoundRule) => {
+    let g = run(pool, sound, 4, TREND_MIN);
+    if (g.length < 10) g = run(pool, sound, 3, TREND_MIN);
+    if (g.length < 10) g = run(pool, sound, 3, 0);
     return g;
   };
   // 애매 등급(교육용도 아니고 뜻도 긍정적이지 않은 희귀 한자)은 자동 추천에서 뺀다. 화면에 보일 이름이 DISPLAY_LIMIT개보다 적을 때만
   // (주로 외자·돌림자) 애매 등급까지 넣은 결과에서 모자란 이름을 채운다. 같은 한글 이름은 애매 등급 없는 쪽을 쓴다 (2026-10-18 사용자 결정)
-  let groups = generate(strictPool);
-  if (groups.length < DISPLAY_LIMIT) {
+  // 채우는 순서: 소리 자리 확인 완화 → 애매 등급 포함 → 둘 다
+  let groups: NameGroup[] = [];
+  for (const [pool, sound, soundFill] of [
+    [strictPool, strictSound, false],
+    [strictPool, looseSound, true],
+    [fullPool, strictSound, false],
+    [fullPool, looseSound, true],
+  ] as const) {
+    if (groups.length >= DISPLAY_LIMIT) break;
     const have = new Set(groups.map((g) => g.hangul));
-    groups = [...groups, ...generate(fullPool).filter((g) => !have.has(g.hangul))];
+    const more = generate(pool, sound).filter((g) => !have.has(g.hangul));
+    groups = [...groups, ...more.map((g) => (soundFill ? { ...g, soundFill } : g))];
   }
 
   // 출생 통계 연동 (희소성 표시·우선순위 + 젠더 뉴트럴 필터)
@@ -150,14 +165,16 @@ async function runNamingUnsafe(
     console.error("[naming] 통계 조회 실패", e);
   }
 
-  // 대표 조합의 기본 순위 점수(성명학 + 한자 뜻 + 요즘 어감) 순.
+  // 대표 조합의 기본 순위 점수(성명학 + 한자 뜻 + 요즘 어감 + 소리 가점) 순.
   // 동점이면 사주 보완 → 수리 → 발음오행 → 희소성(누적 건수가 적은 이름) 순
   const births = (g: NameGroup) => {
     const c = stats?.get(g.hangul)?.cumulative;
     return c ? c.male + c.female : 0;
   };
+  // 소리 자리 확인을 풀고 채운 이름은 맨 뒤
   groups.sort(
     (a, b) =>
+      +!!a.soundFill - +!!b.soundFill ||
       b.options[0].baseScore - a.options[0].baseScore ||
       compareAnalysis(a.options[0].analysis, b.options[0].analysis) ||
       births(a) - births(b) ||

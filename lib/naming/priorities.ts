@@ -146,7 +146,7 @@ export function firstSoundKey(syllable: string): string {
 /**
  * 우선순위로 정렬해 상위 limit개를 돌려준다 (입력 순서는 기본 순위 점수 순이라고 가정).
  * 맞춤 점수순이 기본이고, 희귀/인기 이름순은 누적 건수로 먼저 비교한 뒤 맞춤 점수로 가른다.
- * `demoted`가 참인 항목은 어떤 정렬에서도 맨 뒤로 보낸다 (순우리말 강한 놀림말 이름).
+ * `demoted`가 참인 항목은 어떤 정렬에서도 맨 뒤로 보낸다 (순우리말 강한 놀림말 이름, 한자 이름의 소리 채움 이름).
  * `firstSound`를 주면 같은 값(첫소리)의 항목은 FIRST_SOUND_MAX개까지만 앞에 두고 나머지는 그 뒤로 보낸다.
  */
 export function rankByPriorities<T extends { metrics: NameMetrics }>(
