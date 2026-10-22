@@ -6,6 +6,7 @@
  *   이름 첫 음절이 부모 성 끝 음절과 같으면 뺀다
  * - 돌림자는 적용하지 않고 안내만 한다. 글로벌 발음·젠더 뉴트럴은 한자 쪽과 같은 기준
  * 이름 통계·글로벌 발음은 법적 이름(부모 성 + 이름) 기준이다.
+ * 정렬은 우리말 이름 점수에 이름 쓰임 가점(자주 +10 · 가끔 +5, `usage.ts`)을 더한 정렬 점수로 한다.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -18,6 +19,7 @@ import type { NamingParams } from "../params";
 import type { NameMetrics } from "../priorities";
 import { nativeLengthAllowed, NATIVE_SINGLE_SHORTAGE_NOTICE, type NativeLength } from "./length";
 import { compareNativeScore, scoreNativeName, type NativeSaju, type NativeScore } from "./score";
+import { DRAFT_NATIVE_USAGE_SOURCE, nativeRankScore, type NativeUsage, type NativeUsageSource } from "./usage";
 
 /** 글로벌 발음 친화 조건의 하한 (한자 쪽 runNaming의 minGlobalScore와 같다) */
 export const NATIVE_MIN_GLOBAL_SCORE = 70;
@@ -36,7 +38,11 @@ export interface NativeCandidate {
   legalName: string;
   score: NativeScore;
   globalScore: number;
-  /** 우선순위 맞춤 점수용 (`priorities.ts`). baseScore는 우리말 이름 점수 */
+  /** 이름 쓰임 (자주·가끔·드묾). 드묾이면 카드에 RARE_USAGE_LABEL */
+  usage: NativeUsage;
+  /** 정렬 점수: 우리말 이름 점수 + 쓰임 가점을 100점으로 환산 (화면 점수는 score.total) */
+  rankScore: number;
+  /** 우선순위 맞춤 점수용 (`priorities.ts`). baseScore는 정렬 점수(rankScore) */
   metrics: NameMetrics;
 }
 
@@ -66,13 +72,14 @@ const sajuOf = (saju: ReturnType<typeof analyzeSaju> | null): NativeSaju | undef
 
 /**
  * 조건에 맞는 순우리말 이름 후보 (통계는 미리 불러 넘긴다). saju가 null이면 생일 없음으로 점수를 매긴다.
- * `names`는 검증용으로 바꿔 넣을 수 있다.
+ * `names`·`usageSource`는 검증용으로 바꿔 넣을 수 있다.
  */
 export function buildNativeCandidates(
   p: NamingParams,
   saju: ReturnType<typeof analyzeSaju> | null,
   stats: Map<string, NameStatSummary> | null,
-  names: readonly NativeName[] = NATIVE_NAMES
+  names: readonly NativeName[] = NATIVE_NAMES,
+  usageSource: NativeUsageSource = DRAFT_NATIVE_USAGE_SOURCE
 ): NativeNamingResult {
   const excluded: NativeFilterCounts = { gender: 0, length: 0, tooLong: 0, repeatsPrefix: 0, global: 0, neutral: 0 };
   const notices: string[] = [];
@@ -108,13 +115,17 @@ export function buildNativeCandidates(
     }
     const score = scoreNativeName({ name, surname: p.surname, prefix, saju: s });
     const st = stats?.get(legalName);
+    const usage = usageSource.usageOf(name.name);
+    const rankScore = nativeRankScore(score.total, usage);
     list.push({
       name,
       legalName,
       score,
       globalScore,
+      usage,
+      rankScore,
       metrics: {
-        baseScore: score.total,
+        baseScore: rankScore,
         globalScore,
         births: stats ? (st ? st.cumulative.male + st.cumulative.female : 0) : null,
         everListed: stats ? (st?.everListed ?? false) : null,
@@ -134,9 +145,12 @@ export function buildNativeCandidates(
     }
   }
 
-  // 정렬: 강한 놀림말 맨 뒤 → 총점 → 용신 보완 → 발음오행 흐름 → 희소성(누적 건수 적은 순) → 가나다
+  // 정렬: 강한 놀림말 맨 뒤 → 정렬 점수(쓰임 가점 포함) → 총점 → 용신 보완 → 발음오행 흐름 → 희소성(누적 건수 적은 순) → 가나다
+  const strong = (c: NativeCandidate) => (c.score.teasing?.level === "strong" ? 1 : 0);
   list.sort(
     (a, b) =>
+      strong(a) - strong(b) ||
+      b.rankScore - a.rankScore ||
       compareNativeScore(a.score, b.score) ||
       (a.metrics.births ?? 0) - (b.metrics.births ?? 0) ||
       a.name.name.localeCompare(b.name.name, "ko")

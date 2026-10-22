@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { NativeCategoryBadge, NativeScoreBadge } from "@/components/naming/native-parts";
 import { CATEGORY_LABEL, NATIVE_SCORE_WEIGHTS, type NativeScore } from "@/lib/naming/native/score";
 import type { NativeCandidate } from "@/lib/naming/native/service";
+import { RARE_USAGE_LABEL } from "@/lib/naming/native/usage";
 import type { NameStatSummary } from "@/lib/stats/name-stats";
 
 /**
@@ -71,6 +72,7 @@ export function NativeCardBody({
           </p>
           <NativeCategoryBadge label={CATEGORY_LABEL[c.name.category]} />
           <p className="text-sm break-keep">{c.name.meaning}</p>
+          {c.usage === "rare" && <p className="text-xs text-muted-foreground">{RARE_USAGE_LABEL}</p>}
         </div>
         <NativeScoreBadge total={s.total} />
       </div>
