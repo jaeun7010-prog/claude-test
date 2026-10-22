@@ -9,7 +9,7 @@ import { buildNativeCandidates } from "@/lib/naming/native/service";
 import { parseNamingParams, type NamingParams } from "@/lib/naming/params";
 import { analyzeChosen } from "@/lib/naming/service";
 import { buildReportSnapshot } from "@/lib/commerce/report-snapshot";
-import { sajuSummaryOf, savedQueryOf, type SavedNameKind, type SavedNative } from "@/lib/naming/saved";
+import { findSavedDuplicate, sajuSummaryOf, savedQueryOf, type SavedNameKind, type SavedNative } from "@/lib/naming/saved";
 import { createClient } from "@/lib/supabase/server";
 
 /** 출생 시각이 있으면 출생지 시간대 기준 UTC 시각 */
@@ -62,6 +62,10 @@ export async function saveName(formData: FormData) {
   const r = await analyzeChosen(supabase, p, givenHanja, givenEum);
   if (!r) redirect(`/naming/result?${qs}`);
 
+  // 같은 이름·같은 조건은 한 번만 저장한다
+  const dup = await findSavedDuplicate(supabase, p, { kind: "hanja", given: givenEum, givenHanja });
+  if (dup) redirect(`/mypage/names/${dup}?already=1`);
+
   const { error } = await supabase.from("user_naming_history").insert({
     user_id: user.id,
     surname: p.surname,
@@ -110,6 +114,9 @@ export async function saveNativeName(formData: FormData) {
   const saju = analyzeSaju(p.birth);
   const c = name ? buildNativeCandidates(p, saju, null, [name]).candidates[0] : undefined;
   if (!c) redirect(resultHref);
+
+  const dup = await findSavedDuplicate(supabase, p, { kind: "native", given: c.legalName, givenHanja: null });
+  if (dup) redirect(`/mypage/names/${dup}?already=1`);
 
   const native: SavedNative = {
     name: { name: c.name.name, category: c.name.category, meaning: c.name.meaning, meaningGrade: c.name.meaningGrade },

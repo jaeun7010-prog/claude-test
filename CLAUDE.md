@@ -374,6 +374,9 @@
 
 ## 마이페이지 (`app/mypage`)
 - 목록(`components/mypage/saved-list.tsx`): 등급 배지, 행 → 상세(`/mypage/names/[id]`), 체크박스 2~3개(`lib/naming/compare.ts`의 `COMPARE_MAX`) → 나란히 비교(`/mypage/compare?ids=a,b,c`).
+- 삭제: 목록의 이름별 휴지통 버튼과 체크한 이름 "선택 삭제"(`deleteSavedMany`), 상세의 삭제 버튼. 모두 "정말 삭제할까요?" 확인 후 지운다. 주문은 남고 `orders.history_id`만 비워진다(`on delete set null`).
+- 중복 저장 막기: 같은 성·이름·한자·종류(한자/순우리말)·입력 조건(`namingConditionKey`)이면 새로 저장하지 않고 기존 상세(`?already=1`)로 보낸다 (`saved.ts`의 `findSavedDuplicate`).
+- 리포트를 산 이름(`entitlement.ts`의 `findReportOrder`: 연결된 주문 먼저, 없으면 같은 조건·같은 이름): 목록에 "리포트 구매" 표시, 상세와 `/goods` 리포트 카드에 결제 버튼 대신 "리포트 보기"·"PDF 다운로드"(`/report/[id]?download=1`이면 바로 내려받기).
 - 상세·비교는 저장값만 그린다 (`lib/naming/saved.ts`의 `readSaved`). 예외: 이름 뜻 한 줄(예전 저장분은 지금 문구 표), 희소성(지금 통계 + 기준일).
 - 비교는 무료 항목만: 등급·성명학 점수, 이름 뜻, 항목별 점수(가장 높은 값 굵게), 4격 수·길흉, 법적 기준 등급·총점, 희소성, 출생, 저장일. 입력 조건(`namingConditionKey`)이 다른 이름이 섞이면 사주 보완 점수를 그대로 비교하기 어렵다고 알린다.
 

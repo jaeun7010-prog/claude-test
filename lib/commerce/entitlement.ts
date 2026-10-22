@@ -14,7 +14,8 @@ import { namingConditionKey } from "@/lib/naming/params";
 /** 리포트를 볼 수 있는 주문 상태 (결제 대기·취소·환불 제외) */
 const PAID_STATUSES = ["paid", "preparing", "shipped", "delivered"];
 
-interface PaidReport {
+export interface PaidReport {
+  orderId: string;
   historyId: string | null;
   conditionKey: string | null;
   nameKey: string | null;
@@ -25,19 +26,22 @@ export interface Entitlement {
   saju: boolean;
   /** 이 이름(법적 이름 한자·한글)의 상세 */
   name: (givenHanja: string, given: string) => boolean;
+  /** 이 이름의 결제한 리포트 주문 id (가장 최근, 저장 이름과 연결된 주문 먼저). 없으면 null */
+  reportOrderId: (givenHanja: string, given: string) => string | null;
 }
 
-export const NO_ENTITLEMENT: Entitlement = { saju: false, name: () => false };
+export const NO_ENTITLEMENT: Entitlement = { saju: false, name: () => false, reportOrderId: () => null };
 
 const nameKeyOf = (givenHanja: string, given: string) => `${givenHanja}|${given}`;
 
-/** 로그인 사용자의 결제한 리포트 주문 (RLS 로 본인 주문만) */
-async function loadPaidReports(supabase: SupabaseClient): Promise<PaidReport[]> {
+/** 로그인 사용자의 결제한 리포트 주문, 최근 주문 먼저 (RLS 로 본인 주문만) */
+export async function loadPaidReports(supabase: SupabaseClient): Promise<PaidReport[]> {
   const { data, error } = await supabase
     .from("orders")
-    .select("history_id, item_options")
+    .select("id, history_id, item_options")
     .eq("order_type", "premium_report")
-    .in("status", PAID_STATUSES);
+    .in("status", PAID_STATUSES)
+    .order("created_at", { ascending: false });
   if (error) {
     console.error("[entitlement] 주문 조회 실패", error);
     return [];
@@ -46,12 +50,28 @@ async function loadPaidReports(supabase: SupabaseClient): Promise<PaidReport[]> 
     const opt = (o.item_options ?? {}) as { qs?: unknown; name?: { given?: unknown; givenHanja?: unknown } };
     const n = opt.name;
     return {
+      orderId: o.id,
       historyId: o.history_id,
       conditionKey: typeof opt.qs === "string" ? namingConditionKey(opt.qs) : null,
       nameKey:
         typeof n?.givenHanja === "string" && typeof n?.given === "string" ? nameKeyOf(n.givenHanja, n.given) : null,
     };
   });
+}
+
+/**
+ * 저장 이름(또는 지금 보는 이름)의 결제한 리포트 주문 id. 저장 이름과 연결된 주문(history_id)을 먼저 보고,
+ * 없으면 같은 입력 조건 + 같은 이름 한자·한글 주문. 마이페이지 목록의 "리포트 구매" 표시와 상세의 "리포트 보기"에 쓴다.
+ */
+export function findReportOrder(
+  reports: PaidReport[],
+  target: { historyId?: string; conditionKey: string | null; givenHanja: string; given: string }
+): string | null {
+  const linked = target.historyId ? reports.find((r) => r.historyId === target.historyId) : undefined;
+  if (linked) return linked.orderId;
+  if (!target.conditionKey) return null;
+  const key = nameKeyOf(target.givenHanja, target.given);
+  return reports.find((r) => r.conditionKey === target.conditionKey && r.nameKey === key)?.orderId ?? null;
 }
 
 /**
@@ -72,5 +92,6 @@ export async function loadEntitlement(
   return {
     saju: same.length > 0 || linked,
     name: (givenHanja, given) => linked || names.has(nameKeyOf(givenHanja, given)),
+    reportOrderId: (givenHanja, given) => findReportOrder(reports, { historyId, conditionKey, givenHanja, given }),
   };
 }

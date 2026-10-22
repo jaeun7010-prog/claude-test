@@ -14,6 +14,7 @@ export function ReportPurchase({
   gh,
   ge,
   hid,
+  reportOrderId,
   fullName,
   loginHref,
   loggedIn,
@@ -22,12 +23,17 @@ export function ReportPurchase({
   gh: string;
   ge: string;
   hid?: string;
+  /** 이 이름의 리포트를 이미 결제했으면 그 주문 id (결제 버튼 대신 리포트 보기) */
+  reportOrderId: string | null;
   fullName: string;
   loginHref: string;
   loggedIn: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const { pay, busy, error, clearError } = useCheckout();
+  const { pay, busy, error, clearError } = useCheckout({
+    onPaymentWindow: () => setOpen(false),
+    onPaymentFailed: () => setOpen(true),
+  });
 
   return (
     <Card>
@@ -43,7 +49,19 @@ export function ReportPurchase({
           <li>이름 한자별 뜻풀이와 발음·자원오행 분석</li>
           <li>고풍스러운 한문 서식의 PDF 열람 및 다운로드</li>
         </ul>
-        {loggedIn ? (
+        {reportOrderId ? (
+          <div className="space-y-2">
+            <p className="font-medium text-primary">이미 구매한 리포트입니다.</p>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild>
+                <Link href={`/report/${reportOrderId}`}>리포트 보기</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href={`/report/${reportOrderId}?download=1`}>PDF 다운로드</Link>
+              </Button>
+            </div>
+          </div>
+        ) : loggedIn ? (
           <Button onClick={() => setOpen(true)}>리포트 결제하기</Button>
         ) : (
           <Button asChild>

@@ -180,6 +180,8 @@ export default async function SavedNamePage({
   // 순우리말 이름도 사주 쪽 유료 항목(격 이름·성격/파격)은 같은 조건의 리포트를 결제했을 때만 보인다
   const ent = await loadEntitlement(supabase, true, s.qs ? namingConditionKey(s.qs) : null, s.id);
   const nameOpen = ent.name(s.givenHanja, s.given);
+  // 이 이름의 리포트를 이미 샀으면 결제 버튼 대신 리포트 보기·PDF 다운로드
+  const reportOrderId = ent.reportOrderId(s.givenHanja, s.given);
   const lockHref = goodsHref ?? "/naming";
   const resultHref = savedResultHref(s);
 
@@ -202,6 +204,12 @@ export default async function SavedNamePage({
   const deleteError = searchParams.deleteError && (
     <p role="alert" className="text-sm text-destructive">
       삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.
+    </p>
+  );
+  // 같은 이름·같은 조건을 다시 저장하려 한 경우 (app/naming/actions.ts 의 findSavedDuplicate)
+  const alreadySaved = searchParams.already && (
+    <p role="status" className="rounded-md bg-secondary p-3 text-sm">
+      이미 같은 조건으로 저장한 이름이라 새로 저장하지 않았습니다.
     </p>
   );
 
@@ -234,6 +242,7 @@ export default async function SavedNamePage({
               {nativeRegistrationText({ surname: s.surname, surnameHanja: s.surnameHanja, given: s.given })}
             </p>
           )}
+          {alreadySaved}
           {deleteError}
         </header>
 
@@ -320,18 +329,33 @@ export default async function SavedNamePage({
             <p className="text-xs text-muted-foreground">{registrationCaveat(!nameOpen)}</p>
           </div>
         )}
-        {deleteError}
+        {alreadySaved}
+          {deleteError}
       </header>
 
       <div className="flex flex-wrap gap-2">
         {s.qs ? (
           <>
-            <Button asChild size="sm">
+            <Button asChild size="sm" variant={reportOrderId ? "outline" : "default"}>
               <Link href={resultHref!}>최신 기준으로 다시 분석</Link>
             </Button>
-            <Button asChild size="sm" variant="outline">
-              <Link href={goodsHref!}>프리미엄 리포트 · 맞춤 굿즈</Link>
-            </Button>
+            {reportOrderId ? (
+              <>
+                <Button asChild size="sm">
+                  <Link href={`/report/${reportOrderId}`}>리포트 보기</Link>
+                </Button>
+                <Button asChild size="sm">
+                  <Link href={`/report/${reportOrderId}?download=1`}>PDF 다운로드</Link>
+                </Button>
+                <Button asChild size="sm" variant="outline">
+                  <Link href={goodsHref!}>맞춤 굿즈</Link>
+                </Button>
+              </>
+            ) : (
+              <Button asChild size="sm" variant="outline">
+                <Link href={goodsHref!}>프리미엄 리포트 · 맞춤 굿즈</Link>
+              </Button>
+            )}
           </>
         ) : (
           <p className="text-sm text-muted-foreground">

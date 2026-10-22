@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { isReportSnapshot, type ReportSnapshot } from "@/lib/commerce/report-snapshot";
 import type { CombinationItem } from "@/lib/naming/combination";
 import { namingConditionKey, toNamingQuery, type NamingParams } from "@/lib/naming/params";
@@ -240,4 +242,38 @@ export function sajuSummaryOf(p: NamingParams, saju: ReturnType<typeof analyzeSa
       : null,
     birthDate: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
   };
+}
+
+/**
+ * 같은 이름·같은 입력 조건으로 이미 저장한 이름의 id (없으면 null). 저장 버튼을 여러 번 눌러 같은 이름이
+ * 여러 번 쌓이지 않게 한다. 입력 조건은 namingConditionKey 로 비교한다 (정렬 방식 rarity 는 보지 않음).
+ * RLS 로 본인 저장분만 조회된다.
+ */
+export async function findSavedDuplicate(
+  supabase: SupabaseClient,
+  p: NamingParams,
+  name: { kind: SavedNameKind; given: string; givenHanja: string | null }
+): Promise<string | null> {
+  let query = supabase
+    .from("user_naming_history")
+    .select(SAVED_COLUMNS)
+    .eq("surname", p.surname)
+    .eq("given_name", name.given);
+  query = name.givenHanja ? query.eq("given_name_hanja", name.givenHanja) : query.is("given_name_hanja", null);
+  const { data, error } = await query;
+  if (error) {
+    console.error("[saved] 중복 저장 확인 실패", error);
+    return null;
+  }
+  const key = namingConditionKey(savedQueryOf(p));
+  const dup = (data ?? [])
+    .map((row) => readSaved(row as SavedRow))
+    .find(
+      (s) =>
+        s.kind === name.kind &&
+        s.surnameHanja === p.surnameHanja &&
+        s.qs != null &&
+        namingConditionKey(s.qs) === key
+    );
+  return dup?.id ?? null;
 }

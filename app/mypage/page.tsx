@@ -11,8 +11,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { SavedList } from "@/components/mypage/saved-list";
+import { findReportOrder, loadPaidReports } from "@/lib/commerce/entitlement";
 import { CATEGORY_LABEL } from "@/lib/naming/native/score";
 import { nativeRegistrationText, registrationText } from "@/lib/naming/registration";
+import { namingConditionKey } from "@/lib/naming/params";
 import { readSaved, SAVED_COLUMNS, type SavedRow } from "@/lib/naming/saved";
 import { createClient } from "@/lib/supabase/server";
 
@@ -34,7 +36,7 @@ export default async function MyPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/mypage");
 
-  const [{ data: profile }, { data: history }, { data: orders }] = await Promise.all([
+  const [{ data: profile }, { data: history }, { data: orders }, paidReports] = await Promise.all([
     supabase
       .from("profiles")
       .select("name, email")
@@ -50,6 +52,7 @@ export default async function MyPage() {
       .select("id, item_name, order_type, status, amount, quantity, created_at, tracking_number")
       .neq("status", "pending")
       .order("created_at", { ascending: false }),
+    loadPaidReports(supabase),
   ]);
 
   const displayName = profile?.name || user.email;
@@ -121,6 +124,15 @@ export default async function MyPage() {
                     }
                   : null,
                 createdAt: h.createdAt,
+                // 저장 이름과 연결된 리포트이거나 같은 조건·같은 이름의 리포트를 결제했으면 (순우리말은 리포트 없음)
+                reportPurchased:
+                  h.kind === "hanja" &&
+                  !!findReportOrder(paidReports, {
+                    historyId: h.id,
+                    conditionKey: h.qs ? namingConditionKey(h.qs) : null,
+                    givenHanja: h.givenHanja,
+                    given: h.given,
+                  }),
               }))}
             />
           ) : (

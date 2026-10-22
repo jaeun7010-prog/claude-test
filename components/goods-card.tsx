@@ -63,7 +63,10 @@ export function GoodsCard({
   const [quantity, setQuantity] = useState(1);
   const [shipping, setShipping] = useState<ShippingInput>(EMPTY_SHIPPING);
   const [open, setOpen] = useState(false);
-  const { pay, busy, error, clearError } = useCheckout();
+  const { pay, busy, error, clearError } = useCheckout({
+    onPaymentWindow: () => setOpen(false),
+    onPaymentFailed: () => setOpen(true),
+  });
 
   const total = goodsUnitPrice(product, withAnimal) * quantity;
   const textValid = text.trim().length > 0 && [...text.trim()].length <= MAX_EMBROIDERY_LENGTH;

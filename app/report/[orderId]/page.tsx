@@ -28,7 +28,14 @@ function Notice({ message, href = "/mypage", label = "마이페이지로" }: { m
   );
 }
 
-export default async function ReportPage({ params }: { params: { orderId: string } }) {
+export default async function ReportPage({
+  params,
+  searchParams,
+}: {
+  params: { orderId: string };
+  /** download=1: 마이페이지 상세의 "PDF 다운로드"로 들어오면 바로 내려받기를 시작한다 */
+  searchParams: { download?: string };
+}) {
   const supabase = createClient();
   const {
     data: { user },
@@ -93,7 +100,7 @@ export default async function ReportPage({ params }: { params: { orderId: string
           <Button asChild variant="outline">
             <Link href="/mypage">마이페이지</Link>
           </Button>
-          <ReportDownloadButton filename={`이름핏_리포트_${fullName}.pdf`} />
+          <ReportDownloadButton filename={`이름핏_리포트_${fullName}.pdf`} autoStart={searchParams.download === "1"} />
         </div>
       </header>
       {/* 리포트는 A4 고정 폭(794px)이라 좁은 화면에서는 가로로 스크롤한다 */}

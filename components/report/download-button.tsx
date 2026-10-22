@@ -1,13 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
-/** #report-root 를 A4 PDF 로 저장한다. 브라우저에서 렌더링한 폰트(나눔명조) 그대로 출력된다. */
-export function ReportDownloadButton({ filename }: { filename: string }) {
+/**
+ * #report-root 를 A4 PDF 로 저장한다. 브라우저에서 렌더링한 폰트(나눔명조) 그대로 출력된다.
+ * autoStart: 페이지를 열자마자 한 번 내려받는다 (마이페이지 상세의 "PDF 다운로드")
+ */
+export function ReportDownloadButton({ filename, autoStart = false }: { filename: string; autoStart?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const autoStarted = useRef(false);
+
+  useEffect(() => {
+    if (!autoStart || autoStarted.current) return;
+    autoStarted.current = true;
+    void download();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart]);
 
   async function download() {
     const el = document.getElementById("report-root");
