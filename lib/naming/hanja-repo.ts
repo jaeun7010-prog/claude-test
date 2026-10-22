@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Element } from "./types";
 import { classifyHanja } from "./hanja-suitability";
-import { nameHunOf } from "./name-hanja-allowlist";
+import { filledHunOf, nameHunOf } from "./name-hanja-allowlist";
 import type { NameHanja } from "./recommend";
 
 interface Row {
@@ -40,13 +40,13 @@ const toChar = (r: Row): NameHanja => ({
   strokes: r.stroke_count,
   element: r.element,
   meaning: r.meaning,
-  // 허용 목록의 이름용 대표 풀이가 있으면 사전 훈 대신 보여 준다 (판정에는 사전 훈을 쓴다)
+  // 허용 목록의 이름용 대표 풀이가 있으면 사전 훈 대신 보여 준다 (판정에는 사전 훈을 쓰고, 사전 훈이 없으면 채운 훈을 쓴다)
   hun: nameHunOf(r.hanja, r.eum) ?? r.hun ?? null,
   suitability: classifyHanja({
     hanja: r.hanja,
     eum: r.eum,
     meaning: r.meaning,
-    hun: r.hun,
+    hun: filledHunOf(r.hanja, r.eum, r.hun),
     isEdu: r.is_edu ?? false,
   }),
 });

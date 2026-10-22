@@ -11,6 +11,8 @@
  *
  * nameHun(이름용 대표 풀이)이 있으면 화면과 PDF에서 사전 훈(hanja_dict.hun) 대신 보여 준다.
  * 사전 훈이 옛말·오타이거나 이름 뜻으로 어색할 때 쓴다. 사전 데이터는 바꾸지 않는다.
+ * 사전 훈이 비어 있는 글자는 nameHun을 판정에도 쓴다 (filledHunOf). 훈이 없으면 애매 등급이 되므로(hanja-suitability.ts),
+ * displayOnly + nameHun으로 훈만 채우면 등급은 채운 훈으로 자동 판정된다 (2026-10-22 사용자 확인).
  */
 
 export interface AllowedNameHanja {
@@ -29,6 +31,8 @@ const GEM = "옥·빛 등 이름에 좋은 뜻이지만 자동 판정으로는 �
 const PLACE = "지명·강 이름 뜻풀이로 걸리지만 이름에 흔히 쓰는 글자";
 const OBJECT = "사물 뜻풀이로 걸리지만 이름에 전통적으로 쓰는 글자";
 const DISPLAY = "사전 훈이 이름 뜻으로 어색해 풀이만 바꾸는 글자 (등급은 자동 판정)";
+const FILL = "사전에 훈이 없어 훈을 채우는 글자 (등급은 채운 훈으로 자동 판정)";
+const VARIANT = "표준 글자의 이체자지만 한국 이름에 많이 쓰는 글자 (표준 글자와 같게)";
 
 export const NAME_HANJA_ALLOWLIST: readonly AllowedNameHanja[] = [
   // ㄱ
@@ -98,6 +102,7 @@ export const NAME_HANJA_ALLOWLIST: readonly AllowedNameHanja[] = [
   { hanja: "娥", eum: "아", reason: POPULAR },
   { hanja: "亞", eum: "아", reason: POPULAR },
   { hanja: "姸", eum: "연", reason: POPULAR, nameHun: "고울" },
+  { hanja: "妍", eum: "연", reason: VARIANT, nameHun: "고울" },
   { hanja: "娟", eum: "연", reason: POPULAR },
   { hanja: "延", eum: "연", reason: POPULAR, nameHun: "늘일" },
   { hanja: "然", eum: "연", reason: POPULAR, nameHun: "그럴" },
@@ -150,6 +155,14 @@ export const NAME_HANJA_ALLOWLIST: readonly AllowedNameHanja[] = [
   { hanja: "燃", eum: "연", reason: DISPLAY, nameHun: "타오를", displayOnly: true },
   { hanja: "淡", eum: "담", reason: DISPLAY, nameHun: "맑을", displayOnly: true },
   { hanja: "璐", eum: "로", reason: DISPLAY, nameHun: "아름다운 옥", displayOnly: true },
+  // 사전에 훈이 없는 글자의 훈 채우기 (2026-10-22 사용자 확인). 璐도 사전 훈이 없어 위 풀이가 판정에 쓰인다
+  { hanja: "豐", eum: "풍", reason: FILL, nameHun: "풍성할", displayOnly: true },
+  { hanja: "強", eum: "강", reason: FILL, nameHun: "강할", displayOnly: true },
+  { hanja: "閏", eum: "윤", reason: FILL, nameHun: "윤달", displayOnly: true },
+  { hanja: "瓏", eum: "롱", reason: FILL, nameHun: "옥 소리", displayOnly: true },
+  { hanja: "烺", eum: "랑", reason: FILL, nameHun: "빛 밝을", displayOnly: true },
+  { hanja: "珹", eum: "성", reason: FILL, nameHun: "옥 이름", displayOnly: true },
+  { hanja: "晸", eum: "정", reason: FILL, nameHun: "해 뜨는 모양", displayOnly: true },
   // ㅈ
   { hanja: "在", eum: "재", reason: POPULAR },
   { hanja: "載", eum: "재", reason: POPULAR },
@@ -219,6 +232,7 @@ export const NAME_HANJA_ALLOWLIST: readonly AllowedNameHanja[] = [
   { hanja: "勳", eum: "훈", reason: POPULAR },
   { hanja: "薰", eum: "훈", reason: POPULAR, nameHun: "향풀" },
   { hanja: "熙", eum: "희", reason: POPULAR },
+  { hanja: "煕", eum: "희", reason: VARIANT, nameHun: "빛날" },
   { hanja: "姬", eum: "희", reason: POPULAR, nameHun: "여자" },
   { hanja: "希", eum: "희", reason: POPULAR },
   { hanja: "喜", eum: "희", reason: POPULAR, nameHun: "기쁠" },
@@ -235,3 +249,7 @@ export const isAllowedNameHanja = (hanja: string, eum: string) => {
 
 /** 이름용 대표 풀이의 훈. 지정되지 않았으면 null (사전 훈을 쓴다) */
 export const nameHunOf = (hanja: string, eum: string) => BY_KEY.get(`${hanja}|${eum}`)?.nameHun ?? null;
+
+/** 사전 훈이 비어 있을 때 판정에 쓸 훈. 사전 훈이 있으면 사전 훈, hun 컬럼이 없는 DB(undefined)면 그대로 undefined */
+export const filledHunOf = (hanja: string, eum: string, dictHun: string | null | undefined) =>
+  dictHun === undefined || dictHun?.trim() ? dictHun : (nameHunOf(hanja, eum) ?? dictHun);
