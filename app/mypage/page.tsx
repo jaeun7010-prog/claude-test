@@ -10,7 +10,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { OrderList, type OrderListItem } from "@/components/mypage/order-list";
 import { SavedList } from "@/components/mypage/saved-list";
+import { PRODUCTS } from "@/lib/commerce/catalog";
 import { findReportOrder, loadPaidReports } from "@/lib/commerce/entitlement";
 import { CATEGORY_LABEL } from "@/lib/naming/native/score";
 import { nativeRegistrationText, registrationText } from "@/lib/naming/registration";
@@ -20,14 +22,53 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "마이페이지 | 이름핏" };
 
-const ORDER_STATUS: Record<string, string> = {
-  paid: "결제 완료",
-  preparing: "제작 중",
-  shipped: "배송 중",
-  delivered: "배송 완료",
-  cancelled: "취소",
-  refunded: "환불",
-};
+interface OrderRow {
+  id: string;
+  item_name: string;
+  item_options: unknown;
+  order_type: string;
+  status: string;
+  amount: number;
+  quantity: number;
+  created_at: string;
+  paid_at: string | null;
+  tracking_number: string | null;
+  history_id: string | null;
+}
+
+/** 주문 한 건을 목록 한 칸으로. 이름·상품은 주문할 때 남긴 item_options 에서 읽는다 */
+function orderItemOf(o: OrderRow): OrderListItem {
+  const opt = (o.item_options ?? {}) as {
+    qs?: unknown;
+    product?: unknown;
+    name?: { surname?: unknown; given?: unknown; surnameHanja?: unknown; givenHanja?: unknown };
+  };
+  const n = opt.name;
+  const str = (v: unknown) => (typeof v === "string" ? v : "");
+  const name = n ? `${str(n.surname)}${str(n.given)}` : "";
+  const kind = o.order_type === "premium_report" ? "report" : "goods";
+  const productLabel =
+    kind === "report"
+      ? "프리미엄 리포트"
+      : (PRODUCTS as Record<string, { label: string }>)[str(opt.product)]?.label ?? "맞춤 굿즈";
+  const qs = str(opt.qs);
+  return {
+    id: o.id,
+    kind,
+    name: name || o.item_name,
+    hanja: n ? `${str(n.surnameHanja)}${str(n.givenHanja)}` : "",
+    product: o.quantity > 1 ? `${productLabel} × ${o.quantity}` : productLabel,
+    amount: o.amount,
+    status: o.status,
+    createdAt: o.paid_at ?? o.created_at,
+    trackingNumber: o.tracking_number,
+    reorderHref:
+      qs && n
+        ? `/goods?${qs}&gh=${encodeURIComponent(str(n.givenHanja))}&ge=${encodeURIComponent(str(n.given))}` +
+          (o.history_id ? `&hid=${o.history_id}` : "")
+        : null,
+  };
+}
 
 export default async function MyPage() {
   const supabase = createClient();
@@ -46,11 +87,14 @@ export default async function MyPage() {
       .from("user_naming_history")
       .select(SAVED_COLUMNS)
       .order("created_at", { ascending: false }),
-    // 결제 대기(미결제) 주문은 목록에서 제외
+    // 결제 대기(미결제)와 결제 전에 취소된 주문(결제창에서 취소)은 목록에서 뺀다. 결제 후 취소·환불은 보여 준다
     supabase
       .from("orders")
-      .select("id, item_name, order_type, status, amount, quantity, created_at, tracking_number")
+      .select(
+        "id, item_name, item_options, order_type, status, amount, quantity, created_at, paid_at, tracking_number, history_id"
+      )
       .neq("status", "pending")
+      .or("status.neq.cancelled,paid_at.not.is.null")
       .order("created_at", { ascending: false }),
     loadPaidReports(supabase),
   ]);
@@ -153,35 +197,7 @@ export default async function MyPage() {
         </CardHeader>
         <CardContent>
           {orders && orders.length > 0 ? (
-            <ul className="divide-y">
-              {orders.map((o) => (
-                <li key={o.id} className="flex items-center justify-between gap-4 py-3 text-sm">
-                  <div>
-                    <p className="font-medium">
-                      {o.item_name}
-                      {o.quantity > 1 && ` × ${o.quantity}`}
-                    </p>
-                    <p className="text-muted-foreground">
-                      {new Date(o.created_at).toLocaleDateString("ko-KR")}
-                      {o.tracking_number && ` · 송장 ${o.tracking_number}`}
-                    </p>
-                    {o.order_type === "premium_report" &&
-                      ["paid", "preparing", "shipped", "delivered"].includes(o.status) && (
-                        <Link
-                          href={`/report/${o.id}`}
-                          className="font-medium text-primary underline-offset-4 hover:underline"
-                        >
-                          리포트 보기 · PDF 다운로드
-                        </Link>
-                      )}
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">{o.amount.toLocaleString("ko-KR")}원</p>
-                    <p className="text-muted-foreground">{ORDER_STATUS[o.status] ?? o.status}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <OrderList items={(orders as OrderRow[]).map(orderItemOf)} />
           ) : (
             <p className="py-6 text-center text-sm text-muted-foreground">주문 내역이 없습니다.</p>
           )}
