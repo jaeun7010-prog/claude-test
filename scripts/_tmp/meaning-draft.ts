@@ -1,4 +1,5 @@
-// 이름 뜻 문구 표 3차 추가 안 (2026-10-23 검토용, 확인 전까지 name-meaning-table.ts 에 넣지 않음)
+// 이름 뜻 문구 표 3차 추가 안 → 2026-10-23 25자 확정해 name-meaning-table.ts 에 넣었다 (盡은 한자 제외).
+// 4차 안을 만들 때 넣지 않기로 한 글자: 1~3차 null 전부 + 陶·盡
 // 1·2차는 2026-10-23 문구 표에 넣었다. 앞에서 "넣지 않음"으로 정한 27자
 // (岷陳島由州需埰坻旨易洲隨有西亞吏 岐寯閩嶺何隱又爐奈序 陶)를 빼고 그다음 40자 (meaning-coverage.ts 28~67위). null = 넣지 않음 제안.
 export const DRAFT: Record<string, [string, string, string] | null> = {
