@@ -95,7 +95,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
   const cellPad = chars.length >= 5 ? "2px 8px" : compact ? "4px 8px" : "8px";
   const hanjaSize = chars.length >= 5 ? "18px" : compact ? "20px" : "24px";
   const gyeokPad = compact ? "4px 8px" : "9px 8px";
-  const sectionGap = compact ? "24px" : "34px";
+  const sectionGap = compact ? "18px" : "30px";
   const footer = `이름핏 NameFit · ${fullHangul} 작명 리포트`;
 
   return (
@@ -259,6 +259,11 @@ export function ReportDocument({ data }: { data: ReportData }) {
               : analysis.resource.arrangement === "희신 배치"
                 ? " · 가운데 글자가 성씨와 끝 글자의 용신 오행을 함께 생해 줍니다."
                 : ""}
+          </p>
+        )}
+        {analysis.resource && data.texts.surnameElementNote && (
+          <p style={{ margin: "0 0 4px", fontSize: "12px", lineHeight: 1.5, color: C.muted }}>
+            {data.texts.surnameElementNote}
           </p>
         )}
         <p style={{ margin: "14px 0 0", fontSize: "26px", fontWeight: 800 }}>

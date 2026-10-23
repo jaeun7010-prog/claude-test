@@ -10,6 +10,8 @@ export interface HanjaChar {
   strokes: number;
   /** 자원오행 (한자 자체의 오행). 사전에 없으면 null */
   element: Element | null;
+  /** 성씨 자리 글자의 자원오행 확신 (surnames.ts의 SURNAME_ELEMENTS). 이름 자리 글자에는 없다 */
+  surnameConfidence?: "높음" | "보통" | "낮음";
 }
 
 export interface NamingInput {

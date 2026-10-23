@@ -96,6 +96,11 @@ export function bridgeElement(a: Element, b: Element): Element | null {
   return (ia + 2) % 5 === ib ? ORDER[(ia + 1) % 5] : ORDER[(ib + 1) % 5];
 }
 
+/** 확신 낮은 성씨의 상극 관계 점수: 만점(100)에서 깎이는 만큼의 절반만 깎는다 (극 0 → 50, 용신 상극 30 → 65) */
+const weakClash = (score: number) => 100 - (100 - score) / 2;
+
+const mean = (scores: number[]) => Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10;
+
 /** 성씨가 곧 용신이라 생긴 같은 오행 편중(예: 金+金+金)의 흐름 점수. 일반 편중(40)보다 덜 감점한다 */
 export const YONGSIN_SAME_SCORE = 50;
 
@@ -107,13 +112,19 @@ export const YONGSIN_SAME_SCORE = 50;
  * - 용신 편중: 성씨가 용신과 같은 오행이고 모든 글자가 그 오행이면 YONGSIN_SAME_SCORE
  * 같은 수리·발음이면 통관·희신 배치가 용신 상극·용신 편중보다 조금 높게 나오도록 맞춘 값이다.
  * `elements[0]`이 성씨 오행이고 이름 첫 글자 오행을 알 때만 `surnameFirst`를 true로 넘긴다.
+ * `weakSurname`: 성씨 오행의 확신이 낮으면(surnames.ts) 성 → 이름 관계가 상극일 때 감점을 절반만 반영한다
+ * (상생 가점은 그대로). `elements[0]`이 성씨 오행일 때만 true로 넘긴다.
  */
 export function evaluateResourceFlow(
   elements: Element[],
   surnameFirst: boolean,
-  needed?: Element
+  needed?: Element,
+  weakSurname = false
 ): ResourceFlow {
-  const flow = evaluateFlow(elements);
+  const raw = evaluateFlow(elements);
+  const softenFirst = weakSurname && raw.relations[0] === "극";
+  const soften = (scores: number[]) => (softenFirst ? [weakClash(scores[0]), ...scores.slice(1)] : scores);
+  const flow = softenFirst ? { ...raw, score: mean(soften(raw.relations.map((r) => RELATION_SCORE[r]))) } : raw;
   const plain: ResourceFlow = { ...flow, arrangement: null };
   if (!surnameFirst || !needed || elements.length < 2) return plain;
 
@@ -136,9 +147,8 @@ export function evaluateResourceFlow(
     return { ...flow, score: 100, arrangement: "통관" };
   }
   if (first === needed && bridge) {
-    const scores = flow.relations.map((r, i) => (i === 0 ? YONGSIN_CLASH_SCORE : RELATION_SCORE[r]));
-    const score = scores.reduce((a, b) => a + b, 0) / scores.length;
-    return { ...flow, score: Math.round(score * 10) / 10, arrangement: "용신 상극" };
+    const scores = soften(flow.relations.map((r, i) => (i === 0 ? YONGSIN_CLASH_SCORE : RELATION_SCORE[r])));
+    return { ...flow, score: mean(scores), arrangement: "용신 상극" };
   }
   return plain;
 }

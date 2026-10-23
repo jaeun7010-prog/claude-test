@@ -139,7 +139,8 @@ export function analyzeName(input: NamingInput): NamingAnalysis {
     const flow = evaluateResourceFlow(
       chars.map((c) => c.element as Element),
       !!surnameChar && !!givenName[0].element,
-      neededElement
+      neededElement,
+      surnameChar?.surnameConfidence === "낮음"
     );
     let needMatched: boolean | null = null;
     if (neededElement) {

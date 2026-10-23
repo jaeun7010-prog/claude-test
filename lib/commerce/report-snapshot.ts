@@ -9,6 +9,10 @@ import type { analyzeChosen } from "@/lib/naming/service";
 import type { Element, NamingAnalysis } from "@/lib/naming/types";
 import type { Pillar, YongsinResult } from "@/lib/saju";
 
+/** 리포트 자원오행 부분의 성씨 자원오행 기준 안내 (version 5부터) */
+export const SURNAME_ELEMENT_NOTE =
+  "성씨 자원오행은 부수와 글자 뜻을 기준으로 보았으며, 학파에 따라 다르게 볼 수 있습니다.";
+
 /**
  * 프리미엄 리포트 고정 내용. 주문 생성 때 계산해 orders.report_snapshot 에 한 번만 저장하고,
  * 리포트는 이 값만으로 그린다. 엔진(사주·작명 규칙)이 바뀌어도 결제한 리포트는 바뀌지 않는다.
@@ -20,8 +24,9 @@ export interface ReportSnapshot {
    * 3: 부모 성 함께 쓰기의 analysis 가 새로 고르는 부분 기준으로 바뀌고 legalAnalysis·texts.combination 추가 (2026-10-17).
    *    version 2 이하의 부모 성 함께 쓰기 스냅숏은 analysis 가 법적 이름 전체 기준이다
    * 4: texts.nameMeaning(이름 전체 뜻 한 줄) 추가 (2026-10-18)
+   * 5: 성씨 자원오행 표(surnames.ts) 적용, texts.surnameElementNote 추가 (2026-10-23)
    */
-  version: 1 | 2 | 3 | 4;
+  version: 1 | 2 | 3 | 4 | 5;
   /** 분석 시각 (ISO) */
   createdAt: string;
   surname: string;
@@ -49,6 +54,8 @@ export interface ReportSnapshot {
     combination?: CombinationItem[] | null;
     /** 이름 전체 뜻 한 줄 (새로 고르는 글자 기준). 문장이 없는 이름이거나 version 3 이하면 없음 */
     nameMeaning?: NameMeaning | null;
+    /** 자원오행 부분의 성씨 자원오행 기준 안내. 자원오행 흐름이 없거나 version 4 이하면 없음 */
+    surnameElementNote?: string | null;
   };
 }
 
@@ -72,7 +79,7 @@ export function birthTextOf(p: NamingParams): string {
 export function buildReportSnapshot(p: NamingParams, chosen: Chosen): ReportSnapshot {
   const { pillars, yongsin } = chosen.saju;
   const snapshot: ReportSnapshot = {
-    version: 4,
+    version: 5,
     createdAt: new Date().toISOString(),
     surname: p.surname,
     surnameHanja: p.surnameHanja,
@@ -105,6 +112,7 @@ export function buildReportSnapshot(p: NamingParams, chosen: Chosen): ReportSnap
         : null,
       combination: chosen.combination,
       nameMeaning: nameMeaningOf(chosen.given.slice(p.parentSurname ? [...p.parentSurname.hanja].length : 0)),
+      surnameElementNote: chosen.analysis.resource ? SURNAME_ELEMENT_NOTE : null,
     },
   };
   // jsonb 에 넣을 수 있는 값만 남긴다 (Date·undefined 제거)
@@ -114,5 +122,5 @@ export function buildReportSnapshot(p: NamingParams, chosen: Chosen): ReportSnap
 /** DB에서 읽은 값이 그릴 수 있는 스냅숏인지 */
 export function isReportSnapshot(v: unknown): v is ReportSnapshot {
   const s = v as ReportSnapshot | null;
-  return !!s && (s.version === 1 || s.version === 2 || s.version === 3 || s.version === 4) && !!s.saju?.yongsin && !!s.analysis && Array.isArray(s.given) && !!s.texts;
+  return !!s && (s.version === 1 || s.version === 2 || s.version === 3 || s.version === 4 || s.version === 5) && !!s.saju?.yongsin && !!s.analysis && Array.isArray(s.given) && !!s.texts;
 }

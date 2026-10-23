@@ -9,6 +9,7 @@ import { fetchByEum, fetchPool, fetchSurname } from "./hanja-repo";
 import type { NamingParams } from "./params";
 import { buildSoundRule, type SoundRule } from "./name-sounds";
 import { recommendNames, type NameGroup, type NameHanja } from "./recommend";
+import { withSurnameElements } from "./surnames";
 import { compareAnalysis } from "./score";
 import { TREND_MIN } from "./trend";
 import type { NamingAnalysis } from "./types";
@@ -38,13 +39,15 @@ export const CANDIDATE_LIMIT = 60;
 
 /** 성씨 한자(부모 성 함께 쓰기면 그 성 글자도) + 사주 계산. 추천/저장에서 공통으로 사용 */
 export async function prepare(supabase: SupabaseClient, p: NamingParams) {
-  const surname = await fetchSurname(supabase, [...p.surnameHanja], [...p.surname]);
-  if (!surname) return null;
+  // 성씨 자리 글자는 성씨 자원오행 표(SURNAME_ELEMENTS)를 사전 값보다 먼저 쓴다
+  const found = await fetchSurname(supabase, [...p.surnameHanja], [...p.surname]);
+  if (!found) return null;
+  const surname = withSurnameElements(found);
   let prefix: NameHanja[] = [];
   if (p.parentSurname) {
-    const found = await fetchSurname(supabase, [...p.parentSurname.hanja], [...p.parentSurname.hangul]);
-    if (!found) return null;
-    prefix = found;
+    const parent = await fetchSurname(supabase, [...p.parentSurname.hanja], [...p.parentSurname.hangul]);
+    if (!parent) return null;
+    prefix = withSurnameElements(parent);
   }
   return { surname, prefix, saju: analyzeSaju(p.birth) };
 }
@@ -234,8 +237,10 @@ export async function analyzeChosen(
   // 부모 성 함께 쓰기면 이름이 그 성 글자로 시작해야 한다
   if (p.parentSurname && !(givenHanja.startsWith(p.parentSurname.hanja) && givenEum.startsWith(p.parentSurname.hangul)))
     return null;
-  const given = await fetchSurname(supabase, [...givenHanja], [...givenEum]);
-  if (!given || given.length <= base.prefix.length) return null;
+  const fetched = await fetchSurname(supabase, [...givenHanja], [...givenEum]);
+  if (!fetched || fetched.length <= base.prefix.length) return null;
+  // 부모 성 글자는 성씨 자원오행 표를 입힌 값으로 둔다 (분석·리포트 한자 표가 같은 오행을 보도록)
+  const given = [...base.prefix, ...fetched.slice(base.prefix.length)];
   const { yongsin, huisin, gisin } = base.saju.yongsin;
   const saju = { neededElement: yongsin, favorableElement: huisin, unfavorableElement: gisin };
   if (base.prefix.length > 0) {
