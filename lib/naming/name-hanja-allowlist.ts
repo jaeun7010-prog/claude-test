@@ -4,7 +4,7 @@
  * 한자 뜻 등급(hanja-suitability.ts)은 영문 뜻풀이·훈·교육용 여부로 자동 판정하는데, 이 방식으로는
  * 이름에 널리 쓰이는 글자가 감점·제외되는 경우가 있다 (예: 鉉 "솥귀"가 사물로, 洙가 강 이름으로,
  * 允·胤이 교육용 아님 + 영문 뜻풀이 평범으로 분류됨). 여기 있는 글자는 자동 판정과 상관없이 "좋음"으로 본다
- * (displayOnly 항목은 풀이만 바꾸고 등급은 자동 판정을 따른다).
+ * (displayOnly 항목은 풀이만 바꾸고 등급은 자동 판정을 따른다. grade가 있으면 그 등급으로 본다).
  * 불용한자(is_forbidden)는 이 목록과 상관없이 제외된다.
  *
  * 같은 한자라도 음에 따라 다른 글자로 보므로 한자와 음을 함께 적는다.
@@ -24,6 +24,8 @@ export interface AllowedNameHanja {
   nameHun?: string;
   /** true면 풀이만 바꾸고 뜻 등급은 자동 판정을 따른다 ("좋음"으로 올리지 않음) */
   displayOnly?: boolean;
+  /** 후보에는 남기되 "좋음" 대신 이 등급으로 본다 (자동 판정이면 제외되는 글자를 낮은 등급으로 살릴 때) */
+  grade?: "normal";
 }
 
 const POPULAR = "인기 이름에 널리 쓰는 글자";
@@ -56,13 +58,14 @@ export const NAME_HANJA_ALLOWLIST: readonly AllowedNameHanja[] = [
   // ㄹ·ㅁ
   { hanja: "璘", eum: "린", reason: GEM },
   { hanja: "潾", eum: "린", reason: POPULAR },
-  { hanja: "律", eum: "율", reason: POPULAR },
+  { hanja: "律", eum: "율", reason: POPULAR, nameHun: "가락" },
   { hanja: "民", eum: "민", reason: POPULAR },
   { hanja: "敏", eum: "민", reason: POPULAR },
   { hanja: "旻", eum: "민", reason: POPULAR },
   { hanja: "玟", eum: "민", reason: GEM },
   { hanja: "珉", eum: "민", reason: GEM, nameHun: "옥돌" },
-  { hanja: "岷", eum: "민", reason: PLACE, nameHun: "산 이름" },
+  // 지명이라 "좋음"이면 토 용신 사주 상위에 몰려(표본 상위 30에 61회) 보통으로 둔다 (2026-10-23 사용자 결정)
+  { hanja: "岷", eum: "민", reason: PLACE, nameHun: "산 이름", grade: "normal" },
   // ㅂ
   { hanja: "範", eum: "범", reason: POPULAR },
   { hanja: "彬", eum: "빈", reason: POPULAR },
@@ -163,6 +166,9 @@ export const NAME_HANJA_ALLOWLIST: readonly AllowedNameHanja[] = [
   { hanja: "烺", eum: "랑", reason: FILL, nameHun: "빛 밝을", displayOnly: true },
   { hanja: "珹", eum: "성", reason: FILL, nameHun: "옥 이름", displayOnly: true },
   { hanja: "晸", eum: "정", reason: FILL, nameHun: "해 뜨는 모양", displayOnly: true },
+  // 2026-10-23 이름 뜻 문구와 맞춤 (사전 훈 귀막이 / 귀막이 옥)
+  { hanja: "琇", eum: "수", reason: DISPLAY, nameHun: "옥돌", displayOnly: true },
+  { hanja: "瑩", eum: "영", reason: DISPLAY, nameHun: "밝을", displayOnly: true },
   // ㅈ
   { hanja: "在", eum: "재", reason: POPULAR },
   { hanja: "載", eum: "재", reason: POPULAR },
@@ -241,11 +247,14 @@ export const NAME_HANJA_ALLOWLIST: readonly AllowedNameHanja[] = [
 
 const BY_KEY = new Map(NAME_HANJA_ALLOWLIST.map((c) => [`${c.hanja}|${c.eum}`, c]));
 
-/** 뜻 등급을 "좋음"으로 보는 글자인가 (풀이만 바꾸는 displayOnly 항목은 제외) */
-export const isAllowedNameHanja = (hanja: string, eum: string) => {
+/** 허용 목록이 정하는 뜻 등급. 목록에 없거나 풀이만 바꾸는 displayOnly 항목이면 null (자동 판정) */
+export const allowedGradeOf = (hanja: string, eum: string): "good" | "normal" | null => {
   const c = BY_KEY.get(`${hanja}|${eum}`);
-  return !!c && !c.displayOnly;
+  return !c || c.displayOnly ? null : (c.grade ?? "good");
 };
+
+/** 뜻 등급을 "좋음"으로 보는 글자인가 (풀이만 바꾸는 displayOnly 항목과 grade로 낮춘 항목은 제외) */
+export const isAllowedNameHanja = (hanja: string, eum: string) => allowedGradeOf(hanja, eum) === "good";
 
 /** 이름용 대표 풀이의 훈. 지정되지 않았으면 null (사전 훈을 쓴다) */
 export const nameHunOf = (hanja: string, eum: string) => BY_KEY.get(`${hanja}|${eum}`)?.nameHun ?? null;

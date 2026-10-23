@@ -9,7 +9,7 @@
  *   좋음     뜻이 긍정적인 교육용 글자, 또는 자주 쓰는 이름 한자 허용 목록(name-hanja-allowlist.ts)
  */
 import { hasAcceptableMeaning, hasPositiveMeaning } from "./hanja-meaning";
-import { isAllowedNameHanja } from "./name-hanja-allowlist";
+import { allowedGradeOf } from "./name-hanja-allowlist";
 import { isRareReading } from "./rare-readings";
 
 export type Suitability = "exclude" | "awkward" | "obscure" | "normal" | "good";
@@ -155,8 +155,8 @@ const AWKWARD_MEANING_EXCLUDE = new Set([
   // 2026-10-22 훈 없는 글자 검토 (애매는 30개가 모자랄 때 채움으로 화면에 나올 수 있어 제외로 올림): 무덤·늙은 말·해 기울·
   // 대바구니·바다거북·볕에 말릴·버섯·태풍·태울·(음 "욕")·눈 흐릴·어둑할·기름질·요염할·멍할·과장할·끊을
   ..."冢駘昃匾鼂曬㰔䫻㶼縟䀴沬䏧艷㥥訏絕",
-  // 2026-10-23 이름 뜻 문구 검토: 장마(滈)
-  ..."滈",
+  // 2026-10-23 이름 뜻 문구 검토: 장마(滈), 빚(債)
+  ..."滈債",
 ]);
 
 /**
@@ -187,7 +187,8 @@ export function classifyHanja(c: {
   isEdu: boolean;
 }): Suitability {
   const hun = c.hun ?? null;
-  if (isAllowedNameHanja(c.hanja, c.eum)) return "good";
+  const allowed = allowedGradeOf(c.hanja, c.eum);
+  if (allowed) return allowed;
   if (isRareReading(c.hanja, c.eum) || KIN_OR_SEX_HANJA.has(c.hanja) || AWKWARD_MEANING_EXCLUDE.has(c.hanja))
     return "exclude";
   if (!hasAcceptableMeaning(c.meaning) || hasNegativeHun(hun) || isMessyMeaning(c.meaning, hun)) return "exclude";
