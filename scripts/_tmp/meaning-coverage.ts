@@ -47,5 +47,5 @@ const key = (c: { hanja: string; eum: string }) => `${c.hanja}|${c.eum}`;
   console.log(`빠진 원인 글자 종류: ${Object.keys(miss).length}`);
   const top = Object.entries(miss).sort((a, b) => b[1].n - a[1].n);
   let cum = 0;
-  top.slice(0, 40).forEach(([k, m], i) => { cum += m.n; console.log(`${i + 1}\t${k}\t${m.hun}\t${m.n}\t${[...m.examples].join(",")}`); });
+  top.slice(0, Number(process.env.TOP ?? 40)).forEach(([k, m], i) => { cum += m.n; console.log(`${i + 1}\t${k}\t${m.hun}\t${m.n}\t${[...m.examples].join(",")}`); });
 })();

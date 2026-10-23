@@ -1,5 +1,5 @@
 import { hasNegativeHun } from "./hanja-suitability";
-import { NAME_MEANING, NAME_MEANING_NOUN, NAME_MEANING_VERB, type NameMeaningEntry } from "./name-meaning-table";
+import { NAME_MEANING, NAME_MEANING_NOUN, NAME_MEANING_PAIR, NAME_MEANING_VERB, type NameMeaningEntry } from "./name-meaning-table";
 
 /**
  * 이름 전체 뜻 한 줄 (무료). 예: 載(실을 재) + 運(운수 운) → 좋은 운을 가득 싣고 살아가길 바라는 뜻
@@ -9,6 +9,7 @@ import { NAME_MEANING, NAME_MEANING_NOUN, NAME_MEANING_VERB, type NameMeaningEnt
  *  ③④ 동작 글자 + 명사 글자 (순서 무관): {명사}을/를 {동작} 살아가길 바라는 뜻
  *  ⑤ 두 글자의 뜻 묶음이 같을 때 (2026-10-22 사용자 결정): "맑고 이슬처럼 맑은"처럼 겹치지 않게 합친다 (sameGroupPhrase)
  *     이슬처럼 맑은 + 연꽃처럼 맑은 → 이슬과 연꽃처럼 맑은 / 맑은 + 이슬처럼 맑은 → 이슬처럼 맑은
+ *     자동으로 합치면 어색한 조합은 NAME_MEANING_PAIR에 문장을 직접 적는다 (景暖 → 볕처럼 따스한)
  * 문구가 없는 글자가 하나라도 있으면 문장을 만들지 않는다 (화면에는 훈음만 남는다).
  * 부모 성 함께 쓰기는 새로 고르는 글자만 넘긴다.
  */
@@ -83,6 +84,8 @@ function sentenceOf(chars: MeaningChar[]): string | null {
     const verb = NAME_MEANING_VERB[a] ?? NAME_MEANING_VERB[b];
     const noun = NAME_MEANING_VERB[a] ? NAME_MEANING_NOUN[b] : NAME_MEANING_NOUN[a];
     if (verb && noun) return `${noun}${eul(noun)} ${verb} ${END_VERB}`;
+    const pair = NAME_MEANING_PAIR[`${a}+${b}`] ?? NAME_MEANING_PAIR[`${b}+${a}`];
+    if (pair) return `${pair} ${END}`;
   }
   const entries = keys.map((k) => NAME_MEANING[k]);
   if (entries.some((x) => !x)) return null;

@@ -22,7 +22,9 @@ export type ReportData = Omit<ReportSnapshot, "version" | "createdAt"> & { issue
 
 const PAGE: React.CSSProperties = {
   width: "794px",
-  height: "1123px",
+  // html2pdf는 A4 한 쪽을 1122px로 보고, break-after 뒤에 "1122 - (끝 위치 % 1122)"만큼 빈칸을 넣는다.
+  // 쪽 높이가 1122px 이상이면 이 빈칸이 거의 한 쪽이 되어 쪽마다 빈 쪽이 생기므로 1px 작게 둔다.
+  height: "1121px",
   boxSizing: "border-box",
   padding: "48px",
   backgroundColor: C.ivory,
@@ -91,8 +93,8 @@ export function ReportDocument({ data }: { data: ReportData }) {
   // 복성·부모 성 함께 쓰기로 글자가 4자 이상이면 3쪽이 A4를 넘지 않도록 한자 표를 줄인다
   const compact = chars.length >= 4;
   const cellPad = chars.length >= 5 ? "2px 8px" : compact ? "4px 8px" : "8px";
-  const hanjaSize = compact ? "20px" : "24px";
-  const gyeokPad = compact ? "6px 8px" : "9px 8px";
+  const hanjaSize = chars.length >= 5 ? "18px" : compact ? "20px" : "24px";
+  const gyeokPad = compact ? "4px 8px" : "9px 8px";
   const sectionGap = compact ? "24px" : "34px";
   const footer = `이름핏 NameFit · ${fullHangul} 작명 리포트`;
 
@@ -218,7 +220,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
           </tbody>
         </table>
         {data.texts.nameMeaning && (
-          <p style={{ margin: "14px 0 0", fontSize: "15px", lineHeight: 1.7 }}>
+          <p style={{ margin: compact ? "8px 0 0" : "14px 0 0", fontSize: "15px", lineHeight: 1.7 }}>
             <span style={{ color: C.muted }}>이름 뜻 · {data.texts.nameMeaning.chars} →</span>{" "}
             {data.texts.nameMeaning.sentence}
           </p>
@@ -234,7 +236,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
                   <td style={{ padding: gyeokPad, border: `1px solid ${C.line}`, width: "130px", fontWeight: 700 }}>
                     {g.name}
                   </td>
-                  <td style={{ padding: gyeokPad, border: `1px solid ${C.line}`, width: "90px", textAlign: "center" }}>
+                  <td style={{ padding: gyeokPad, border: `1px solid ${C.line}`, width: "120px", textAlign: "center", whiteSpace: "nowrap" }}>
                     {r.suri}수 · {r.lucky ? "길(吉)" : "흉(凶)"}
                   </td>
                   <td style={{ padding: gyeokPad, border: `1px solid ${C.line}`, color: C.muted }}>{g.desc}</td>
@@ -264,7 +266,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
           {analysis.grade && <span style={{ marginLeft: "16px" }}>{analysis.grade}등급</span>}
         </p>
 
-        <p style={{ margin: "34px 0 0", fontSize: "12px", lineHeight: 1.7, color: C.muted }}>
+        <p style={{ margin: `${sectionGap} 0 0`, fontSize: "12px", lineHeight: 1.7, color: C.muted }}>
           사주의 강약, 계절 균형, 합충, 격국을 기준으로 아이에게 필요한 기운을 찾았습니다. 학파에 따라 해석이 다를 수
           있습니다. 이름 풀이는 수리 81수·오행 이론에 따른 참고 자료이며, 작명의 최종 결정은 가족의 뜻과 함께 정하시길
           권합니다.
@@ -287,7 +289,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
                     <td style={{ padding: "9px 8px", border: `1px solid ${C.line}`, width: "130px", fontWeight: 700 }}>
                       {g.name}
                     </td>
-                    <td style={{ padding: "9px 8px", border: `1px solid ${C.line}`, width: "90px", textAlign: "center" }}>
+                    <td style={{ padding: "9px 8px", border: `1px solid ${C.line}`, width: "120px", textAlign: "center", whiteSpace: "nowrap" }}>
                       {r.suri}수 · {r.lucky ? "길(吉)" : "흉(凶)"}
                     </td>
                     <td style={{ padding: "9px 8px", border: `1px solid ${C.line}`, color: C.muted }}>{g.desc}</td>

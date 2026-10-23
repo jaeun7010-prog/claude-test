@@ -35,7 +35,8 @@ export function ReportDownloadButton({ filename, autoStart = false }: { filename
         image: { type: "jpeg", quality: 0.95 },
         html2canvas: { scale: 2, useCORS: true, backgroundColor: "#fdfbf7" },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css"], after: ".report-page" },
+        // 쪽마다 break-after: page(css)가 있어 after 선택자를 함께 주면 쪽 나눔이 두 번 들어가 빈 쪽이 생긴다
+        pagebreak: { mode: ["css"] },
       } as const;
       await html2pdf()
         .set(options as never)
