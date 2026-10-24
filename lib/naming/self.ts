@@ -16,14 +16,13 @@ import { fetchByEum } from "./hanja-repo";
 import type { NamingParams } from "./params";
 import { baseRankScore, meaningScore } from "./ranking";
 import type { NameHanja } from "./recommend";
-import type { SelfChar, SelfScore, SelfSlot, SelfTable } from "./self-rank";
+import { SELF_MAX_LENGTH, type SelfChar, type SelfScore, type SelfSlot, type SelfTable } from "./self-rank";
 import { prepare } from "./service";
 import { trendScore } from "./trend";
 import type { Element, NamingAnalysis } from "./types";
 
 const HANGUL = /^[가-힣]+$/;
-/** 셀프 작명 이름 글자 수 (부모 성 글자 제외). 3자 이름은 이번 범위에서 뺐다 (2026-10-24 사용자 결정) */
-export const SELF_MAX_LENGTH = 2;
+export { SELF_MAX_LENGTH };
 
 /** 입력한 한글 이름 검사. 문제 없으면 null */
 export function checkSelfName(given: string, prefixHangul = ""): string | null {

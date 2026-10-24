@@ -61,6 +61,8 @@ export interface SelfTable {
 /** 자리마다 고른 한자 (slot.chars의 번호). 안 골랐으면 null */
 export type SelfPicks = (number | null)[];
 
+/** 셀프 작명 이름 글자 수 (부모 성 글자 제외). 3자 이름은 이번 범위에서 뺐다 (2026-10-24 사용자 결정) */
+export const SELF_MAX_LENGTH = 2;
 /** [추천] 최대 개수 */
 export const SELF_RECOMMEND_MAX = 5;
 /** [추천] 등급 하한 */

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NATIVE_SINGLE_SHORTAGE_NOTICE } from "@/lib/naming/native/length";
+import { SELF_MAX_LENGTH } from "@/lib/naming/self-rank";
 import { COMMON_SURNAMES, COMPOUND_SURNAMES } from "@/lib/naming/surnames";
 import {
   BIRTHPLACES,
@@ -181,7 +182,11 @@ function SurnameFields({
   );
 }
 
-export function NamingForm() {
+/**
+ * 작명 입력 폼. `self`(직접 짓기)는 이름 조건 대신 부모가 정한 한글 이름을 받아 /naming/self로 보낸다
+ */
+export function NamingForm({ mode = "recommend" }: { mode?: "recommend" | "self" }) {
+  const self = mode === "self";
   const [noTime, setNoTime] = useState(false);
   const [place, setPlace] = useState(DEFAULT_BIRTHPLACE_ID);
   const [length, setLength] = useState<"any" | "1" | "2">("any");
@@ -195,7 +200,7 @@ export function NamingForm() {
   );
 
   return (
-    <form action="/naming/result" method="get" className="space-y-6">
+    <form action={self ? "/naming/self" : "/naming/result"} method="get" className="space-y-6">
       <section className="space-y-3">
         <h2 className="font-serif text-lg font-bold">성씨</h2>
         <SurnameFields label="성" hangulName="surname" hanjaName="sh" placeholder="예: 김, 남궁" />
@@ -318,6 +323,27 @@ export function NamingForm() {
         </div>
       </section>
 
+      {self ? (
+        <section className="space-y-3">
+          <h2 className="font-serif text-lg font-bold">정한 이름</h2>
+          <div className="space-y-2">
+            <Label htmlFor="given">이름 (한글)</Label>
+            <Input
+              id="given"
+              name="given"
+              placeholder="예: 서윤"
+              maxLength={SELF_MAX_LENGTH}
+              pattern={`[가-힣]{1,${SELF_MAX_LENGTH}}`}
+              title={`한글 1~${SELF_MAX_LENGTH}자`}
+              required
+            />
+            <p className="text-xs text-muted-foreground break-keep">
+              {withParent ? "성과 함께 쓰는 부모 성을 뺀" : "성을 뺀"} 이름을 한글 1~{SELF_MAX_LENGTH}자로 적어 주세요.
+              글자마다 쓸 수 있는 한자와 사주에 맞는 조합 점수를 보여 드려요.
+            </p>
+          </div>
+        </section>
+      ) : (
       <section className="space-y-3">
         <h2 className="font-serif text-lg font-bold">이름 조건</h2>
         <div className="space-y-2">
@@ -403,9 +429,10 @@ export function NamingForm() {
           희귀한 이름·인기 이름 순서와 우리 집 우선순위는 결과 화면에서 바로 고를 수 있습니다.
         </p>
       </section>
+      )}
 
       <Button type="submit" size="lg" className="w-full">
-        이름 추천받기
+        {self ? "한자 고르기" : "이름 추천받기"}
       </Button>
     </form>
   );
