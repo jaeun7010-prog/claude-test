@@ -5,6 +5,7 @@
  *
  * - 같은 소리·한자가 두 번 나오면 합친다 (호환 한자 李 U+F9E1 등은 NFC로 표준 글자에 합침)
  * - 두음법칙: 첫소리만 다른 소리(류·유, 림·임, 라·나, 리·이, 로·노 …)는 한 묶음(surnameKey)으로 보고, 한자마다 인구를 더한다
+ * - 확장 한자(CJK 기본 영역 U+4E00~U+9FFF 밖, 예: 㛅)는 글꼴에서 깨질 수 있어 뺀다 (2026-10-24 사용자 결정)
  * - "제갈(諸*)"은 자료에서 葛이 깨진 것이라 諸葛으로 읽는다. "기타(기타)"는 뺀다
  * 출력하는 확인 표: 성씨 수, 상위 10, 사전에 없는 글자, 이체자 쌍, 자원오행 표에 없는 상위 한자, 소리별 바로 보이는 한자
  */
@@ -58,11 +59,16 @@ const national = Number(lines.find((l) => l.startsWith('"전국"'))?.split(",")[
   type Entry = { hanja: string; population: number; strokes: number[]; sounds: Set<string> };
   const groups = new Map<string, Map<string, Entry>>();
   const missing: [string, string, number][] = [];
+  const extended: [string, string, number][] = [];
   const noReading: [string, string, number, string][] = [];
   for (const [k, n] of raw) {
     const [sound, hanja] = k.split("|");
     const key = surnameKey(sound);
     const cs = [...hanja];
+    if (cs.some((c) => c < "一" || c > "鿿")) {
+      extended.push([sound, hanja, n]);
+      continue;
+    }
     if (cs.some((c) => !dict.has(c))) {
       missing.push([sound, hanja, n]);
       continue;
@@ -112,6 +118,7 @@ ${body}
 
   console.log(`\n## 2. 사전에 없는 글자 ${missing.length}개 (뺌)`);
   console.log(missing.sort((a, b) => b[2] - a[2]).map(([s, h, n]) => `${s}(${h}) ${fmt(n)}`).join(" · "));
+  console.log(`확장 한자 ${extended.length}개 (숨김): ${extended.sort((a, b) => b[2] - a[2]).map(([s, h, n]) => `${s}(${h}) ${fmt(n)}`).join(" · ")}`);
   console.log(`사전에 그 소리 읽기가 없는 글자 ${noReading.length}개 (뺌)`);
   console.log(noReading.sort((a, b) => b[2] - a[2]).map(([s, h, n, r]) => `${s}(${h}) ${fmt(n)} [사전 ${r}]`).join(" · "));
   const PAIRS = ["曺曹", "裵裴", "兪俞", "吳呉", "黃黄", "晉晋", "姬姫", "姸妍", "邊辺", "權権", "鄭郑", "盧卢", "羅罗", "劉刘"];
