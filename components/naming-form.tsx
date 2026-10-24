@@ -7,22 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NATIVE_SINGLE_SHORTAGE_NOTICE } from "@/lib/naming/native/length";
 import { SELF_MAX_LENGTH } from "@/lib/naming/self-rank";
-import { COMMON_SURNAMES, COMPOUND_SURNAMES } from "@/lib/naming/surnames";
+import { surnameLabel, surnameOptions } from "@/lib/naming/surname-hanja";
+import { COMPOUND_SURNAMES } from "@/lib/naming/surnames";
 import {
   BIRTHPLACES,
   CUSTOM_BIRTHPLACE_ID,
   DEFAULT_BIRTHPLACE_ID,
 } from "@/lib/saju/birthplaces";
-import { createClient } from "@/lib/supabase/client";
-
-interface SurnameOption {
-  hanja: string;
-  /** 한글 훈 (예: 쇠) */
-  hun: string | null;
-  strokes: number;
-  /** 복성의 글자별 획수 (예: 南9 + 宮10) */
-  detail?: string;
-}
 
 type NameKind = "hanja" | "native";
 
@@ -36,8 +27,9 @@ const selectClass =
   "flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 /**
- * 성(한글) 입력 + 한자 선택. 한글 성이 바뀌면 사전에서 해당 음의 한자 후보를 불러온다.
- * 복성은 알려진 조합(COMMON_SURNAMES)만 지원하고, 글자별 획수를 함께 보여 준다.
+ * 성(한글) 입력 + 한자 선택. 후보는 통계청 2015 성씨별 인구로 만든 성씨 표(surname-hanja.ts)만 쓰고 사전은 조회하지 않는다.
+ * 인구 1위를 기본으로 고르고, 그 소리 인구의 1% 이상은 바로 보이며 나머지는 "다른 한자 성씨 보기"를 눌러야 목록에 나온다.
+ * 두음법칙 성씨는 두 소리 모두에서 같은 후보가 나온다 (류·유, 림·임, 라·나)
  */
 function SurnameFields({
   label,
@@ -51,91 +43,26 @@ function SurnameFields({
   hanjaName: string;
   placeholder: string;
 }) {
-  const supabase = useMemo(() => createClient(), []);
   const [surname, setSurname] = useState("");
-  const [options, setOptions] = useState<SurnameOption[]>([]);
   const [surnameHanja, setSurnameHanja] = useState("");
-  const [loadError, setLoadError] = useState(false);
+  const [showRare, setShowRare] = useState(false);
   const s = surname.trim();
+  const valid = /^[가-힣]{1,2}$/.test(s) && (s.length === 1 || COMPOUND_SURNAMES.includes(s));
   const unknownCompound = /^[가-힣]{2}$/.test(s) && !COMPOUND_SURNAMES.includes(s);
+  const options = useMemo(() => (valid ? surnameOptions(s) : []), [s, valid]);
+  const visible = options.filter((o) => o.visible);
+  const rare = options.filter((o) => !o.visible);
+  const unknown = valid && options.length === 0;
 
+  // 소리가 바뀌면 인구 1위를 기본으로 고르고, 접힌 목록은 다시 접는다
   useEffect(() => {
-    setOptions([]);
-    setSurnameHanja("");
-    setLoadError(false);
-    if (!/^[가-힣]{1,2}$/.test(s)) return;
+    setSurnameHanja(options[0]?.hanja ?? "");
+    setShowRare(false);
+  }, [options]);
 
-    let cancelled = false;
-
-    // 복성: 기본 한자 조합 하나를 보여 주고, 글자별 획수를 사전에서 읽어 붙인다
-    if (s.length === 2) {
-      const h = COMMON_SURNAMES[s];
-      if (!h || !COMPOUND_SURNAMES.includes(s)) return;
-      setOptions([{ hanja: h, hun: null, strokes: 0 }]);
-      setSurnameHanja(h);
-      void (async () => {
-        const res = await supabase
-          .from("hanja_dict")
-          .select("hanja, eum, stroke_count")
-          .in("hanja", [...h])
-          .in("eum", [...s]);
-        if (cancelled || res.error) return;
-        const rows = (res.data ?? []) as { hanja: string; eum: string; stroke_count: number }[];
-        const chars = [...h].map((c, i) => rows.find((r) => r.hanja === c && r.eum === s[i]));
-        if (chars.some((r) => !r)) return;
-        setOptions([
-          {
-            hanja: h,
-            hun: null,
-            strokes: chars.reduce((n, r) => n + r!.stroke_count, 0),
-            detail: chars.map((r) => `${r!.hanja}${r!.stroke_count}`).join(" + "),
-          },
-        ]);
-      })();
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    // 기본 한자(COMMON_SURNAMES)는 따로 불러와 맨 앞에 두고 기본값으로 고른다. 획수순 60개 안에 없을 수 있어서다
-    // (鄭은 정 86자 중 85번째라 목록에 없었고, 정씨가 丁으로 들어갔다)
-    const preferred = COMMON_SURNAMES[s];
-    const load = async () => {
-      const query = (columns: string, hanja?: string) => {
-        const q = supabase.from("hanja_dict").select(columns).eq("eum", s);
-        return hanja
-          ? q.eq("hanja", hanja).limit(1)
-          : q.eq("is_name_hanja", true).order("stroke_count", { ascending: true }).limit(60);
-      };
-      // hun 컬럼이 아직 없는 DB(42703)는 훈 없이 다시 조회한다
-      const run = async (hanja?: string) => {
-        const res = await query("hanja, stroke_count, hun", hanja);
-        return res.error?.code === "42703" ? query("hanja, stroke_count", hanja) : res;
-      };
-      const [res, pref] = await Promise.all([run(), preferred ? run(preferred) : null]);
-      if (cancelled) return;
-      if (res.error) {
-        setLoadError(true);
-        return;
-      }
-      type Row = { hanja: string; stroke_count: number; hun?: string | null };
-      const rows = [...((pref?.data ?? []) as unknown as Row[]), ...((res.data ?? []) as unknown as Row[])];
-      const seen = new Set<string>();
-      const opts = rows
-        .filter((r) => !seen.has(r.hanja) && seen.add(r.hanja))
-        .map((r) => ({
-          hanja: r.hanja,
-          hun: r.hun ?? null,
-          strokes: r.stroke_count,
-        }));
-      setOptions(opts);
-      setSurnameHanja(opts[0]?.hanja ?? "");
-    };
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [s, supabase]);
+  // 고른 한자가 접힌 쪽이면 접어도 목록에 남긴다
+  const selectedRare = rare.find((o) => o.hanja === surnameHanja);
+  const shownRare = showRare ? rare : selectedRare ? [selectedRare] : [];
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -156,6 +83,7 @@ function SurnameFields({
             함께 쓰기&rsquo;를 선택해 주세요.
           </p>
         )}
+        {unknown && <p className="text-xs text-destructive">성씨 통계에 없는 성입니다. 성을 다시 확인해 주세요.</p>}
       </div>
       <div className="space-y-2">
         <Label htmlFor={hanjaName}>{label} (한자)</Label>
@@ -169,15 +97,30 @@ function SurnameFields({
           disabled={options.length === 0}
         >
           {options.length === 0 && <option value="">성을 먼저 입력하세요</option>}
-          {options.map((o) => (
+          {visible.map((o) => (
             <option key={o.hanja} value={o.hanja}>
-              {o.hanja} ({o.hun ? `${o.hun} ` : ""}
-              {s}
-              {o.detail ? `, ${o.detail} = ${o.strokes}획` : o.strokes ? `, ${o.strokes}획` : ""})
+              {surnameLabel(s, o)}
             </option>
           ))}
+          {shownRare.length > 0 && (
+            <optgroup label="다른 한자 성씨 (인구순)">
+              {shownRare.map((o) => (
+                <option key={o.hanja} value={o.hanja}>
+                  {surnameLabel(s, o)} · {o.population.toLocaleString("ko-KR")}명
+                </option>
+              ))}
+            </optgroup>
+          )}
         </select>
-        {loadError && <p className="text-xs text-destructive">한자 목록을 불러오지 못했습니다.</p>}
+        {rare.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowRare(!showRare)}
+            className="text-xs text-primary underline underline-offset-2"
+          >
+            {showRare ? "다른 한자 성씨 접기" : `다른 한자 성씨 보기 (${rare.length}개)`}
+          </button>
+        )}
       </div>
     </div>
   );

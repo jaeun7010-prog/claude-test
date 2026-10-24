@@ -6,13 +6,13 @@ function ro(word: string): string {
   return coda === 0 || coda === 8 ? "로" : "으로";
 }
 
-/** 주소에 성씨 한자가 없거나 형식이 맞지 않아 기본 한자로 계산했을 때 알린다 (params.ts의 defaultedSurnames) */
+/** 주소의 성씨 한자가 비어 있거나 성씨 표에 없어 기본 한자로 계산했을 때 알린다 (params.ts의 defaultedSurnames) */
 export function SurnameDefaultNote({ p }: { p: NamingParams }) {
   if (p.defaultedSurnames.length === 0) return null;
   const hanjaOf = (hangul: string) => (hangul === p.surname ? p.surnameHanja : p.parentSurname?.hanja ?? "");
   return (
     <p role="status" className="rounded-md bg-secondary p-3 text-sm break-keep">
-      성씨 한자가 선택되지 않아 {p.defaultedSurnames.map((s) => `${s}씨는 ${hanjaOf(s)}${ro(s)}`).join(", ")} 계산했어요. 다른 한자라면 다시 입력해 주세요.
+      성씨 한자를 확인할 수 없어 {p.defaultedSurnames.map((s) => `${s}씨는 ${hanjaOf(s)}${ro(s)}`).join(", ")} 계산했어요. 다른 한자라면 다시 입력해 주세요.
     </p>
   );
 }

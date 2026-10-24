@@ -4,6 +4,7 @@ import type { Element } from "./types";
 import { classifyHanja } from "./hanja-suitability";
 import { filledHunOf, nameHunOf } from "./name-hanja-allowlist";
 import type { NameHanja } from "./recommend";
+import { surnameKey } from "./surname-hanja";
 
 interface Row {
   hanja: string;
@@ -57,14 +58,14 @@ export async function fetchSurname(
   hanja: string[],
   eum: string[]
 ): Promise<NameHanja[] | null> {
-  const rows = await select((cols) =>
-    supabase.from("hanja_dict").select(cols).in("hanja", hanja).in("eum", eum)
-  );
+  const rows = await select((cols) => supabase.from("hanja_dict").select(cols).in("hanja", hanja));
   const out: NameHanja[] = [];
   for (let i = 0; i < hanja.length; i++) {
-    const row = rows.find((r) => r.hanja === hanja[i] && r.eum === eum[i]);
+    // 두음법칙 성씨는 사전에 한 소리만 있을 수 있어(劉 유·류 등) 같은 묶음의 읽기도 받는다. 소리는 입력한 대로 쓴다
+    const same = rows.filter((r) => r.hanja === hanja[i]);
+    const row = same.find((r) => r.eum === eum[i]) ?? same.find((r) => surnameKey(r.eum) === surnameKey(eum[i]));
     if (!row) return null;
-    out.push(toChar(row));
+    out.push({ ...toChar(row), eum: eum[i] });
   }
   return out;
 }

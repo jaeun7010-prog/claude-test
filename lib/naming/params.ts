@@ -1,6 +1,7 @@
 import type { BirthInput } from "@/lib/saju";
 import { CUSTOM_BIRTHPLACE_ID, resolveBirthplace, type Birthplace } from "@/lib/saju/birthplaces";
-import { COMMON_SURNAMES, COMPOUND_SURNAMES } from "./surnames";
+import { defaultSurnameHanja, isSurnameHanja } from "./surname-hanja";
+import { COMPOUND_SURNAMES } from "./surnames";
 
 export interface NamingParams {
   surname: string; // 한글 성
@@ -11,7 +12,7 @@ export interface NamingParams {
    */
   parentSurname: { hangul: string; hanja: string } | null;
   /**
-   * 주소의 성씨 한자(sh·psh)가 비어 있거나 형식이 맞지 않아 기본 한자(COMMON_SURNAMES)로 바꾼 성 (한글).
+   * 주소의 성씨 한자(sh·psh)가 비어 있거나 성씨 표에 없어 기본 한자(인구 1위)로 바꾼 성 (한글).
    * 결과 화면에 "기본 한자로 계산했어요"를 알린다. 주소로 다시 만들 때(toNamingQuery)는 바꾼 한자가 들어간다
    */
   defaultedSurnames: string[];
@@ -45,8 +46,9 @@ export type ParseResult =
 
 /**
  * 성(한글·한자) 검증. 2자는 복성 목록에 있을 때만 받는다.
- * 한자가 비어 있거나 형식이 맞지 않으면 그 성의 기본 한자(COMMON_SURNAMES)를 쓴다 (예전 폼은 鄭이 후보 60개 밖이라
- * 정씨가 丁으로 들어갔다. 2026-10-24 사용자 결정). 기본 한자가 없는 성은 오류
+ * 한자는 성씨 표(surname-hanja.ts, 통계청 2015 성씨별 인구)에 있는 것만 받고, 비어 있거나 표에 없으면 그 소리의
+ * 기본 한자(인구 1위)를 쓴다 (2026-10-24 사용자 결정. 예전 폼은 鄭이 후보 60개 밖이라 정씨가 丁으로 들어갔다).
+ * 성씨 표에 없는 소리는 오류
  */
 function checkSurname(
   hangul: string,
@@ -58,9 +60,10 @@ function checkSurname(
     return {
       error: `지원하지 않는 ${label}입니다. 단성(1자) 또는 복성(남궁 등)을 입력해 주세요. 두 부모의 성을 함께 쓰려면 "부모 성 함께 쓰기"를 선택해 주세요.`,
     };
-  if (HANJA.test(hanja) && [...hanja].length === hangul.length) return { hanja, defaulted: false };
-  const fallback = COMMON_SURNAMES[hangul];
-  return fallback ? { hanja: fallback, defaulted: true } : { error: `${label}의 한자를 선택해 주세요.` };
+  const fallback = defaultSurnameHanja(hangul);
+  if (!fallback) return { error: `성씨 통계에 없는 ${label}입니다. ${label}을 다시 확인해 주세요.` };
+  if (HANJA.test(hanja) && isSurnameHanja(hangul, hanja)) return { hanja, defaulted: false };
+  return { hanja: fallback, defaulted: true };
 }
 
 export function parseNamingParams(raw: Raw): ParseResult {
