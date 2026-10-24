@@ -1,3 +1,4 @@
+import { suriWebName } from "@/lib/naming/suri81";
 import type { Grade, NamingAnalysis } from "@/lib/naming/types";
 
 /** 결과 화면·마이페이지에서 함께 쓰는 성명학 점수 표시 */
@@ -46,14 +47,19 @@ export function ScoreBreakdownLine({ analysis }: { analysis: NamingAnalysis }) {
   );
 }
 
+/** 4격 한 칸: "33수 승천격 · 길" / "44수 · 흉" (격 이름은 길한 수만, 풀이는 PDF에만) */
+export function gyeokText(g: { suri: number; lucky: boolean }): string {
+  const name = suriWebName(g.suri);
+  return `${g.suri}수${name ? ` ${name}` : ""} · ${g.lucky ? "길" : "흉"}`;
+}
+
 /** 원/형/이/정 4격 수리와 길흉 */
 export function GyeokGrid({ analysis }: { analysis: NamingAnalysis }) {
   return (
     <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
       {(Object.keys(GYEOK_LABEL) as (keyof typeof GYEOK_LABEL)[]).map((k) => (
         <p key={k}>
-          <span className="text-muted-foreground">{GYEOK_LABEL[k]}</span> {analysis.fourGyeok[k].suri}수{" "}
-          {analysis.fourGyeok[k].lucky ? "길" : "흉"}
+          <span className="text-muted-foreground">{GYEOK_LABEL[k]}</span> {gyeokText(analysis.fourGyeok[k])}
         </p>
       ))}
     </div>

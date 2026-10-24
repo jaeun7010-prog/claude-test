@@ -278,6 +278,36 @@ export function ReportDocument({ data }: { data: ReportData }) {
         </p>
       </Frame>
 
+      {/* 사격 풀이 (version 6부터). 3쪽에 자리가 없어 따로 한 쪽 */}
+      {data.texts.suri && data.texts.suri.length > 0 && (
+        <Frame footer={footer}>
+          <h2 style={h2}>五. 사격 풀이(四格 解說)</h2>
+          {data.texts.suri.map((x) => {
+            const g = GYEOK.find((y) => y.key === x.key)!;
+            return (
+              <div key={x.key} style={{ marginBottom: "22px", paddingBottom: "18px", borderBottom: `1px dotted ${C.line}` }}>
+                <p style={{ margin: 0, fontSize: "17px", fontWeight: 700 }}>
+                  {g.name} · {x.suri}수 {x.name}({x.hanja}) · {x.lucky ? "길(吉)" : "흉(凶)"}
+                  <span style={{ marginLeft: "10px", fontSize: "13px", fontWeight: 400, color: C.muted }}>
+                    {g.desc.split(" · ")[0]}
+                  </span>
+                </p>
+                <p style={{ margin: "8px 0 0", fontSize: "16px", fontWeight: 700 }}>{x.summary}</p>
+                <p style={{ margin: "6px 0 0", fontSize: "15px", lineHeight: 1.8 }}>
+                  {x.sameAs ? `${GYEOK.find((y) => y.key === x.sameAs)!.name.slice(0, 2)}과 같은 수입니다.` : x.text}
+                </p>
+                {x.female && (
+                  <p style={{ margin: "4px 0 0", fontSize: "13px", lineHeight: 1.6, color: C.muted }}>{x.female}</p>
+                )}
+              </div>
+            );
+          })}
+          <p style={{ margin: "4px 0 0", fontSize: "12px", lineHeight: 1.7, color: C.muted }}>
+            81수 격 이름과 풀이는 전통 성명학에 따른 참고 자료이며, 책과 학파에 따라 이름과 풀이가 조금씩 다릅니다.
+          </p>
+        </Frame>
+      )}
+
       {/* 부모 성 함께 쓰기: 법적 이름 전체 기준(참고)과 조합 진단 */}
       {legal && (
         <Frame footer={footer}>

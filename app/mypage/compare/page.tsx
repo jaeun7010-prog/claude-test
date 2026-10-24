@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { DataSourceNote } from "@/components/data-source-note";
-import { GradeBadge } from "@/components/naming/analysis-parts";
+import { GradeBadge, gyeokText } from "@/components/naming/analysis-parts";
 import { NativeScoreBadge } from "@/components/naming/native-parts";
 import { Button } from "@/components/ui/button";
 import { isUuid } from "@/lib/commerce/payment-sync";
@@ -282,8 +282,7 @@ export default async function ComparePage({
                       <ul className="space-y-0.5">
                         {GYEOK.map(([k, label]) => (
                           <li key={k}>
-                            <span className="text-muted-foreground">{label}</span> {s.analysis!.fourGyeok[k].suri}수{" "}
-                            {s.analysis!.fourGyeok[k].lucky ? "길" : <span className="text-muted-foreground">흉</span>}
+                            <span className="text-muted-foreground">{label}</span> {gyeokText(s.analysis!.fourGyeok[k])}
                           </li>
                         ))}
                       </ul>
