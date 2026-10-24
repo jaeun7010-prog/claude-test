@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { NamingForm } from "@/components/naming-form";
 import { NamingModeTabs } from "@/components/naming/naming-mode-tabs";
 import { SajuCard } from "@/components/naming/saju-card";
+import { SurnameDefaultNote } from "@/components/naming/surname-default-note";
 import { SelfPicker } from "@/components/naming/self-picker";
 import { loadEntitlement } from "@/lib/commerce/entitlement";
 import { parseNamingParams, toNamingQuery } from "@/lib/naming/params";
@@ -125,6 +126,8 @@ export default async function SelfNamingPage({ searchParams }: { searchParams: S
           <Link href="/naming/self">다시 입력</Link>
         </Button>
       </header>
+
+      <SurnameDefaultNote p={p} />
 
       {p.parentSurname && (
         <div role="note" className="space-y-1 rounded-md border p-4 text-sm">

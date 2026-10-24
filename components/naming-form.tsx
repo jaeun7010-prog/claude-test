@@ -97,38 +97,39 @@ function SurnameFields({
       };
     }
 
+    // 기본 한자(COMMON_SURNAMES)는 따로 불러와 맨 앞에 두고 기본값으로 고른다. 획수순 60개 안에 없을 수 있어서다
+    // (鄭은 정 86자 중 85번째라 목록에 없었고, 정씨가 丁으로 들어갔다)
+    const preferred = COMMON_SURNAMES[s];
     const load = async () => {
-      const query = (columns: string) =>
-        supabase
-          .from("hanja_dict")
-          .select(columns)
-          .eq("eum", s)
-          .eq("is_name_hanja", true)
-          .order("stroke_count", { ascending: true })
-          .limit(60);
+      const query = (columns: string, hanja?: string) => {
+        const q = supabase.from("hanja_dict").select(columns).eq("eum", s);
+        return hanja
+          ? q.eq("hanja", hanja).limit(1)
+          : q.eq("is_name_hanja", true).order("stroke_count", { ascending: true }).limit(60);
+      };
       // hun 컬럼이 아직 없는 DB(42703)는 훈 없이 다시 조회한다
-      let res = await query("hanja, stroke_count, hun");
-      if (res.error?.code === "42703") res = await query("hanja, stroke_count");
+      const run = async (hanja?: string) => {
+        const res = await query("hanja, stroke_count, hun", hanja);
+        return res.error?.code === "42703" ? query("hanja, stroke_count", hanja) : res;
+      };
+      const [res, pref] = await Promise.all([run(), preferred ? run(preferred) : null]);
       if (cancelled) return;
       if (res.error) {
         setLoadError(true);
         return;
       }
-      const rows = (res.data ?? []) as unknown as {
-        hanja: string;
-        stroke_count: number;
-        hun?: string | null;
-      }[];
-      const opts = rows.map((r) => ({
-        hanja: r.hanja,
-        hun: r.hun ?? null,
-        strokes: r.stroke_count,
-      }));
+      type Row = { hanja: string; stroke_count: number; hun?: string | null };
+      const rows = [...((pref?.data ?? []) as unknown as Row[]), ...((res.data ?? []) as unknown as Row[])];
+      const seen = new Set<string>();
+      const opts = rows
+        .filter((r) => !seen.has(r.hanja) && seen.add(r.hanja))
+        .map((r) => ({
+          hanja: r.hanja,
+          hun: r.hun ?? null,
+          strokes: r.stroke_count,
+        }));
       setOptions(opts);
-      const preferred = COMMON_SURNAMES[s];
-      setSurnameHanja(
-        preferred && opts.some((o) => o.hanja === preferred) ? preferred : (opts[0]?.hanja ?? "")
-      );
+      setSurnameHanja(opts[0]?.hanja ?? "");
     };
     void load();
     return () => {

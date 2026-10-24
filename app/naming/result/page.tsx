@@ -7,6 +7,7 @@ import { NamingTabs } from "@/components/naming/naming-tabs";
 import { NativeCardBody } from "@/components/naming/native-card";
 import { NameCardBody } from "@/components/naming/hanja-name-card";
 import { SajuCard } from "@/components/naming/saju-card";
+import { SurnameDefaultNote } from "@/components/naming/surname-default-note";
 import { CombinationNote } from "@/components/naming/combination-note";
 import { loadEntitlement } from "@/lib/commerce/entitlement";
 import { parseNamingParams, toNamingQuery } from "@/lib/naming/params";
@@ -182,6 +183,8 @@ export default async function ResultPage({
           <Link href="/naming">다시 입력</Link>
         </Button>
       </header>
+
+      <SurnameDefaultNote p={p} />
 
       {p.parentSurname && (
         <div role="note" className="space-y-1 rounded-md border p-4 text-sm">

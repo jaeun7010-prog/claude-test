@@ -1,6 +1,6 @@
 import type { BirthInput } from "@/lib/saju";
 import { CUSTOM_BIRTHPLACE_ID, resolveBirthplace, type Birthplace } from "@/lib/saju/birthplaces";
-import { COMPOUND_SURNAMES } from "./surnames";
+import { COMMON_SURNAMES, COMPOUND_SURNAMES } from "./surnames";
 
 export interface NamingParams {
   surname: string; // 한글 성
@@ -10,6 +10,11 @@ export interface NamingParams {
    * URL `ps`(한글)·`psh`(한자). 없으면 null
    */
   parentSurname: { hangul: string; hanja: string } | null;
+  /**
+   * 주소의 성씨 한자(sh·psh)가 비어 있거나 형식이 맞지 않아 기본 한자(COMMON_SURNAMES)로 바꾼 성 (한글).
+   * 결과 화면에 "기본 한자로 계산했어요"를 알린다. 주소로 다시 만들 때(toNamingQuery)는 바꾼 한자가 들어간다
+   */
+  defaultedSurnames: string[];
   birth: BirthInput;
   /** 출생지. 예전 링크처럼 place가 없으면 서울 */
   birthplace: Birthplace;
@@ -38,31 +43,42 @@ export type ParseResult =
   | { ok: true; value: NamingParams }
   | { ok: false; error: string };
 
-/** 성(한글·한자) 검증. 2자는 복성 목록에 있을 때만 받는다 */
-function checkSurname(hangul: string, hanja: string, label: string): string | null {
-  if (!HANGUL.test(hangul) || hangul.length > 2) return `${label}을 한글 1~2자로 입력해 주세요.`;
+/**
+ * 성(한글·한자) 검증. 2자는 복성 목록에 있을 때만 받는다.
+ * 한자가 비어 있거나 형식이 맞지 않으면 그 성의 기본 한자(COMMON_SURNAMES)를 쓴다 (예전 폼은 鄭이 후보 60개 밖이라
+ * 정씨가 丁으로 들어갔다. 2026-10-24 사용자 결정). 기본 한자가 없는 성은 오류
+ */
+function checkSurname(
+  hangul: string,
+  hanja: string,
+  label: string
+): { error: string } | { hanja: string; defaulted: boolean } {
+  if (!HANGUL.test(hangul) || hangul.length > 2) return { error: `${label}을 한글 1~2자로 입력해 주세요.` };
   if (hangul.length === 2 && !COMPOUND_SURNAMES.includes(hangul))
-    return `지원하지 않는 ${label}입니다. 단성(1자) 또는 복성(남궁 등)을 입력해 주세요. 두 부모의 성을 함께 쓰려면 "부모 성 함께 쓰기"를 선택해 주세요.`;
-  if (!HANJA.test(hanja) || [...hanja].length !== hangul.length)
-    return `${label}의 한자를 선택해 주세요.`;
-  return null;
+    return {
+      error: `지원하지 않는 ${label}입니다. 단성(1자) 또는 복성(남궁 등)을 입력해 주세요. 두 부모의 성을 함께 쓰려면 "부모 성 함께 쓰기"를 선택해 주세요.`,
+    };
+  if (HANJA.test(hanja) && [...hanja].length === hangul.length) return { hanja, defaulted: false };
+  const fallback = COMMON_SURNAMES[hangul];
+  return fallback ? { hanja: fallback, defaulted: true } : { error: `${label}의 한자를 선택해 주세요.` };
 }
 
 export function parseNamingParams(raw: Raw): ParseResult {
   const surname = one(raw.surname).trim();
-  const surnameHanja = one(raw.sh).trim();
-  const surnameError = checkSurname(surname, surnameHanja, "성");
-  if (surnameError) return { ok: false, error: surnameError };
+  const checked = checkSurname(surname, one(raw.sh).trim(), "성");
+  if ("error" in checked) return { ok: false, error: checked.error };
+  const surnameHanja = checked.hanja;
+  const defaultedSurnames = checked.defaulted ? [surname] : [];
 
   let parentSurname: NamingParams["parentSurname"] = null;
   const ps = one(raw.ps).trim();
   if (ps) {
-    const psh = one(raw.psh).trim();
-    const error = checkSurname(ps, psh, "함께 쓸 부모 성");
-    if (error) return { ok: false, error };
+    const parent = checkSurname(ps, one(raw.psh).trim(), "함께 쓸 부모 성");
+    if ("error" in parent) return { ok: false, error: parent.error };
     if (ps === surname)
       return { ok: false, error: "함께 쓸 부모 성이 아이의 성과 같습니다. 다른 부모의 성을 입력해 주세요." };
-    parentSurname = { hangul: ps, hanja: psh };
+    parentSurname = { hangul: ps, hanja: parent.hanja };
+    if (parent.defaulted) defaultedSurnames.push(ps);
   }
 
   const date = one(raw.date);
@@ -118,6 +134,7 @@ export function parseNamingParams(raw: Raw): ParseResult {
       surname,
       surnameHanja,
       parentSurname,
+      defaultedSurnames,
       birth: {
         year,
         month,
