@@ -35,8 +35,19 @@ export const SURI_PARTS = {
  * - given: 이름 안의 관계 전체 (관계가 여럿이면 똑같이 나눈다. 2자 이름이면 첫 글자 → 둘째 글자 하나)
  * - surname: 복성 두 글자 사이 관계. 모든 후보에 같으므로 작게 둔다
  * 단성 2자 이름은 0.6 / 0.4로 예전과 같다.
+ * 2026-10-24부터 성명학 점수의 발음오행 항목은 PRONUNCIATION_CLASH_SCORE로 정하고, 이 가중치는 흐름 표시와
+ * 순우리말 이름 점수(native/score.ts)에만 쓴다.
  */
 export const PRONUNCIATION_FLOW_WEIGHTS = { junction: 0.6, given: 0.4, surname: 0.2 } as const;
+
+/**
+ * 성명학 점수의 발음오행 항목 (2026-10-24 사용자 결정). 상극만 흠으로 본다:
+ * 이름 쪽 관계(성 끝 글자 → 이름 첫 글자, 이름 안 글자 사이)의 상극이 0곳 100 · 1곳 80 · 2곳 이상 40.
+ * 상생·비화·설·같은 오행 편중은 감점하지 않고, 복성 두 글자 사이 관계는 세지 않는다.
+ * 근거: 상극 한두 곳은 크게 문제 삼지 않고 종합적으로 보는 작명 현장의 견해, 발음오행 자체의 원리 문제
+ * (김기승·이종훈 2019, 「훈민정음 한글발음의 성명학 적용 논점 고찰」).
+ */
+export const PRONUNCIATION_CLASH_SCORE = [100, 80, 40] as const;
 
 /** 사주 보완: 이름 한 글자의 자원오행이 무엇이냐에 따른 점수 (0~1) */
 export const SAJU_CHAR_SCORE = {
@@ -47,6 +58,13 @@ export const SAJU_CHAR_SCORE = {
   neutral: 0.3,
   gisin: 0,
 } as const;
+
+/**
+ * 이름에 용신 글자가 하나라도 있을 때 나머지 글자의 사주 보완 점수 (2026-10-24 사용자 결정).
+ * 필요한 기운을 한 글자로 채웠으면 나머지 글자는 방해하는 기운(기신)만 피하면 되므로 희신·중립 감점을 줄인다.
+ * 두 글자 이름이면 용신 + 희신(통관) 85 · 용신 + 중립 70 · 용신 + 기신 50 (예전 80 / 65 / 50). 용신이 없으면 SAJU_CHAR_SCORE 그대로
+ */
+export const SAJU_WITH_YONGSIN = { huisin: 0.7, neutral: 0.4 } as const;
 
 /** 등급 하한 (이상). 나머지는 C */
 export const GRADE_MIN: Record<Exclude<Grade, "C">, number> = {

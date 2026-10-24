@@ -96,7 +96,9 @@ export function buildSelfTable({ surname, prefix, saju, slotChars, slots }: Self
   } else {
     for (const a of slotChars[0]) for (const b of slotChars[1]) scores.push(a.hanja === b.hanja ? null : scoreOf([a, b]));
   }
-  return { slots, scores };
+  // 발음오행은 소리로 정해져 모든 조합에 같다
+  const first = scores.find((s): s is SelfScore => !!s);
+  return { slots, scores, pronunciation: { score: first?.breakdown.pronunciation ?? 0 } };
 }
 
 export type SelfNamingResult =

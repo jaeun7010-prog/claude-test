@@ -8,6 +8,8 @@
  *  - 제외 등급 한자는 숨긴다. 애매·어색 등급은 보여 주되 표시를 붙이고 [최고]/[추천] 대상에서 뺀다
  *  - 이름은 1~2자 (+ 부모 성 함께 쓰기)
  *  - [추천]은 A등급 이상, 최대 5개
+ *  - 등급은 추천받기와 같은 성명학 점수를 쓰고, 좋은 조합이 적은 소리는 등급을 올리지 않고 표시와 안내로 알린다.
+ *    발음오행은 소리로 정해져 한자를 바꿔도 같으므로 "소리로 정해지는 참고 항목"으로 따로 보여 준다 (SelfTable.pronunciation)
  */
 import type { Suitability } from "./hanja-suitability";
 import type { Grade, ScoreBreakdown } from "./types";
@@ -52,6 +54,8 @@ export interface SelfSlot {
 export interface SelfTable {
   slots: SelfSlot[];
   scores: (SelfScore | null)[];
+  /** 발음오행 항목 점수 (0~100). 소리로 정해져 모든 조합에 같다. 흐름 모양(오행 순서)은 유료라 넣지 않는다 */
+  pronunciation: { score: number };
 }
 
 /** 자리마다 고른 한자 (slot.chars의 번호). 안 골랐으면 null */
@@ -211,12 +215,21 @@ export interface SelfNotice {
 
 const fmt = (n: number) => n.toFixed(1);
 
-/** 좋은 조합이 없으면 솔직하게 알려 주는 문장 (추천 조합 1위 기준) */
+/** 발음오행이 만점이 아니면 붙이는 문장: 소리로 정해지는 항목이라 한자를 바꿔도 같다 */
+export function pronunciationNote(t: SelfTable): string | null {
+  return t.pronunciation.score < 100
+    ? `발음오행(${t.pronunciation.score}점)은 이름 소리로 정해지는 항목이라 한자를 바꿔도 같아요.`
+    : null;
+}
+
+/** 좋은 조합이 없으면 솔직하게 알려 주는 문장 (추천 조합 1위 기준). 등급이 낮으면 발음오행 문장을 덧붙인다 */
 export function selfNotice(t: SelfTable): SelfNotice | null {
   const [top] = topCombos(t, 1);
   if (!top) return null;
   const hanja = top.picks.map((i, s) => t.slots[s].chars[i].hanja).join("");
   const best = `가장 높은 조합은 ${top.score.grade}등급 ${fmt(top.score.totalScore)}점(${hanja})이에요.`;
+  const pron = pronunciationNote(t);
+  const withPron = (text: string) => (pron ? `${text} ${pron}` : text);
   const two = t.slots.length === 2;
   switch (top.score.grade) {
     case "S": {
@@ -224,13 +237,13 @@ export function selfNotice(t: SelfTable): SelfNotice | null {
       return { tone: "good", text: `이 소리로 만들 수 있는 S등급 조합이 ${n}개 있어요.`, suggestDolrimja: false };
     }
     case "A":
-      return { tone: "fair", text: `이 소리로는 S등급 조합이 없어요. ${best}`, suggestDolrimja: false };
+      return { tone: "fair", text: withPron(`이 소리로는 S등급 조합이 없어요. ${best}`), suggestDolrimja: false };
     case "B":
-      return { tone: "fair", text: `이 소리로는 A등급 이상 조합이 없어요. ${best}`, suggestDolrimja: two };
+      return { tone: "fair", text: withPron(`이 소리로는 A등급 이상 조합이 없어요. ${best}`), suggestDolrimja: two };
     default:
       return {
         tone: "weak",
-        text: `이 소리는 아이 사주와 맞는 한자 조합이 적어요. ${best}`,
+        text: withPron(`이 소리는 아이 사주와 맞는 한자 조합이 적어요. ${best}`),
         suggestDolrimja: two,
       };
   }

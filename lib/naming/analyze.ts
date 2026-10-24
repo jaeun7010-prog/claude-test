@@ -7,7 +7,9 @@ import {
 import {
   GYEOK_WEIGHTS,
   PRONUNCIATION_FLOW_WEIGHTS,
+  PRONUNCIATION_CLASH_SCORE,
   SAJU_CHAR_SCORE,
+  SAJU_WITH_YONGSIN,
   SCORE_WEIGHTS,
   SURI_PARTS,
   gradeOf,
@@ -127,6 +129,11 @@ export function analyzeName(input: NamingInput): NamingAnalysis {
       ? pronunciationWeights(pronSurname.length, givenName.length)
       : undefined
   );
+  // 점수는 상극 수로 정한다 (PRONUNCIATION_CLASH_SCORE). 흐름 모양(elements·relations)은 그대로 둔다
+  const nameRelations =
+    pronElements.length === pronChars.length ? pronunciation.relations.slice(pronSurname.length - 1) : pronunciation.relations;
+  const clashes = nameRelations.filter((r) => r === "극").length;
+  pronunciation.score = PRONUNCIATION_CLASH_SCORE[Math.min(clashes, PRONUNCIATION_CLASH_SCORE.length - 1)];
 
   // 자원오행: 오행을 아는 글자만으로 평가한다. 이름 글자 중 하나라도 오행을 알아야 의미가 있다.
   // 성씨 오행은 surnameElementChar(성 끝 글자 → 첫 글자)로 정한다.
@@ -150,13 +157,25 @@ export function analyzeName(input: NamingInput): NamingAnalysis {
     resource = { ...flow, needMatched };
   }
 
-  // 사주 보완: 이름 글자마다 용신·희신·중립·기신을 따로 반영한다. 오행을 모르는 글자는 중립으로 본다
+  // 사주 보완: 이름 글자마다 용신·희신·중립·기신을 따로 반영한다. 오행을 모르는 글자는 중립으로 본다.
+  // 이름 글자가 모두 오행을 모르면(셀프 작명에서만 생긴다. 추천은 용신 글자가 필수) 모두 중립으로 본다 (2026-10-24 사용자 결정)
   let sajuScore: number | null = null;
-  if (neededElement && knownGiven.length > 0) {
+  if (neededElement) {
     const saju = { needed: neededElement, favorable: favorableElement, unfavorable: unfavorableElement };
-    const per = givenName.map((c) => sajuCharScore(c.element, saju) ?? SAJU_CHAR_SCORE.neutral);
+    let per = givenName.map((c) => sajuCharScore(c.element, saju) ?? SAJU_CHAR_SCORE.neutral);
     // 통관 글자(이름 첫 글자)는 희신만큼 본다
     if (resource?.arrangement === "통관") per[0] = Math.max(per[0], SAJU_CHAR_SCORE.tonggwan);
+    // 용신 글자가 있으면 나머지 글자는 기신만 피하면 되므로 희신·중립 감점을 줄인다 (SAJU_WITH_YONGSIN)
+    if (per.includes(SAJU_CHAR_SCORE.yongsin))
+      per = per.map((v) =>
+        v === SAJU_CHAR_SCORE.yongsin
+          ? v
+          : v >= SAJU_CHAR_SCORE.huisin
+            ? SAJU_WITH_YONGSIN.huisin
+            : v >= SAJU_CHAR_SCORE.neutral
+              ? SAJU_WITH_YONGSIN.neutral
+              : v
+      );
     sajuScore = round1((per.reduce((a, b) => a + b, 0) / per.length) * 100);
   }
 
