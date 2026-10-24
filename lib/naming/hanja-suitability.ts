@@ -167,6 +167,12 @@ const AWKWARD_MEANING_EXCLUDE = new Set([
  */
 const RIVER_NAME_HANJA = new Set([..."淦潙漊漯涖漓汶洣涪汾湓灄涑濉瀼洹涔溱祊湟洨"]);
 
+/**
+ * 뜻이 이름으로 맞지 않는 글자 (2026-10-24 사용자 결정, 글자 상세 풀이 검토 중): 閩(지명·종족, 강 이름 글자와 같은 이유) ·
+ * 何·奈(어찌) · 隱(숨을) · 又(또) · 院(원집). 같은 소리에 좋은 글자가 많아 애매로 내려 자동 추천에서 뺀다.
+ */
+const VAGUE_MEANING_HANJA = new Set([..."閩何奈隱又院"]);
+
 /** 지명·인명 전용 글자와 어조사 */
 const NAME_OR_PARTICLE_HUN = /(땅|물|강|산|나라|고을|사람)\s?이름|어조사/;
 
@@ -194,6 +200,7 @@ export function classifyHanja(c: {
   if (isRareReading(c.hanja, c.eum) || KIN_OR_SEX_HANJA.has(c.hanja) || AWKWARD_MEANING_EXCLUDE.has(c.hanja))
     return "exclude";
   if (!hasAcceptableMeaning(c.meaning) || hasNegativeHun(hun) || isMessyMeaning(c.meaning, hun)) return "exclude";
+  if (VAGUE_MEANING_HANJA.has(c.hanja)) return "obscure";
   if (AWKWARD_HANJA.has(c.hanja)) return "awkward";
   if (isObjectLike(c.meaning, hun)) return c.isEdu ? "awkward" : "exclude";
   // 훈이 없는 글자는 화면에 뜻 없이 음만 보이고(㷂 서), 대부분 표준 글자의 이체자다(徳·清·恵). 강 이름 글자와 함께 애매로 본다

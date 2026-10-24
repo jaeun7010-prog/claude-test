@@ -14,6 +14,7 @@ import { NativeCategoryBadge, NativeScoreBadge } from "@/components/naming/nativ
 import { loadEntitlement } from "@/lib/commerce/entitlement";
 import { CATEGORY_LABEL, NATIVE_SCORE_WEIGHTS } from "@/lib/naming/native/score";
 import { namingConditionKey, parseNamingParams } from "@/lib/naming/params";
+import { hanjaDetailOf } from "@/lib/naming/hanja-detail";
 import { hunEum } from "@/lib/naming/recommend";
 import { nativeRegistrationText, registrationCaveat, registrationText } from "@/lib/naming/registration";
 import { savedNameMeaning } from "@/lib/naming/saved-meaning";
@@ -380,12 +381,21 @@ export default async function SavedNamePage({
         <CardContent className="space-y-3">
           {snap ? (
             <ul className="space-y-1 text-sm">
-              {snap.given.map((c, i) => (
-                <li key={`${c.hanja}${i}`}>
-                  <span className="font-serif text-lg font-bold">{c.hanja}</span> {hunEum(c)} · {c.strokes}획
-                  {c.element && ` · ${ELEMENT_HANJA[c.element]}${c.element}`}
-                </li>
-              ))}
+              {snap.given.map((c, i) => {
+                // 글자 상세 풀이는 그 이름 리포트를 산 뒤에만 (저장값이 아니라 지금 문구 표로 그린다)
+                const d = reportOrderId ? hanjaDetailOf(c) : null;
+                return (
+                  <li key={`${c.hanja}${i}`}>
+                    <span className="font-serif text-lg font-bold">{c.hanja}</span> {hunEum(c)} · {c.strokes}획
+                    {c.element && ` · ${ELEMENT_HANJA[c.element]}${c.element}`}
+                    {d && (
+                      <span className="block pl-7 text-xs text-muted-foreground break-keep">
+                        <b className="font-medium text-foreground">{d.summary}</b> — {d.text}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <NoRecord />

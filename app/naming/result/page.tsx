@@ -21,6 +21,7 @@ import { firstSoundKey, parsePriorities, type Priorities } from "@/lib/naming/pr
 import { NATIVE_SCORE_WEIGHTS } from "@/lib/naming/native/score";
 import { NATIVE_DISPLAY_LIMIT, runNativeNaming } from "@/lib/naming/native/service";
 import { nameMeaningOf } from "@/lib/naming/name-meaning";
+import { hanjaDetailOf } from "@/lib/naming/hanja-detail";
 import { hunEum, type NameGroup, type Recommendation } from "@/lib/naming/recommend";
 import { registrationCaveat, registrationText } from "@/lib/naming/registration";
 import { GRADE_MIN, SCORE_WEIGHTS } from "@/lib/naming/score";
@@ -79,7 +80,7 @@ function LegalDetails({ r, p, unlocked }: { r: Recommendation; p: NamingParams; 
 /**
  * 이름 한자 (마이페이지 "이름 한자" 칸과 같은 모양): 글자마다 훈음·획수, 그 아래 이름 뜻 한 줄.
  * 글자별 자원오행은 "자원오행 흐름"(유료)에 들어가므로 결제 후에만 붙인다.
- * 훈이 없는 글자의 영문 뜻풀이도 결제 후에만 보여 준다.
+ * 글자 상세 풀이(hanja-detail.ts, 요약 + 풀이)도 결제 후에만 보여 준다.
  * 이름 뜻은 부모 성 함께 쓰기면 새로 고르는 글자만 보고, 문장이 없으면 그리지 않는다.
  */
 function HanjaChars({ r, p, unlocked }: { r: Recommendation; p: NamingParams; unlocked: boolean }) {
@@ -87,15 +88,20 @@ function HanjaChars({ r, p, unlocked }: { r: Recommendation; p: NamingParams; un
   return (
     <div className="mt-2 space-y-1 text-sm">
       <ul className="space-y-0.5">
-        {r.givenName.map((c, i) => (
-          <li key={`${c.hanja}${i}`}>
-            <span className="font-serif font-bold">{c.hanja}</span> {hunEum(c)} · {c.strokes}획
-            {unlocked && c.element && ` · ${ELEMENT_HANJA[c.element]}`}
-            {unlocked && !c.hun && c.meaning && (
-              <span className="text-xs text-muted-foreground"> — {c.meaning}</span>
-            )}
-          </li>
-        ))}
+        {r.givenName.map((c, i) => {
+          const d = unlocked ? hanjaDetailOf(c) : null;
+          return (
+            <li key={`${c.hanja}${i}`}>
+              <span className="font-serif font-bold">{c.hanja}</span> {hunEum(c)} · {c.strokes}획
+              {unlocked && c.element && ` · ${ELEMENT_HANJA[c.element]}`}
+              {d && (
+                <span className="block pl-5 text-xs text-muted-foreground break-keep">
+                  <b className="font-medium text-foreground">{d.summary}</b> — {d.text}
+                </span>
+              )}
+            </li>
+          );
+        })}
       </ul>
       {m && (
         <p>

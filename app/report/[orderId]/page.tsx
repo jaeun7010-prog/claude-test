@@ -93,7 +93,7 @@ export default async function ReportPage({
         <div>
           <h1 className="font-serif text-2xl font-bold">{fullName} 프리미엄 리포트</h1>
           <p className="text-sm text-muted-foreground">
-            양가 어르신께 드리는 한문 작명 리포트 (A4 {3 + (data.texts.suri?.length ? 1 : 0) + (data.legalAnalysis ? 1 : 0)}쪽)
+            양가 어르신께 드리는 한문 작명 리포트 (A4 {3 + (data.texts.hanja?.some((x) => x.text) ? 1 : 0) + (data.texts.suri?.length ? 1 : 0) + (data.legalAnalysis ? 1 : 0)}쪽)
           </p>
         </div>
         <div className="flex items-start gap-2">

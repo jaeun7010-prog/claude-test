@@ -1,5 +1,5 @@
 /**
- * 한자 제외 전후 영향: npx tsx --env-file=.env.local scripts/_tmp/hanja-exclude-trial.ts <글자>
+ * 한자 제외 전후 영향: npx tsx --env-file=.env.local scripts/_tmp/hanja-exclude-trial.ts <글자들>
  * 단성 56개 × 남·여 × 테스트 사주 10개의 화면 상위 30 등급 분포와 그 글자가 든 이름(대표 한자 기준)을 센다.
  */
 import { createClient } from "@supabase/supabase-js";
@@ -30,7 +30,7 @@ const list = SINGLE.split(" ").map((x) => [x.slice(0, 1), x.slice(1)] as const);
       const o = item.x.options[0];
       total[g][o.analysis.grade]++;
       const hz = o.givenName.map((h) => h.hanja).join("");
-      if (hz.includes(CH)) hits.push(`${s}${item.x.hangul}(${hz}) ${o.analysis.grade} ${o.analysis.totalScore} ${g} ${date} ${place} ${i + 1}위`);
+      if ([...CH].some((ch) => hz.includes(ch))) hits.push(`${s}${item.x.hangul}(${hz}) ${o.analysis.grade} ${o.analysis.totalScore} ${g} ${date} ${place} ${i + 1}위`);
     });
   }
   for (const h of hits) console.log(h);

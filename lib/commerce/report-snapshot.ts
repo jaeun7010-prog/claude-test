@@ -4,6 +4,7 @@ import type { NameHanja } from "@/lib/naming/recommend";
 import type { NamingParams } from "@/lib/naming/params";
 import type { CombinationItem } from "@/lib/naming/combination";
 import { nameMeaningOf, type NameMeaning } from "@/lib/naming/name-meaning";
+import { hanjaDetailOf } from "@/lib/naming/hanja-detail";
 import { registrationText } from "@/lib/naming/registration";
 import { suriText } from "@/lib/naming/suri81";
 import type { analyzeChosen } from "@/lib/naming/service";
@@ -29,6 +30,28 @@ export interface SuriReportItem {
   sameAs: FourGyeokKey | null;
   /** 여자아이 리포트에만 넣는 한 문장 (21·23·29·33·39수) */
   female: string | null;
+}
+
+/** 리포트 글자 풀이 한 칸 (version 7부터). 문구가 없는 글자는 summary·text가 null (훈음·획수·자원오행만) */
+export interface HanjaReportItem {
+  hanja: string;
+  eum: string;
+  hun: string | null;
+  strokes: number;
+  element: Element | null;
+  summary: string | null;
+  text: string | null;
+}
+
+/** 새로 고르는 이름 글자의 상세 풀이 고정 (부모 성 함께 쓰기면 부모 성 글자는 뺀다) */
+export function hanjaReportItems(chars: NameHanja[]): HanjaReportItem[] {
+  return chars.map((c) => {
+    const d = hanjaDetailOf(c);
+    return {
+      hanja: c.hanja, eum: c.eum, hun: c.hun ?? null, strokes: c.strokes, element: c.element ?? null,
+      summary: d?.summary ?? null, text: d?.text ?? null,
+    };
+  });
 }
 
 const GYEOK_ORDER: FourGyeokKey[] = ["won", "hyeong", "i", "jeong"];
@@ -61,8 +84,9 @@ export interface ReportSnapshot {
    * 4: texts.nameMeaning(이름 전체 뜻 한 줄) 추가 (2026-10-18)
    * 5: 성씨 자원오행 표(surnames.ts) 적용, texts.surnameElementNote 추가 (2026-10-23)
    * 6: texts.suri(4격 81수 격 이름·요약·풀이) 추가 (2026-10-24)
+   * 7: texts.hanja(글자 상세 풀이) 추가 (2026-10-24)
    */
-  version: 1 | 2 | 3 | 4 | 5 | 6;
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   /** 분석 시각 (ISO) */
   createdAt: string;
   surname: string;
@@ -94,6 +118,8 @@ export interface ReportSnapshot {
     surnameElementNote?: string | null;
     /** 4격 81수 풀이 (analysis 기준). version 5 이하면 없음 */
     suri?: SuriReportItem[] | null;
+    /** 새로 고르는 글자의 상세 풀이. version 6 이하면 없음 */
+    hanja?: HanjaReportItem[] | null;
   };
 }
 
@@ -116,8 +142,9 @@ export function birthTextOf(p: NamingParams): string {
 
 export function buildReportSnapshot(p: NamingParams, chosen: Chosen): ReportSnapshot {
   const { pillars, yongsin } = chosen.saju;
+  const newChars = chosen.given.slice(p.parentSurname ? [...p.parentSurname.hanja].length : 0);
   const snapshot: ReportSnapshot = {
-    version: 6,
+    version: 7,
     createdAt: new Date().toISOString(),
     surname: p.surname,
     surnameHanja: p.surnameHanja,
@@ -149,9 +176,10 @@ export function buildReportSnapshot(p: NamingParams, chosen: Chosen): ReportSnap
           })
         : null,
       combination: chosen.combination,
-      nameMeaning: nameMeaningOf(chosen.given.slice(p.parentSurname ? [...p.parentSurname.hanja].length : 0)),
+      nameMeaning: nameMeaningOf(newChars),
       surnameElementNote: chosen.analysis.resource ? SURNAME_ELEMENT_NOTE : null,
       suri: suriReportItems(chosen.analysis, p.gender === "female"),
+      hanja: hanjaReportItems(newChars),
     },
   };
   // jsonb 에 넣을 수 있는 값만 남긴다 (Date·undefined 제거)
@@ -161,5 +189,5 @@ export function buildReportSnapshot(p: NamingParams, chosen: Chosen): ReportSnap
 /** DB에서 읽은 값이 그릴 수 있는 스냅숏인지 */
 export function isReportSnapshot(v: unknown): v is ReportSnapshot {
   const s = v as ReportSnapshot | null;
-  return !!s && (s.version === 1 || s.version === 2 || s.version === 3 || s.version === 4 || s.version === 5 || s.version === 6) && !!s.saju?.yongsin && !!s.analysis && Array.isArray(s.given) && !!s.texts;
+  return !!s && (s.version === 1 || s.version === 2 || s.version === 3 || s.version === 4 || s.version === 5 || s.version === 6 || s.version === 7) && !!s.saju?.yongsin && !!s.analysis && Array.isArray(s.given) && !!s.texts;
 }

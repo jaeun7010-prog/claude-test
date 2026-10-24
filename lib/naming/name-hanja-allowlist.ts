@@ -33,6 +33,7 @@ const GEM = "옥·빛 등 이름에 좋은 뜻이지만 자동 판정으로는 �
 const PLACE = "지명·강 이름 뜻풀이로 걸리지만 이름에 흔히 쓰는 글자";
 const OBJECT = "사물 뜻풀이로 걸리지만 이름에 전통적으로 쓰는 글자";
 const DISPLAY = "사전 훈이 이름 뜻으로 어색해 풀이만 바꾸는 글자 (등급은 자동 판정)";
+const TYPO = "사전 훈이 깨져 있어 바로잡는 글자 (등급은 자동 판정)";
 const FILL = "사전에 훈이 없어 훈을 채우는 글자 (등급은 채운 훈으로 자동 판정)";
 const VARIANT = "표준 글자의 이체자지만 한국 이름에 많이 쓰는 글자 (표준 글자와 같게)";
 
@@ -109,7 +110,7 @@ export const NAME_HANJA_ALLOWLIST: readonly AllowedNameHanja[] = [
   { hanja: "娟", eum: "연", reason: POPULAR },
   { hanja: "延", eum: "연", reason: POPULAR, nameHun: "늘일" },
   { hanja: "然", eum: "연", reason: POPULAR, nameHun: "그럴" },
-  { hanja: "蓮", eum: "연", reason: POPULAR },
+  { hanja: "蓮", eum: "연", reason: POPULAR, nameHun: "연꽃" },
   { hanja: "淵", eum: "연", reason: POPULAR, nameHun: "깊을" },
   { hanja: "沇", eum: "연", reason: PLACE },
   { hanja: "英", eum: "영", reason: POPULAR, nameHun: "뛰어날" },
@@ -169,6 +170,18 @@ export const NAME_HANJA_ALLOWLIST: readonly AllowedNameHanja[] = [
   // 2026-10-23 이름 뜻 문구와 맞춤 (사전 훈 귀막이 / 귀막이 옥)
   { hanja: "琇", eum: "수", reason: DISPLAY, nameHun: "옥돌", displayOnly: true },
   { hanja: "瑩", eum: "영", reason: DISPLAY, nameHun: "밝을", displayOnly: true },
+  // 2026-10-24 글자 상세 풀이와 맞춤 (사전 훈 맛있을 / 늘어놓을 / 음식 / 벼슬아치 / 늦을)
+  { hanja: "旨", eum: "지", reason: DISPLAY, nameHun: "뜻", displayOnly: true },
+  { hanja: "陳", eum: "진", reason: DISPLAY, nameHun: "베풀", displayOnly: true },
+  { hanja: "需", eum: "수", reason: DISPLAY, nameHun: "쓰일", displayOnly: true },
+  { hanja: "吏", eum: "리", reason: DISPLAY, nameHun: "관리", displayOnly: true },
+  { hanja: "吏", eum: "이", reason: DISPLAY, nameHun: "관리", displayOnly: true },
+  { hanja: "晏", eum: "안", reason: DISPLAY, nameHun: "편안할", displayOnly: true },
+  // 2026-10-24 사전 훈이 깨진 글자 바로잡기 (질 그도 / 태나무 / 이)
+  { hanja: "陶", eum: "도", reason: TYPO, nameHun: "질그릇", displayOnly: true },
+  { hanja: "梨", eum: "리", reason: TYPO, nameHun: "배나무", displayOnly: true },
+  { hanja: "梨", eum: "이", reason: TYPO, nameHun: "배나무", displayOnly: true },
+  { hanja: "諟", eum: "시", reason: TYPO, nameHun: "살필", displayOnly: true },
   // ㅈ
   { hanja: "在", eum: "재", reason: POPULAR },
   { hanja: "載", eum: "재", reason: POPULAR },
@@ -204,7 +217,7 @@ export const NAME_HANJA_ALLOWLIST: readonly AllowedNameHanja[] = [
   { hanja: "燦", eum: "찬", reason: POPULAR },
   { hanja: "讚", eum: "찬", reason: POPULAR },
   { hanja: "璨", eum: "찬", reason: GEM },
-  { hanja: "采", eum: "채", reason: POPULAR, nameHun: "풍채" },
+  { hanja: "采", eum: "채", reason: POPULAR, nameHun: "빛깔" },
   { hanja: "彩", eum: "채", reason: POPULAR, nameHun: "채색" },
   { hanja: "埰", eum: "채", reason: POPULAR },
   // ㅌ·ㅎ

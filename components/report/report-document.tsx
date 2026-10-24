@@ -9,6 +9,7 @@ import { BRANCHES_KO, STEMS_KO, type Pillar } from "@/lib/saju";
 const C = { ivory: "#fdfbf7", navy: "#2d3a52", sand: "#f4eae1", muted: "#5d6679", line: "#c9bba8" };
 const FONT = 'var(--font-myeongjo), "Nanum Myeongjo", serif';
 
+const NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
 const ELEMENT_HANJA: Record<string, string> = { 목: "木", 화: "火", 토: "土", 금: "金", 수: "水" };
 const GYEOK = [
   { key: "won", name: "원격(元格)", desc: "초년운 · 타고난 바탕과 유년기의 기운" },
@@ -97,6 +98,12 @@ export function ReportDocument({ data }: { data: ReportData }) {
   const gyeokPad = compact ? "4px 8px" : "9px 8px";
   const sectionGap = compact ? "18px" : "30px";
   const footer = `이름핏 NameFit · ${fullHangul} 작명 리포트`;
+  // 一~六은 늘 있고, 뒤쪽 쪽(글자 풀이 version 7 · 사격 풀이 version 6 · 법적 기준 · 조합 진단)은 있는 것만 차례로 번호를 붙인다
+  const hanjaItems = data.texts.hanja?.some((x) => x.text) ? data.texts.hanja : null;
+  const suriItems = data.texts.suri && data.texts.suri.length > 0 ? data.texts.suri : null;
+  const hasCombination = !!legal && !!data.texts.combination && data.texts.combination.length > 0;
+  const later = [hanjaItems && "hanja", suriItems && "suri", legal && "legal", hasCombination && "combination"].filter(Boolean);
+  const num = (k: string) => NUMERALS[6 + later.indexOf(k)];
 
   return (
     <div id="report-root" style={{ width: "794px" }}>
@@ -189,7 +196,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
           <p style={{ margin: "0 0 12px", fontSize: "14px", lineHeight: 1.7, color: C.muted }}>
             {data.texts.registration}
             {legal
-              ? " 아래 사격·점수는 새로 고르는 부분 기준이며, 법적 이름 전체 기준은 七에 실었습니다."
+              ? ` 아래 사격·점수는 새로 고르는 부분 기준이며, 법적 이름 전체 기준은 ${num("legal")}에 실었습니다.`
               : " 수리·오행은 이 등록 기준으로 풀이했습니다."}
           </p>
         )}
@@ -278,11 +285,41 @@ export function ReportDocument({ data }: { data: ReportData }) {
         </p>
       </Frame>
 
-      {/* 사격 풀이 (version 6부터). 3쪽에 자리가 없어 따로 한 쪽 */}
-      {data.texts.suri && data.texts.suri.length > 0 && (
+      {/* 글자 풀이 (version 7부터). 문구가 없는 글자는 훈음·획수·자원오행만 */}
+      {hanjaItems && (
         <Frame footer={footer}>
-          <h2 style={h2}>五. 사격 풀이(四格 解說)</h2>
-          {data.texts.suri.map((x) => {
+          <h2 style={h2}>{num("hanja")}. 글자 풀이(漢字 解說)</h2>
+          {hanjaItems.map((x, i) => (
+            <div
+              key={`${x.hanja}-${i}`}
+              style={{ display: "flex", gap: "22px", marginBottom: "18px", paddingBottom: "16px", borderBottom: `1px dotted ${C.line}` }}
+            >
+              <div style={{ width: "64px", flexShrink: 0, textAlign: "center", fontSize: "44px", fontWeight: 700, lineHeight: 1.2 }}>
+                {x.hanja}
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontSize: "16px", fontWeight: 700 }}>
+                  {x.hun ? `${x.hun} ${x.eum}` : x.eum}
+                  <span style={{ marginLeft: "10px", fontSize: "13px", fontWeight: 400, color: C.muted }}>
+                    {x.strokes}획{x.element ? ` · ${ELEMENT_HANJA[x.element]}(${x.element})` : ""}
+                  </span>
+                </p>
+                {x.summary && <p style={{ margin: "6px 0 0", fontSize: "16px", fontWeight: 700 }}>{x.summary}</p>}
+                {x.text && <p style={{ margin: "4px 0 0", fontSize: "15px", lineHeight: 1.8 }}>{x.text}</p>}
+              </div>
+            </div>
+          ))}
+          <p style={{ margin: "4px 0 0", fontSize: "12px", lineHeight: 1.7, color: C.muted }}>
+            글자 풀이는 이름에 담는 뜻을 중심으로 쓴 참고 자료이며, 사전과 책에 따라 풀이가 조금씩 다릅니다.
+          </p>
+        </Frame>
+      )}
+
+      {/* 사격 풀이 (version 6부터). 3쪽에 자리가 없어 따로 한 쪽 */}
+      {suriItems && (
+        <Frame footer={footer}>
+          <h2 style={h2}>{num("suri")}. 사격 풀이(四格 解說)</h2>
+          {suriItems.map((x) => {
             const g = GYEOK.find((y) => y.key === x.key)!;
             return (
               <div key={x.key} style={{ marginBottom: "22px", paddingBottom: "18px", borderBottom: `1px dotted ${C.line}` }}>
@@ -311,7 +348,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
       {/* 부모 성 함께 쓰기: 법적 이름 전체 기준(참고)과 조합 진단 */}
       {legal && (
         <Frame footer={footer}>
-          <h2 style={h2}>七. 법적 이름 전체 기준 (참고)</h2>
+          <h2 style={h2}>{num("legal")}. 법적 이름 전체 기준 (참고)</h2>
           {data.texts.registration && (
             <p style={{ margin: "0 0 12px", fontSize: "15px", lineHeight: 1.7 }}>{data.texts.registration}</p>
           )}
@@ -341,11 +378,11 @@ export function ReportDocument({ data }: { data: ReportData }) {
             법적 이름 전체 기준 {legal.totalScore} / 100 · {legal.grade}등급
           </p>
 
-          {data.texts.combination && data.texts.combination.length > 0 && (
+          {hasCombination && (
             <>
-              <h2 style={{ ...h2, marginTop: "34px" }}>八. 조합 진단(組合診斷)</h2>
+              <h2 style={{ ...h2, marginTop: "34px" }}>{num("combination")}. 조합 진단(組合診斷)</h2>
               <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "15px", lineHeight: 1.8 }}>
-                {data.texts.combination.map((x) => (
+                {data.texts.combination!.map((x) => (
                   <li key={x.text} style={{ color: x.tone === "weak" ? C.navy : C.muted }}>
                     {x.tone === "weak" ? "참고 · " : ""}
                     {x.text}
