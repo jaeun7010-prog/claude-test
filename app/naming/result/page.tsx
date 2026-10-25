@@ -8,9 +8,17 @@ import { NativeCardBody } from "@/components/naming/native-card";
 import { NameCardBody } from "@/components/naming/hanja-name-card";
 import { SajuCard } from "@/components/naming/saju-card";
 import { SurnameDefaultNote } from "@/components/naming/surname-default-note";
+import {
+  ALREADY_PARAM,
+  SAVE_RESULT_PARAMS,
+  SAVED_HANJA_PARAM,
+  SAVED_NATIVE_PARAM,
+  SAVED_PARAM,
+} from "@/components/naming/saved-status";
+import { isUuid } from "@/lib/commerce/payment-sync";
 import { CombinationNote } from "@/components/naming/combination-note";
 import { loadEntitlement } from "@/lib/commerce/entitlement";
-import { parseNamingParams, toNamingQuery } from "@/lib/naming/params";
+import { namingChildQuery, parseNamingParams } from "@/lib/naming/params";
 import { firstSoundKey, parsePriorities, type Priorities } from "@/lib/naming/priorities";
 import { NATIVE_SCORE_WEIGHTS } from "@/lib/naming/native/score";
 import { NATIVE_DISPLAY_LIMIT, runNativeNaming } from "@/lib/naming/native/service";
@@ -68,7 +76,7 @@ export default async function ResultPage({
   const [native, ent] = await Promise.all([
     runNativeNaming(supabase, p, result.saju),
     // 유료 내용(사주 상세·이름 상세)은 결제한 리포트가 있을 때만 그린다 (lib/commerce/entitlement.ts)
-    loadEntitlement(supabase, !!user, toNamingQuery(p, false)),
+    loadEntitlement(supabase, !!user, namingChildQuery(p)),
   ]);
   const snapshot = result.stats || native.stats ? await getLatestSnapshot() : null;
 
@@ -89,9 +97,15 @@ export default async function ResultPage({
 
   const qs = new URLSearchParams(
     Object.entries(searchParams).flatMap(([k, v]) =>
-      typeof v === "string" && k !== "saveError" ? [[k, v] as [string, string]] : []
+      typeof v === "string" && !SAVE_RESULT_PARAMS.includes(k) ? [[k, v] as [string, string]] : []
     )
   ).toString();
+
+  // 저장하고 돌아왔으면 그 카드에 "마이페이지에 저장했어요" (app/naming/actions.ts)
+  const savedId = one(searchParams[SAVED_PARAM]);
+  const savedNotice = isUuid(savedId) ? { id: savedId, already: one(searchParams[ALREADY_PARAM]) === "1" } : null;
+  const savedHanja = savedNotice ? one(searchParams[SAVED_HANJA_PARAM]) : "";
+  const savedNative = savedNotice ? one(searchParams[SAVED_NATIVE_PARAM]) : "";
 
   // 로그인 사용자의 저장된 우선순위 (컬럼이 아직 없거나 값이 없으면 null)
   let saved: Priorities | null = null;
@@ -125,6 +139,7 @@ export default async function ResultPage({
           qs={qs}
           loggedIn={!!user}
           ent={ent}
+          saved={savedNotice && savedHanja ? { ...savedNotice, givenHanja: savedHanja } : undefined}
         />
       ),
     };
@@ -150,6 +165,7 @@ export default async function ResultPage({
         asOfDate={snapshot?.asOfDate ?? null}
         qs={nativeQs}
         loggedIn={!!user}
+        saved={savedNotice && savedNative === c.legalName ? savedNotice : undefined}
       />
     ),
   }));

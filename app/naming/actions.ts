@@ -13,6 +13,7 @@ import { selfPickHref, selfResultHref } from "@/lib/naming/self-href";
 import { buildReportSnapshot } from "@/lib/commerce/report-snapshot";
 import { findSavedDuplicate, sajuSummaryOf, savedQueryOf, type SavedNameKind, type SavedNative } from "@/lib/naming/saved";
 import { createClient } from "@/lib/supabase/server";
+import { SAVED_HANJA_PARAM, SAVED_NATIVE_PARAM, savedBackHref } from "@/components/naming/saved-status";
 
 /** 출생 시각이 있으면 출생지 시간대 기준 UTC 시각 */
 function birthDatetimeOf(p: NamingParams): string | null {
@@ -25,7 +26,7 @@ function birthDatetimeOf(p: NamingParams): string | null {
 /** filters 컬럼 (한자·순우리말 공통) */
 function filtersOf(p: NamingParams, nameKind: SavedNameKind) {
   return {
-    // 입력 조건 원문 (최신 기준으로 다시 분석·리포트 결제 여부 확인용)
+    // 입력 조건 원문 (같은 조건으로 다른 이름 보기·리포트 주문용)
     qs: savedQueryOf(p),
     // 한자 이름 / 순우리말 이름 (lib/naming/saved.ts)
     nameKind,
@@ -69,11 +70,16 @@ function hanjaRowOf(p: NamingParams, r: Chosen, givenEum: string, givenHanja: st
   };
 }
 
-/** 추천 결과 중 하나를 마이페이지(작명 이력)에 저장. 점수는 서버에서 다시 계산한다. */
+/**
+ * 추천 결과 중 하나를 마이페이지(작명 이력)에 저장. 점수는 서버에서 다시 계산한다.
+ * 저장한 뒤(이미 저장한 이름이어도) 결과 화면의 그 카드로 돌아와 "마이페이지에 저장했어요"를 보여 준다 (직접 짓기와 같음)
+ */
 export async function saveName(formData: FormData) {
   const qs = String(formData.get("qs") ?? "");
   const givenHanja = String(formData.get("gh") ?? "");
   const givenEum = String(formData.get("ge") ?? "");
+  const back = `/naming/result?${qs}`;
+  const mark = `&${SAVED_HANJA_PARAM}=${encodeURIComponent(givenHanja)}`;
 
   const supabase = createClient();
   const {
@@ -90,20 +96,22 @@ export async function saveName(formData: FormData) {
 
   // 같은 이름·같은 조건은 한 번만 저장한다
   const dup = await findSavedDuplicate(supabase, p, { kind: "hanja", given: givenEum, givenHanja });
-  if (dup) redirect(`/mypage/names/${dup}?already=1`);
+  if (dup) redirect(savedBackHref(back, dup, true, mark));
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("user_naming_history")
-    .insert({ user_id: user.id, ...hanjaRowOf(p, r, givenEum, givenHanja) });
-  if (error) redirect(`/naming/result?${qs}&saveError=1`);
+    .insert({ user_id: user.id, ...hanjaRowOf(p, r, givenEum, givenHanja) })
+    .select("id")
+    .single();
+  if (error || !data) redirect(`${back}&saveError=1`);
 
-  redirect("/mypage");
+  redirect(savedBackHref(back, data.id, false, mark));
 }
 
 /**
  * 셀프 작명(직접 짓기)으로 고른 조합을 마이페이지에 저장. 주소의 조합이 셀프 작명 후보인지(isSelfSelectable) 확인하고
  * 점수는 서버에서 다시 계산한다. 저장한 뒤(이미 저장한 이름이어도) 고른 조합 결과 화면으로 돌아온다.
- * filters.source = "self", filters.selfGiven(새로 고르는 부분)을 남겨 마이페이지의 "최신 기준으로 다시 분석"이 고르기 화면으로 간다
+ * filters.source = "self", filters.selfGiven(새로 고르는 부분)을 남겨 마이페이지의 "한자 다시 골라 보기"가 고르기 화면으로 간다
  */
 export async function saveSelfName(formData: FormData) {
   const qs = String(formData.get("qs") ?? "");
@@ -129,7 +137,7 @@ export async function saveSelfName(formData: FormData) {
   const givenHanja = prefix.hanja + hj;
 
   const dup = await findSavedDuplicate(supabase, p, { kind: "hanja", given: givenEum, givenHanja });
-  if (dup) redirect(`${back}&saved=${dup}&already=1`);
+  if (dup) redirect(savedBackHref(back, dup, true));
 
   const row = hanjaRowOf(p, choice.chosen, givenEum, givenHanja);
   const { data, error } = await supabase
@@ -139,12 +147,13 @@ export async function saveSelfName(formData: FormData) {
     .single();
   if (error || !data) redirect(`${back}&saveError=1`);
 
-  redirect(`${back}&saved=${data.id}`);
+  redirect(savedBackHref(back, data.id, false));
 }
 
 /**
  * 순우리말 이름을 마이페이지에 저장. 점수는 서버에서 다시 계산한다.
  * given_name_hanja·total_score 는 비우고(성명학 점수가 아니다), 우리말 이름 점수는 analysis.native 에 둔다.
+ * 저장한 뒤 결과 화면(순우리말 탭)의 그 카드로 돌아온다.
  */
 export async function saveNativeName(formData: FormData) {
   const qs = String(formData.get("qs") ?? "");
@@ -168,7 +177,8 @@ export async function saveNativeName(formData: FormData) {
   if (!c) redirect(resultHref);
 
   const dup = await findSavedDuplicate(supabase, p, { kind: "native", given: c.legalName, givenHanja: null });
-  if (dup) redirect(`/mypage/names/${dup}?already=1`);
+  const mark = `&${SAVED_NATIVE_PARAM}=${encodeURIComponent(c.legalName)}`;
+  if (dup) redirect(savedBackHref(resultHref, dup, true, mark));
 
   const native: SavedNative = {
     name: { name: c.name.name, category: c.name.category, meaning: c.name.meaning, meaningGrade: c.name.meaningGrade },
@@ -176,7 +186,7 @@ export async function saveNativeName(formData: FormData) {
     score: c.score,
     globalScore: c.globalScore,
   };
-  const { error } = await supabase.from("user_naming_history").insert({
+  const { data, error } = await supabase.from("user_naming_history").insert({
     user_id: user.id,
     surname: p.surname,
     surname_hanja: p.surnameHanja,
@@ -188,8 +198,8 @@ export async function saveNativeName(formData: FormData) {
     total_score: null,
     analysis: { native, saju: sajuSummaryOf(p, saju) },
     filters: filtersOf(p, "native"),
-  });
-  if (error) redirect(`${resultHref}&saveError=1`);
+  }).select("id").single();
+  if (error || !data) redirect(`${resultHref}&saveError=1`);
 
-  redirect("/mypage");
+  redirect(savedBackHref(resultHref, data.id, false, mark));
 }

@@ -6,6 +6,7 @@ import { NameStatsBasic } from "@/components/name-stats-basic";
 import { TierBadge } from "@/components/name-stats-chart";
 import { GradeBadge, GyeokGrid, ScoreBreakdownLine } from "@/components/naming/analysis-parts";
 import { LockedPreview } from "@/components/naming/locked-preview";
+import { SavedStatus, type SavedNotice } from "@/components/naming/saved-status";
 import type { Entitlement } from "@/lib/commerce/entitlement";
 import type { NamingParams } from "@/lib/naming/params";
 import { nameMeaningOf } from "@/lib/naming/name-meaning";
@@ -107,44 +108,47 @@ function OptionActions({
   qs,
   loggedIn,
   self,
+  saved,
 }: {
   r: Recommendation;
   qs: string;
   loggedIn: boolean;
   self?: SelfCardMode;
+  saved?: SavedNotice;
 }) {
   const back = self ? self.resultHref : `/naming/result?${qs}`;
   return (
-    <div className="flex flex-wrap gap-2">
-      {loggedIn ? (
-        <form action={self ? saveSelfName : saveName}>
-          <input type="hidden" name="qs" value={qs} />
-          {self ? (
-            <>
-              <input type="hidden" name="given" value={self.given} />
-              <input type="hidden" name="hj" value={self.givenHanja} />
-            </>
-          ) : (
-            <>
-              <input type="hidden" name="gh" value={hanjaOf(r)} />
-              <input type="hidden" name="ge" value={eumOf(r)} />
-            </>
-          )}
-          <Button type="submit" size="sm" variant="secondary">
-            마이페이지에 저장
+    <>
+      {saved && <SavedStatus saved={saved} />}
+      <div className="flex flex-wrap gap-2">
+        {loggedIn ? (
+          <form action={self ? saveSelfName : saveName}>
+            <input type="hidden" name="qs" value={qs} />
+            {self ? (
+              <>
+                <input type="hidden" name="given" value={self.given} />
+                <input type="hidden" name="hj" value={self.givenHanja} />
+              </>
+            ) : (
+              <>
+                <input type="hidden" name="gh" value={hanjaOf(r)} />
+                <input type="hidden" name="ge" value={eumOf(r)} />
+              </>
+            )}
+            <Button type="submit" size="sm" variant="secondary">
+              마이페이지에 저장
+            </Button>
+          </form>
+        ) : (
+          <Button asChild size="sm" variant="secondary">
+            <Link href={`/login?next=${encodeURIComponent(back)}`}>로그인하고 저장</Link>
           </Button>
-        </form>
-      ) : (
-        <Button asChild size="sm" variant="secondary">
-          <Link href={`/login?next=${encodeURIComponent(back)}`}>로그인하고 저장</Link>
+        )}
+        <Button asChild size="sm" variant="outline">
+          <Link href={goodsHref(qs, r)}>리포트 · 맞춤 굿즈</Link>
         </Button>
-      )}
-      <Button asChild size="sm" variant="outline">
-        <Link href={goodsHref(qs, r)}>
-          리포트 · 맞춤 굿즈
-        </Link>
-      </Button>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -158,6 +162,7 @@ export function NameCardBody({
   loggedIn,
   ent,
   self,
+  saved,
 }: {
   group: NameGroup;
   p: NamingParams;
@@ -168,8 +173,11 @@ export function NameCardBody({
   ent: Entitlement;
   /** 셀프 작명 결과 화면이면 저장을 셀프 작명 쪽으로 (qs 에는 from=self 가 들어 있어 리포트 주문도 셀프 조합으로 확인한다) */
   self?: SelfCardMode;
+  /** 추천받기 결과 화면: 저장하고 돌아온 한자 조합 (그 조합의 저장 버튼 위에 안내) */
+  saved?: SavedNotice & { givenHanja: string };
 }) {
   const [best, ...others] = g.options;
+  const savedFor = (r: Recommendation) => (saved && saved.givenHanja === hanjaOf(r) ? saved : undefined);
   const a = best.analysis;
   const unlocked = (r: Recommendation) => ent.name(hanjaOf(r), eumOf(r));
   return (
@@ -250,10 +258,10 @@ export function NameCardBody({
       )}
       <LegalDetails r={best} p={p} unlocked={unlocked(best)} />
 
-      <OptionActions r={best} qs={qs} loggedIn={loggedIn} self={self} />
+      <OptionActions r={best} qs={qs} loggedIn={loggedIn} self={self} saved={savedFor(best)} />
 
       {others.length > 0 && (
-        <details className="group rounded-md border">
+        <details className="group rounded-md border" open={others.some((r) => savedFor(r)) || undefined}>
           <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-primary">
             <span className="group-open:hidden">다른 한자 조합 {others.length}개 보기</span>
             <span className="hidden group-open:inline">다른 한자 조합 접기</span>
@@ -273,7 +281,7 @@ export function NameCardBody({
                 </div>
                 <ScoreBreakdownLine analysis={r.analysis} />
                 <LegalDetails r={r} p={p} unlocked={unlocked(r)} />
-                <OptionActions r={r} qs={qs} loggedIn={loggedIn} />
+                <OptionActions r={r} qs={qs} loggedIn={loggedIn} saved={savedFor(r)} />
               </li>
             ))}
           </ul>

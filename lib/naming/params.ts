@@ -162,7 +162,7 @@ export function parseNamingParams(raw: Raw): ParseResult {
 
 /**
  * NamingParams → 결과 화면 쿼리스트링 (parseNamingParams 의 역). 같은 조건이면 항상 같은 문자열이 나온다.
- * 저장된 작명을 "최신 기준으로 다시 분석"할 때와 리포트 결제 여부(같은 조건인지)를 비교할 때 쓴다.
+ * 저장한 이름에서 "같은 조건으로 다른 이름 보기"로 갈 때와 같은 조건 저장인지 비교할 때 쓴다.
  * withRarity=false 면 정렬에만 쓰는 rarity 를 뺀다 (분석 결과와 상관없음)
  */
 export function toNamingQuery(p: NamingParams, withRarity = true): string {
@@ -198,4 +198,31 @@ export function toNamingQuery(p: NamingParams, withRarity = true): string {
 export function namingConditionKey(qs: string): string | null {
   const parsed = parseNamingParams(Object.fromEntries(new URLSearchParams(qs)));
   return parsed.ok ? toNamingQuery(parsed.value, false) : null;
+}
+
+/**
+ * 같은 아이인지 비교하는 키: 성·성씨 한자·생년월일·시각·야자시·출생지·성별만 (글자 수·돌림자 같은 검색 조건은 뺀다).
+ * 리포트 결제 여부는 이 키 + 법적 이름(한글·한자)으로 본다 (lib/commerce/entitlement.ts). 부모 성은 법적 이름에 들어 있다.
+ */
+export function namingChildQuery(p: NamingParams): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const q = new URLSearchParams();
+  q.set("surname", p.surname);
+  q.set("sh", p.surnameHanja);
+  q.set("date", `${p.birth.year}-${pad(p.birth.month)}-${pad(p.birth.day)}`);
+  if (p.hasTime) q.set("time", `${pad(p.birth.hour!)}:${pad(p.birth.minute ?? 0)}`);
+  if (p.birth.lateNight === "same-day") q.set("late", "same-day");
+  q.set("place", p.birthplace.id);
+  if (p.birthplace.id === CUSTOM_BIRTHPLACE_ID) {
+    q.set("tz", p.birthplace.timeZone);
+    q.set("lon", String(p.birthplace.longitude));
+  }
+  q.set("gender", p.gender);
+  return q.toString();
+}
+
+/** 쿼리스트링 → 같은 아이 비교 키 (읽을 수 없으면 null) */
+export function namingChildKey(qs: string): string | null {
+  const parsed = parseNamingParams(Object.fromEntries(new URLSearchParams(qs)));
+  return parsed.ok ? namingChildQuery(parsed.value) : null;
 }

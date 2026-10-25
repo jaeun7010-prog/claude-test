@@ -13,7 +13,7 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
-import { surnameKey, SURNAME_VISIBLE_SHARE } from "@/lib/naming/surname-hanja";
+import { surnameKey } from "@/lib/naming/surname-hanja";
 import { COMPOUND_SURNAMES, SURNAME_ELEMENTS } from "@/lib/naming/surnames";
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
@@ -141,15 +141,14 @@ ${body}
   const elemNotInTable = Object.keys(SURNAME_ELEMENTS).filter((c) => !flat.some((e) => e.hanja.includes(c)));
   console.log(`자원오행 표에 있지만 성씨 표에 없는 글자: ${elemNotInTable.join(" ") || "없음"}`);
 
-  console.log(`\n## 4. 바로 보이는 한자 (그 소리 인구 ${SURNAME_VISIBLE_SHARE * 100}% 이상, 1위는 늘)`);
+  console.log("\n## 4. 소리별 한자 목록 (인구순, 1위가 기본값)");
   for (const s of ["이", "리", "박", "정", "조", "신", "전", "유", "류", "임", "림", "나", "라", "노", "김", "강", "장", "한", "윤", ...COMPOUND_SURNAMES]) {
     const g = sorted.find((x) => x.key === surnameKey(s));
     if (!g) {
       console.log(`${s}: 표에 없음`);
       continue;
     }
-    const vis = g.list.filter((e, i) => i === 0 || e.population >= g.sum * SURNAME_VISIBLE_SHARE);
-    console.log(`${s}: ${vis.map((e) => `${e.hanja} ${((e.population / g.sum) * 100).toFixed(1)}%`).join(" · ")}  (접힘 ${g.list.length - vis.length}개)`);
+    console.log(`${s}: ${g.list.map((e) => `${e.hanja} ${((e.population / g.sum) * 100).toFixed(1)}%`).join(" · ")}`);
   }
   const compounds = sorted.filter((g) => g.key.length === 2);
   console.log(`\n자료의 복성 ${compounds.length}개: ${compounds.map((g) => `${g.key}(${g.list.map((e) => e.hanja).join("·")}) ${fmt(g.sum)}`).join(" · ")}`);

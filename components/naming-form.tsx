@@ -28,7 +28,7 @@ const selectClass =
 
 /**
  * 성(한글) 입력 + 한자 선택. 후보는 통계청 2015 성씨별 인구로 만든 성씨 표(surname-hanja.ts)만 쓰고 사전은 조회하지 않는다.
- * 인구 1위를 기본으로 고르고, 그 소리 인구의 1% 이상은 바로 보이며 나머지는 "다른 한자 성씨 보기"를 눌러야 목록에 나온다.
+ * 인구 1위를 기본으로 고르고, 목록은 접기 없이 인구 많은 순 (인구수는 보여 주지 않는다).
  * 두음법칙 성씨는 두 소리 모두에서 같은 후보가 나온다 (류·유, 림·임, 라·나)
  */
 function SurnameFields({
@@ -45,24 +45,16 @@ function SurnameFields({
 }) {
   const [surname, setSurname] = useState("");
   const [surnameHanja, setSurnameHanja] = useState("");
-  const [showRare, setShowRare] = useState(false);
   const s = surname.trim();
   const valid = /^[가-힣]{1,2}$/.test(s) && (s.length === 1 || COMPOUND_SURNAMES.includes(s));
   const unknownCompound = /^[가-힣]{2}$/.test(s) && !COMPOUND_SURNAMES.includes(s);
   const options = useMemo(() => (valid ? surnameOptions(s) : []), [s, valid]);
-  const visible = options.filter((o) => o.visible);
-  const rare = options.filter((o) => !o.visible);
   const unknown = valid && options.length === 0;
 
-  // 소리가 바뀌면 인구 1위를 기본으로 고르고, 접힌 목록은 다시 접는다
+  // 소리가 바뀌면 인구 1위를 기본으로 고른다
   useEffect(() => {
     setSurnameHanja(options[0]?.hanja ?? "");
-    setShowRare(false);
   }, [options]);
-
-  // 고른 한자가 접힌 쪽이면 접어도 목록에 남긴다
-  const selectedRare = rare.find((o) => o.hanja === surnameHanja);
-  const shownRare = showRare ? rare : selectedRare ? [selectedRare] : [];
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -97,30 +89,12 @@ function SurnameFields({
           disabled={options.length === 0}
         >
           {options.length === 0 && <option value="">성을 먼저 입력하세요</option>}
-          {visible.map((o) => (
+          {options.map((o) => (
             <option key={o.hanja} value={o.hanja}>
               {surnameLabel(s, o)}
             </option>
           ))}
-          {shownRare.length > 0 && (
-            <optgroup label="다른 한자 성씨 (인구순)">
-              {shownRare.map((o) => (
-                <option key={o.hanja} value={o.hanja}>
-                  {surnameLabel(s, o)} · {o.population.toLocaleString("ko-KR")}명
-                </option>
-              ))}
-            </optgroup>
-          )}
         </select>
-        {rare.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setShowRare(!showRare)}
-            className="text-xs text-primary underline underline-offset-2"
-          >
-            {showRare ? "다른 한자 성씨 접기" : `다른 한자 성씨 보기 (${rare.length}개)`}
-          </button>
-        )}
       </div>
     </div>
   );

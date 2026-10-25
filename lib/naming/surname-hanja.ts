@@ -2,14 +2,11 @@
  * 성씨 한자 후보 (입력 폼·서버 확인). 통계청 2015 인구주택총조사 성씨별 인구로 만든 SURNAME_TABLE만 쓴다.
  * 엔진·사전을 가져오지 않아 브라우저에서도 쓴다. 2026-10-24 사용자 결정:
  *  - 실제 성씨 한자만 후보로, 인구 많은 순. 기본값은 인구 1위
- *  - 그 소리 인구의 1% 이상은 바로 보이고 나머지는 "다른 한자 성씨 보기"로 접는다 (조 趙·曺, 신 申·辛, 전 全·田)
+ *  - 접기 없이 한 목록, 인구수는 보여 주지 않는다 (2026-10-25 사용자 결정. 예전에는 1% 미만을 "다른 한자 성씨 보기"로 접었다)
  *  - 두음법칙 성씨는 두 소리 모두에서 나온다 (류·유, 림·임, 라·나 등, surnameKey)
  *  - 목록에는 훈 대신 "李 (이씨, 7획)"
  */
 import { SURNAME_TABLE } from "./surname-table";
-
-/** 바로 보이는 한자: 그 소리 인구에서 이 비율 이상 (1위는 늘 보인다) */
-export const SURNAME_VISIBLE_SHARE = 0.01;
 
 const IY = new Set([2, 3, 6, 7, 12, 17, 20]); // ㅑ ㅒ ㅕ ㅖ ㅛ ㅠ ㅣ
 /**
@@ -34,20 +31,12 @@ export interface SurnameOption {
   population: number;
   /** 글자별 획수 (복성은 두 개) */
   strokes: readonly number[];
-  /** 그 소리 인구 중 비율 */
-  share: number;
-  /** 바로 보이는지 (아니면 "다른 한자 성씨 보기") */
-  visible: boolean;
 }
 
 /** 소리의 성씨 한자 후보 (인구 많은 순). 표에 없는 소리면 빈 배열 */
 export function surnameOptions(sound: string): SurnameOption[] {
   const list = SURNAME_TABLE[surnameKey(sound)] ?? [];
-  const sum = list.reduce((s, [, n]) => s + n, 0);
-  return list.map(([hanja, population, strokes], i) => {
-    const share = sum ? population / sum : 0;
-    return { hanja, population, strokes, share, visible: i === 0 || share >= SURNAME_VISIBLE_SHARE };
-  });
+  return list.map(([hanja, population, strokes]) => ({ hanja, population, strokes }));
 }
 
 /** 기본 한자 (인구 1위). 표에 없는 소리면 null */

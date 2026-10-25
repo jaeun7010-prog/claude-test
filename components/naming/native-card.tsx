@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { saveNativeName } from "@/app/naming/actions";
+import { SavedStatus, type SavedNotice } from "@/components/naming/saved-status";
 import { NameStatsBasic } from "@/components/name-stats-basic";
 import { TierBadge } from "@/components/name-stats-chart";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,7 @@ export function NativeCardBody({
   asOfDate,
   qs,
   loggedIn,
+  saved,
 }: {
   candidate: NativeCandidate;
   surname: string;
@@ -60,6 +62,8 @@ export function NativeCardBody({
   /** 결과 화면 쿼리 (tab=native 포함) */
   qs: string;
   loggedIn: boolean;
+  /** 이 이름을 저장하고 돌아왔을 때 */
+  saved?: SavedNotice;
 }) {
   const s = c.score;
   return (
@@ -98,6 +102,7 @@ export function NativeCardBody({
         </p>
       )}
 
+      {saved && <SavedStatus saved={saved} />}
       <NativeSaveAction name={c.name.name} qs={qs} loggedIn={loggedIn} />
     </>
   );

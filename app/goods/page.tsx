@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PRODUCT_IDS, ELEMENT_LUCKY, lackingElement } from "@/lib/commerce/catalog";
 import { loadEntitlement } from "@/lib/commerce/entitlement";
 import { isUuid } from "@/lib/commerce/payment-sync";
-import { namingConditionKey, parseNamingParams } from "@/lib/naming/params";
+import { namingChildKey, parseNamingParams } from "@/lib/naming/params";
 import { analyzeChosen } from "@/lib/naming/service";
 import { loadSelfChoice, selfQueryOf } from "@/lib/naming/self";
 import { selfResultHref, SELF_SOURCE_PARAM, SELF_SOURCE_VALUE } from "@/lib/naming/self-href";
@@ -83,7 +83,7 @@ export default async function GoodsPage({
   const loginHref = `/login?next=${encodeURIComponent(here)}`;
   // 이 이름의 리포트를 이미 샀으면 결제 대신 리포트 보기 (같은 리포트를 두 번 사지 않게)
   const reportOrderId = user
-    ? (await loadEntitlement(supabase, true, namingConditionKey(qs), hid)).reportOrderId(gh, ge)
+    ? (await loadEntitlement(supabase, true, namingChildKey(qs), hid)).reportOrderId(gh, ge)
     : null;
   const fullName = `${p.surname}${ge}`;
 

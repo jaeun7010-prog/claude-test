@@ -7,7 +7,7 @@ import { SajuCard } from "@/components/naming/saju-card";
 import { SurnameDefaultNote } from "@/components/naming/surname-default-note";
 import { SelfPicker } from "@/components/naming/self-picker";
 import { loadEntitlement } from "@/lib/commerce/entitlement";
-import { parseNamingParams, toNamingQuery } from "@/lib/naming/params";
+import { namingChildQuery, parseNamingParams, toNamingQuery } from "@/lib/naming/params";
 import { REGISTRATION_CAVEAT } from "@/lib/naming/registration";
 import { GRADE_MIN, SCORE_WEIGHTS } from "@/lib/naming/score";
 import { runSelfNaming, selfQueryOf } from "@/lib/naming/self";
@@ -89,7 +89,7 @@ export default async function SelfNamingPage({ searchParams }: { searchParams: S
     data: { user },
   } = await supabase.auth.getUser();
   // 사주 상세(유료)는 같은 조건으로 결제한 리포트가 있을 때만 (추천받기 결과 화면과 같은 기준)
-  const ent = await loadEntitlement(supabase, !!user, toNamingQuery(p, false));
+  const ent = await loadEntitlement(supabase, !!user, namingChildQuery(p));
 
   const t = result.table;
   // 추천받기로 옮겨 갈 때: 같은 사주·성, 정한 이름과 같은 글자 수

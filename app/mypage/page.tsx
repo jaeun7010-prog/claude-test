@@ -16,7 +16,7 @@ import { PRODUCTS } from "@/lib/commerce/catalog";
 import { findReportOrder, loadPaidReports } from "@/lib/commerce/entitlement";
 import { CATEGORY_LABEL } from "@/lib/naming/native/score";
 import { nativeRegistrationText, registrationText } from "@/lib/naming/registration";
-import { namingConditionKey } from "@/lib/naming/params";
+import { namingChildKey } from "@/lib/naming/params";
 import { readSaved, SAVED_COLUMNS, type SavedRow } from "@/lib/naming/saved";
 import { createClient } from "@/lib/supabase/server";
 
@@ -169,12 +169,12 @@ export default async function MyPage() {
                   : null,
                 self: h.source === "self",
                 createdAt: h.createdAt,
-                // 저장 이름과 연결된 리포트이거나 같은 조건·같은 이름의 리포트를 결제했으면 (순우리말은 리포트 없음)
+                // 저장 이름과 연결된 리포트이거나 같은 아이·같은 이름의 리포트를 결제했으면 (순우리말은 리포트 없음)
                 reportPurchased:
                   h.kind === "hanja" &&
                   !!findReportOrder(paidReports, {
                     historyId: h.id,
-                    conditionKey: h.qs ? namingConditionKey(h.qs) : null,
+                    childKey: h.qs ? namingChildKey(h.qs) : null,
                     givenHanja: h.givenHanja,
                     given: h.given,
                   }),

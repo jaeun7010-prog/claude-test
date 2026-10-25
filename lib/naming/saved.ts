@@ -231,7 +231,7 @@ export function readSaved(row: SavedRow): SavedNaming {
 export const savedQueryOf = (p: NamingParams) => toNamingQuery(p);
 
 /**
- * 저장한 이름을 최신 기준으로 다시 볼 때의 주소. 순우리말 이름은 순우리말 탭이 먼저 열리고,
+ * 저장한 이름에서 "같은 조건으로 다른 이름 보기"(직접 지은 이름은 "한자 다시 골라 보기")로 갈 때의 주소. 순우리말 이름은 순우리말 탭이 먼저 열리고,
  * 직접 짓기로 저장한 이름은 고르기 화면에 저장한 한자를 고른 채로 연다
  */
 export function savedResultHref(

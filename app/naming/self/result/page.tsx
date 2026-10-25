@@ -7,10 +7,11 @@ import { CombinationNote } from "@/components/naming/combination-note";
 import { NameCardBody } from "@/components/naming/hanja-name-card";
 import { SajuCard } from "@/components/naming/saju-card";
 import { SurnameDefaultNote } from "@/components/naming/surname-default-note";
+import { ALREADY_PARAM, SAVED_PARAM, SavedStatus } from "@/components/naming/saved-status";
 import { loadEntitlement } from "@/lib/commerce/entitlement";
 import { isUuid } from "@/lib/commerce/payment-sync";
 import { getLatestSnapshot } from "@/lib/name-stats/snapshot";
-import { parseNamingParams, toNamingQuery } from "@/lib/naming/params";
+import { namingChildQuery, parseNamingParams } from "@/lib/naming/params";
 import { registrationCaveat } from "@/lib/naming/registration";
 import { GRADE_MIN, SCORE_WEIGHTS } from "@/lib/naming/score";
 import { loadSelfChoice, selfQueryOf } from "@/lib/naming/self";
@@ -59,7 +60,7 @@ export default async function SelfResultPage({ searchParams }: { searchParams: S
     data: { user },
   } = await supabase.auth.getUser();
   const [ent, stats] = await Promise.all([
-    loadEntitlement(supabase, !!user, toNamingQuery(p, false)),
+    loadEntitlement(supabase, !!user, namingChildQuery(p)),
     loadNameSummaries(supabase, [r.hangul]).catch((e) => {
       console.error("[naming] 통계 조회 실패", e);
       return null;
@@ -67,8 +68,8 @@ export default async function SelfResultPage({ searchParams }: { searchParams: S
   ]);
   const snapshot = stats ? await getLatestSnapshot() : null;
 
-  const savedId = one(searchParams.saved);
-  const saved = isUuid(savedId) ? { id: savedId, already: one(searchParams.already) === "1" } : null;
+  const savedId = one(searchParams[SAVED_PARAM]);
+  const saved = isUuid(savedId) ? { id: savedId, already: one(searchParams[ALREADY_PARAM]) === "1" } : null;
   // 리포트·굿즈로 넘어갈 때 셀프 작명 조합이라는 표시 (주문할 때도 조합을 다시 확인한다)
   const qs = `${selfQ}&${SELF_SOURCE_PARAM}=${SELF_SOURCE_VALUE}`;
   const fullHanja = r.givenName.map((c) => c.hanja).join("");
@@ -98,14 +99,7 @@ export default async function SelfResultPage({ searchParams }: { searchParams: S
         </p>
       </header>
 
-      {saved && (
-        <p role="status" className="rounded-md bg-secondary p-3 text-sm">
-          {saved.already ? "이미 마이페이지에 저장한 이름이에요. " : "마이페이지에 저장했어요. "}
-          <Link href={`/mypage/names/${saved.id}`} className="text-primary underline underline-offset-2">
-            저장한 이름 보기
-          </Link>
-        </p>
-      )}
+      {saved && <SavedStatus saved={saved} />}
       {searchParams.saveError && (
         <p role="alert" className="text-sm text-destructive">
           저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.

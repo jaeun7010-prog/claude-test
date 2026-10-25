@@ -13,7 +13,7 @@ import { NativeScoreDetail } from "@/components/naming/native-card";
 import { NativeCategoryBadge, NativeScoreBadge } from "@/components/naming/native-parts";
 import { loadEntitlement } from "@/lib/commerce/entitlement";
 import { CATEGORY_LABEL, NATIVE_SCORE_WEIGHTS } from "@/lib/naming/native/score";
-import { namingConditionKey, parseNamingParams } from "@/lib/naming/params";
+import { namingChildKey, parseNamingParams } from "@/lib/naming/params";
 import { hanjaDetailOf } from "@/lib/naming/hanja-detail";
 import { hunEum } from "@/lib/naming/recommend";
 import { nativeRegistrationText, registrationCaveat, registrationText } from "@/lib/naming/registration";
@@ -124,7 +124,7 @@ function SajuCard({
 
 /**
  * 마이페이지에 저장한 이름 하나. 저장한 값만 그리고 지금 엔진으로 다시 계산하지 않는다 (lib/naming/saved.ts).
- * 최신 기준 결과는 "최신 기준으로 다시 분석"으로 결과 화면에서 본다.
+ * "같은 조건으로 다른 이름 보기"(직접 지은 이름은 "한자 다시 골라 보기")로 결과 화면·고르기 화면에 간다.
  * 순우리말 이름은 4격·등급 없이 우리말 이름 점수로 따로 그리고, 모두 무료라 잠금·리포트 버튼이 없다.
  */
 export default async function SavedNamePage({
@@ -175,14 +175,16 @@ export default async function SavedNamePage({
   const legal = s.legal ?? snap?.legalAnalysis ?? null;
   const combination = s.combination ?? snap?.texts.combination ?? null;
   const goodsHref = savedGoodsHref(s);
-  // 유료 내용: 이 저장 이름과 연결된 리포트이거나 같은 조건·같은 이름의 리포트를 결제했을 때만 그린다.
-  // 순우리말 이름도 사주 쪽 유료 항목(격 이름·성격/파격)은 같은 조건의 리포트를 결제했을 때만 보인다
-  const ent = await loadEntitlement(supabase, true, s.qs ? namingConditionKey(s.qs) : null, s.id);
+  // 유료 내용: 이 저장 이름과 연결된 리포트이거나 같은 아이·같은 이름의 리포트를 결제했을 때만 그린다.
+  // 순우리말 이름도 사주 쪽 유료 항목(격 이름·성격/파격)은 같은 아이의 리포트를 결제했을 때만 보인다
+  const ent = await loadEntitlement(supabase, true, s.qs ? namingChildKey(s.qs) : null, s.id);
   const nameOpen = ent.name(s.givenHanja, s.given);
   // 이 이름의 리포트를 이미 샀으면 결제 버튼 대신 리포트 보기·PDF 다운로드
   const reportOrderId = ent.reportOrderId(s.givenHanja, s.given);
   const lockHref = goodsHref ?? "/naming";
   const resultHref = savedResultHref(s);
+  // 저장한 분석은 그대로 두고, 같은 조건의 다른 이름(직접 지은 이름은 다른 한자)을 보러 가는 버튼
+  const resultLabel = s.source === "self" ? "한자 다시 골라 보기" : "같은 조건으로 다른 이름 보기";
 
   const birthCard = (
     <Card>
@@ -248,16 +250,15 @@ export default async function SavedNamePage({
         <div className="flex flex-wrap gap-2">
           {resultHref ? (
             <Button asChild size="sm">
-              <Link href={resultHref}>최신 기준으로 다시 분석</Link>
+              <Link href={resultHref}>{resultLabel}</Link>
             </Button>
           ) : (
-            <p className="text-sm text-muted-foreground">입력 조건이 저장되지 않아 다시 분석할 수 없습니다.</p>
+            <p className="text-sm text-muted-foreground">입력 조건이 저장되지 않아 다른 이름을 볼 수 없습니다.</p>
           )}
           <DeleteSavedButton id={s.id} name={fullName} />
         </div>
         <p className="text-xs text-muted-foreground">
-          아래는 저장할 때의 분석입니다. 다시 분석하면 지금 기준으로 계산해 점수가 다를 수 있습니다. 순우리말 이름은 모두
-          무료로 볼 수 있습니다.
+          아래는 저장할 때의 분석 그대로입니다. 순우리말 이름은 모두 무료로 볼 수 있습니다.
         </p>
 
         {birthCard}
@@ -312,7 +313,7 @@ export default async function SavedNamePage({
         </div>
         {s.gradeFromScore && (
           <p className="text-xs text-muted-foreground">
-            등급을 함께 저장하지 않던 때의 기록이라, 저장한 점수에 지금 등급 기준(S 92 · A 86 · B 80점 이상)을 적용했습니다.
+            등급을 함께 저장하지 않던 때의 기록이라, 저장한 점수에 등급 기준(S 92 · A 86 · B 80점 이상)을 적용했습니다.
           </p>
         )}
         {s.parentSurname && (
@@ -336,7 +337,7 @@ export default async function SavedNamePage({
         {s.qs ? (
           <>
             <Button asChild size="sm" variant={reportOrderId ? "outline" : "default"}>
-              <Link href={resultHref!}>최신 기준으로 다시 분석</Link>
+              <Link href={resultHref!}>{resultLabel}</Link>
             </Button>
             {reportOrderId ? (
               <>
@@ -358,15 +359,14 @@ export default async function SavedNamePage({
           </>
         ) : (
           <p className="text-sm text-muted-foreground">
-            입력 조건이 저장되지 않아 다시 분석하거나 주문할 수 없습니다.
+            입력 조건이 저장되지 않아 다른 이름을 보거나 주문할 수 없습니다.
           </p>
         )}
         <DeleteSavedButton id={s.id} name={fullName} />
       </div>
       {s.qs && (
         <p className="text-xs text-muted-foreground">
-          아래는 저장할 때의 분석입니다. 다시 분석하면 지금 기준으로 계산해 점수·등급이 다를 수 있고, 리포트는 결제할 때의
-          기준으로 만들어집니다.
+          아래는 저장할 때의 분석 그대로이고, 결제한 리포트도 결제할 때의 내용 그대로 보관됩니다.
         </p>
       )}
 
