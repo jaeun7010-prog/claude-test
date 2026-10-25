@@ -19,6 +19,8 @@ const myeongjo = Nanum_Myeongjo({
 });
 
 export const metadata: Metadata = {
+  // 링크 미리보기 그림(og:image)을 절대 주소로 만들 때 쓴다. 도메인이 정해지면 NEXT_PUBLIC_SITE_URL에 넣는다
+  ...(process.env.NEXT_PUBLIC_SITE_URL ? { metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL) } : {}),
   title: "이름핏 (NameFit)",
   description: "사주 맞춤 작명 & 희소성 통계 플랫폼",
 };

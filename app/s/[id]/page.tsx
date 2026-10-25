@@ -26,29 +26,31 @@ export async function generateMetadata({ params }: Props) {
   const robots = { index: false, follow: false };
   if (!share) return { title: "이름 카드 | 이름핏", robots };
   const hanja = shareFullHanja(share);
+  const title = `${shareFullName(share)}${hanja ? `(${hanja})` : ""} 이름 카드`;
+  // 카톡·문자 미리보기: 가로 카드 그림 (생년월일·사주 없음)
+  const image = { url: `/s/${share.id}/image`, width: 1200, height: 630, alt: title };
   return {
-    title: `${shareFullName(share)}${hanja ? `(${hanja})` : ""} 이름 카드 | 이름핏`,
+    title: `${title} | 이름핏`,
     description: share.meaning,
     robots,
+    openGraph: { type: "website", siteName: "이름핏", title, description: share.blessing, images: [image] },
+    twitter: { card: "summary_large_image", title, description: share.blessing, images: [image.url] },
   };
 }
 
-/** 카드 (간단한 모양, 전체 디자인 때 다듬는다) */
+/** 카드: 저장·공유하는 세로 그림과 같은 것을 보여 준다 (그림은 image/route.tsx) */
 function NameCard({ share }: { share: NameShare }) {
   const hanja = shareFullHanja(share);
+  const alt = `${hanja ? `${hanja} ` : ""}${shareFullName(share)}. ${share.meaning}. ${share.blessing}`;
   return (
-    <div className="rounded-2xl border border-navy/15 bg-ivory px-6 py-10 text-center shadow-sm">
-      {hanja && <p className="font-serif text-4xl font-bold tracking-[0.3em]">{hanja}</p>}
-      <p className={hanja ? "mt-2 text-xl tracking-[0.3em]" : "font-serif text-4xl font-bold tracking-[0.2em]"}>
-        {shareFullName(share)}
-      </p>
-      <p className="mt-6 text-sm leading-relaxed text-foreground/80 break-keep">{share.meaning}</p>
-      <div className="mx-auto my-6 h-px w-12 bg-navy/20" />
-      <p className="font-serif text-base leading-relaxed break-keep">“{share.blessing}”</p>
-      <p className="mt-8 text-xs text-muted-foreground">
-        이름핏{process.env.NEXT_PUBLIC_SITE_URL ? ` · ${process.env.NEXT_PUBLIC_SITE_URL.replace(/^https?:\/\//, "")}` : ""}
-      </p>
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element -- 서버가 만든 PNG를 그대로 보여 준다 (next/image 최적화 불필요)
+    <img
+      src={`/s/${share.id}/image?size=story`}
+      alt={alt}
+      width={1080}
+      height={1350}
+      className="h-auto w-full rounded-2xl shadow-sm"
+    />
   );
 }
 
