@@ -97,13 +97,14 @@ function sentenceOf(chars: MeaningChar[]): string | null {
   return null;
 }
 
+/** 훈음 줄: 載(실을 재) + 運(운수 운) */
+export const meaningCharsLabel = (chars: MeaningChar[]): string =>
+  chars.map((c) => (c.hun ? `${c.hanja}(${c.hun} ${c.eum})` : `${c.hanja}(${c.eum})`)).join(" + ");
+
 export function nameMeaningOf(chars: MeaningChar[]): NameMeaning | null {
   if (chars.length === 0) return null;
   const sentence = sentenceOf(chars);
   // 마지막 안전장치: 부정적인 단어가 들어간 문장은 쓰지 않는다
   if (!sentence || hasNegativeHun(sentence)) return null;
-  return {
-    chars: chars.map((c) => (c.hun ? `${c.hanja}(${c.hun} ${c.eum})` : `${c.hanja}(${c.eum})`)).join(" + "),
-    sentence,
-  };
+  return { chars: meaningCharsLabel(chars), sentence };
 }
