@@ -2,6 +2,8 @@
 
 import { parseNamingParams } from "@/lib/naming/params";
 import { analyzeChosen } from "@/lib/naming/service";
+import { loadSelfChoice } from "@/lib/naming/self";
+import { isSelfSource } from "@/lib/naming/self-href";
 import {
   ANIMAL_EMBROIDERY_PRICE,
   ELEMENT_LUCKY,
@@ -59,6 +61,12 @@ export async function createOrder(input: CheckoutInput): Promise<CreateOrderResu
 
   const chosen = await analyzeChosen(supabase, parsed.value, gh, ge);
   if (!chosen) return fail("이름 정보를 확인할 수 없습니다.");
+  // 직접 짓기에서 온 주문(qs 에 from=self): 셀프 작명 후보 조합인지 확인한다 (gh·ge는 법적 이름이라 부모 성 글자를 뗀다)
+  if (isSelfSource(String(input.qs ?? ""))) {
+    const n = [...(parsed.value.parentSurname?.hangul ?? "")].length;
+    const self = await loadSelfChoice(supabase, parsed.value, [...ge].slice(n).join(""), [...gh].slice(n).join(""));
+    if (!self.ok) return fail(self.error);
+  }
   const { surname, surnameHanja } = parsed.value;
   const fullName = `${surname}${ge}`;
   const fullHanja = `${surnameHanja}${gh}`;

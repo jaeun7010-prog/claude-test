@@ -167,6 +167,7 @@ export default async function MyPage() {
                       line: `${CATEGORY_LABEL[h.native.name.category]} · ${h.native.name.meaning}`,
                     }
                   : null,
+                self: h.source === "self",
                 createdAt: h.createdAt,
                 // 저장 이름과 연결된 리포트이거나 같은 조건·같은 이름의 리포트를 결제했으면 (순우리말은 리포트 없음)
                 reportPurchased:

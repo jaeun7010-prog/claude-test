@@ -8,6 +8,8 @@ import { loadEntitlement } from "@/lib/commerce/entitlement";
 import { isUuid } from "@/lib/commerce/payment-sync";
 import { namingConditionKey, parseNamingParams } from "@/lib/naming/params";
 import { analyzeChosen } from "@/lib/naming/service";
+import { loadSelfChoice, selfQueryOf } from "@/lib/naming/self";
+import { selfResultHref, SELF_SOURCE_PARAM, SELF_SOURCE_VALUE } from "@/lib/naming/self-href";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "리포트 · 맞춤 굿즈 | 이름핏" };
@@ -45,6 +47,17 @@ export default async function GoodsPage({
   const supabase = createClient();
   const chosen = await analyzeChosen(supabase, parsed.value, gh, ge);
   if (!chosen) return <Problem message="이름 정보를 확인할 수 없습니다." />;
+  // 직접 짓기에서 온 조합: 셀프 작명 후보인지 확인하고, 돌아가기는 고른 조합 결과 화면으로.
+  // gh·ge는 법적 이름이라 부모 성 함께 쓰기면 그 글자를 떼고 본다
+  let selfBack: string | null = null;
+  if (first(searchParams[SELF_SOURCE_PARAM]) === SELF_SOURCE_VALUE) {
+    const n = [...(parsed.value.parentSurname?.hangul ?? "")].length;
+    const selfGiven = [...ge].slice(n).join("");
+    const selfHanja = [...gh].slice(n).join("");
+    const self = await loadSelfChoice(supabase, parsed.value, selfGiven, selfHanja);
+    if (!self.ok) return <Problem message={self.error} />;
+    selfBack = selfResultHref(selfQueryOf(parsed.value), selfGiven, selfHanja);
+  }
 
   const {
     data: { user },
@@ -80,6 +93,8 @@ export default async function GoodsPage({
         <Button asChild variant="ghost" size="sm" className="-ml-3">
           {hid ? (
             <Link href={`/mypage/names/${hid}`}>← 저장한 이름</Link>
+          ) : selfBack ? (
+            <Link href={selfBack}>← 직접 지은 이름</Link>
           ) : (
             <Link href={`/naming/result?${qs}`}>← 추천 결과</Link>
           )}

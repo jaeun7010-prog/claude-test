@@ -18,7 +18,7 @@ import { hanjaDetailOf } from "@/lib/naming/hanja-detail";
 import { hunEum } from "@/lib/naming/recommend";
 import { nativeRegistrationText, registrationCaveat, registrationText } from "@/lib/naming/registration";
 import { savedNameMeaning } from "@/lib/naming/saved-meaning";
-import { readSaved, SAVED_COLUMNS, savedResultHref, type SavedRow, type SavedSajuSummary } from "@/lib/naming/saved";
+import { readSaved, SAVED_COLUMNS, savedGoodsHref, savedResultHref, type SavedRow, type SavedSajuSummary } from "@/lib/naming/saved";
 import type { NamingAnalysis } from "@/lib/naming/types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -174,9 +174,7 @@ export default async function SavedNamePage({
   } : null);
   const legal = s.legal ?? snap?.legalAnalysis ?? null;
   const combination = s.combination ?? snap?.texts.combination ?? null;
-  const goodsHref = s.qs
-    ? `/goods?${s.qs}&gh=${encodeURIComponent(s.givenHanja)}&ge=${encodeURIComponent(s.given)}&hid=${s.id}`
-    : null;
+  const goodsHref = savedGoodsHref(s);
   // 유료 내용: 이 저장 이름과 연결된 리포트이거나 같은 조건·같은 이름의 리포트를 결제했을 때만 그린다.
   // 순우리말 이름도 사주 쪽 유료 항목(격 이름·성격/파격)은 같은 조건의 리포트를 결제했을 때만 보인다
   const ent = await loadEntitlement(supabase, true, s.qs ? namingConditionKey(s.qs) : null, s.id);

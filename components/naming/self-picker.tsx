@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { GradeBadge, GradeChip } from "@/components/naming/grade-badge";
+import { Button } from "@/components/ui/button";
+import { selfResultHref, withFromSelf } from "@/lib/naming/self-href";
 import { unpackSelfTable, type PackedSelfTable } from "@/lib/naming/self-pack";
 import {
   isBadgeEligible,
@@ -113,6 +115,7 @@ export function SelfPicker({
   suriNames,
   recommendHref,
   dolrimjaHref,
+  selfQuery,
 }: {
   packed: PackedSelfTable;
   initialPicks: SelfPicks;
@@ -126,6 +129,8 @@ export function SelfPicker({
   recommendHref: string;
   /** 첫 글자를 돌림자로 두고 둘째 글자 추천받기 (두 글자 이름만) */
   dolrimjaHref: string | null;
+  /** 셀프 작명 입력 조건 (고른 조합 결과 화면 주소용, self-href.ts) */
+  selfQuery: string;
 }) {
   const t = useMemo(() => unpackSelfTable(packed), [packed]);
   const [picks, setPicks] = useState<SelfPicks>(initialPicks);
@@ -154,6 +159,12 @@ export function SelfPicker({
   };
   const toggle = (slot: number, index: number) =>
     update(picks.map((p, s) => (s === slot ? (p === index ? null : index) : p)));
+
+  // 추천받기로 넘어가도 결과 화면의 "직접 짓기로 돌아가기"로 지금 고른 한자 그대로 돌아온다
+  const hjText = picks.map((i, s) => charAt(s, i)?.hanja ?? "_").join("");
+  const toRecommend = withFromSelf(recommendHref, eumText, hjText);
+  const toDolrimja = dolrimjaHref ? withFromSelf(dolrimjaHref, eumText, hjText) : null;
+  const resultHref = picked ? selfResultHref(selfQuery, eumText, hjText) : null;
 
   const legalName = prefix
     ? `${surnameHangul} ${prefix.hangul}${eumText}(${prefix.hanja}${picks.map((i, s) => charAt(s, i)?.hanja ?? "○").join("")})`
@@ -186,8 +197,13 @@ export function SelfPicker({
                 .join(", ")}`}
           </p>
         </div>
-        {picked ? (
-          <GradeBadge grade={picked.grade} score={picked.totalScore} size="sm" />
+        {picked && resultHref ? (
+          <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+            <GradeBadge grade={picked.grade} score={picked.totalScore} size="sm" />
+            <Button asChild size="sm" className="h-8 px-3">
+              <Link href={resultHref}>결과 보기</Link>
+            </Button>
+          </div>
         ) : (
           <p className="w-28 shrink-0 text-right text-xs text-muted-foreground break-keep">
             {two ? "두 글자를 모두 고르면 점수가 나와요" : "글자를 고르면 점수가 나와요"}
@@ -201,6 +217,13 @@ export function SelfPicker({
             고른 조합 성명학 점수 {picked.grade}등급 {fmt(picked.totalScore)}점
           </h2>
           <PickedScore t={t} score={picked} suriNames={suriNames} legalName={legalName} />
+          {resultHref && (
+            <div className="pt-1">
+              <Button asChild size="sm">
+                <Link href={resultHref}>이 조합으로 결과 보기 (이름 뜻 · 저장 · 리포트)</Link>
+              </Button>
+            </div>
+          )}
         </section>
       )}
 
@@ -212,11 +235,11 @@ export function SelfPicker({
           <p className="break-keep">{notice.text}</p>
           {notice.tone !== "good" && (
             <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-x-4">
-              <Link href={recommendHref} className="text-primary underline underline-offset-2">
+              <Link href={toRecommend} className="text-primary underline underline-offset-2">
                 이 사주에 맞는 다른 소리 보기
               </Link>
-              {notice.suggestDolrimja && dolrimjaHref && (
-                <Link href={dolrimjaHref} className="text-primary underline underline-offset-2">
+              {notice.suggestDolrimja && toDolrimja && (
+                <Link href={toDolrimja} className="text-primary underline underline-offset-2">
                   &lsquo;{t.slots[0].eum}&rsquo;{josa(t.slots[0].eum, "은", "는")} 두고 둘째 글자 추천받기
                 </Link>
               )}
@@ -350,7 +373,7 @@ export function SelfPicker({
           어색한 한자는 고를 수 있지만 [최고]·[추천]과 추천 조합에서는 뺐어요.
         </p>
         <p>
-          <Link href={recommendHref} className="text-primary underline underline-offset-2">
+          <Link href={toRecommend} className="text-primary underline underline-offset-2">
             이 사주에 맞는 다른 소리 보기
           </Link>
         </p>

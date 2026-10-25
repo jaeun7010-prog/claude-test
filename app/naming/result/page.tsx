@@ -15,6 +15,8 @@ import { firstSoundKey, parsePriorities, type Priorities } from "@/lib/naming/pr
 import { NATIVE_SCORE_WEIGHTS } from "@/lib/naming/native/score";
 import { NATIVE_DISPLAY_LIMIT, runNativeNaming } from "@/lib/naming/native/service";
 import { registrationCaveat } from "@/lib/naming/registration";
+import { checkSelfName, selfQueryOf } from "@/lib/naming/self";
+import { cleanSelfHanja, FROM_SELF_GIVEN, FROM_SELF_HANJA, selfPickHref } from "@/lib/naming/self-href";
 import { GRADE_MIN, SCORE_WEIGHTS } from "@/lib/naming/score";
 import { DISPLAY_LIMIT, runNaming } from "@/lib/naming/service";
 import { getLatestSnapshot } from "@/lib/name-stats/snapshot";
@@ -69,6 +71,21 @@ export default async function ResultPage({
     loadEntitlement(supabase, !!user, toNamingQuery(p, false)),
   ]);
   const snapshot = result.stats || native.stats ? await getLatestSnapshot() : null;
+
+  // 직접 짓기의 "이 사주에 맞는 다른 소리 보기"로 왔으면 입력한 이름·고른 한자 그대로 돌아가는 버튼
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+  const selfGiven = one(searchParams[FROM_SELF_GIVEN]).trim();
+  const backToSelf =
+    selfGiven && !checkSelfName(selfGiven, p.parentSurname?.hangul)
+      ? {
+          given: selfGiven,
+          href: selfPickHref(
+            selfQueryOf(p),
+            selfGiven,
+            cleanSelfHanja(one(searchParams[FROM_SELF_HANJA]), [...selfGiven].length)
+          ),
+        }
+      : null;
 
   const qs = new URLSearchParams(
     Object.entries(searchParams).flatMap(([k, v]) =>
@@ -164,6 +181,13 @@ export default async function ResultPage({
 
   return (
     <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-3xl space-y-8 px-4 py-8 sm:px-6 sm:py-12">
+      {backToSelf && (
+        <Button asChild variant="outline" className="h-auto w-full justify-start whitespace-normal py-2.5 text-left sm:w-auto">
+          <Link href={backToSelf.href}>
+            ← &lsquo;{backToSelf.given}&rsquo; 직접 짓기로 돌아가기
+          </Link>
+        </Button>
+      )}
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="font-serif text-2xl font-bold break-keep sm:text-3xl">

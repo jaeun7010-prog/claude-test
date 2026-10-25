@@ -24,6 +24,8 @@ export interface SavedListItem {
   registration: string | null;
   /** 순우리말 이름: 우리말 이름 점수와 "분류 · 뜻" 한 줄 (한자 이름이면 null) */
   native: { score: number; line: string } | null;
+  /** 직접 짓기(셀프 작명)로 저장한 이름 */
+  self: boolean;
   createdAt: string;
   /** 이 이름의 프리미엄 리포트를 결제했는지 */
   reportPurchased: boolean;
@@ -127,6 +129,11 @@ export function SavedList({ items }: { items: SavedListItem[] }) {
                   <p className="font-serif text-lg font-bold break-keep">
                     {h.name}
                     {h.favorite && " ★"}
+                    {h.self && (
+                      <span className="ml-2 inline-block rounded-full border px-2 py-0.5 align-middle font-sans text-xs font-medium text-muted-foreground">
+                        직접 지음
+                      </span>
+                    )}
                     {h.reportPurchased && (
                       <span className="ml-2 inline-block rounded-full bg-primary px-2 py-0.5 align-middle font-sans text-xs font-medium text-primary-foreground">
                         리포트 구매

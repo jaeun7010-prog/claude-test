@@ -10,7 +10,8 @@ import { loadEntitlement } from "@/lib/commerce/entitlement";
 import { parseNamingParams, toNamingQuery } from "@/lib/naming/params";
 import { REGISTRATION_CAVEAT } from "@/lib/naming/registration";
 import { GRADE_MIN, SCORE_WEIGHTS } from "@/lib/naming/score";
-import { runSelfNaming } from "@/lib/naming/self";
+import { runSelfNaming, selfQueryOf } from "@/lib/naming/self";
+import { cleanSelfHanja } from "@/lib/naming/self-href";
 import { packSelfTable } from "@/lib/naming/self-pack";
 import type { SelfPicks, SelfTable } from "@/lib/naming/self-rank";
 import { suriWebName } from "@/lib/naming/suri81";
@@ -166,13 +167,14 @@ export default async function SelfNamingPage({ searchParams }: { searchParams: S
         </div>
         <SelfPicker
           packed={packSelfTable(t)}
-          initialPicks={picksOf(t, one(searchParams.hj))}
+          initialPicks={picksOf(t, cleanSelfHanja(one(searchParams.hj), t.slots.length))}
           surnameHangul={p.surname}
           surnameHanja={p.surnameHanja}
           prefix={p.parentSurname}
           suriNames={suriNamesOf(t)}
           recommendHref={recommendHref}
           dolrimjaHref={dolrimjaHref}
+          selfQuery={selfQueryOf(p)}
         />
       </section>
     </main>

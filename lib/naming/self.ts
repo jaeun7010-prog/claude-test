@@ -12,12 +12,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { analyzeSaju } from "@/lib/saju";
 import { analyzeName, analyzeWithPrefix } from "./analyze";
 import { applyGender } from "./gender-hanja";
+import { globalPronunciationScore } from "./global-pronunciation";
 import { fetchByEum } from "./hanja-repo";
-import type { NamingParams } from "./params";
+import { toNamingQuery, type NamingParams } from "./params";
 import { baseRankScore, meaningScore } from "./ranking";
-import type { NameHanja } from "./recommend";
+import type { NameHanja, Recommendation } from "./recommend";
 import { SELF_MAX_LENGTH, type SelfChar, type SelfScore, type SelfSlot, type SelfTable } from "./self-rank";
-import { prepare } from "./service";
+import { analyzeChosen, prepare } from "./service";
 import { trendScore } from "./trend";
 import type { Element, NamingAnalysis } from "./types";
 
@@ -138,11 +139,56 @@ export async function runSelfNaming(supabase: SupabaseClient, p: NamingParams, g
 
 /**
  * 고른 한자가 셀프 작명 후보에 있는지 (저장·결과 화면에서 주소로 들어온 조합을 확인할 때).
- * `givenHanja`·`given`은 새로 고르는 부분만
+ * `givenHanja`·`given`은 새로 고르는 부분만. 점수는 보지 않으므로 자리별 후보(slots)만 있으면 된다
  */
-export function isSelfSelectable(table: SelfTable, givenHanja: string, given: string): boolean {
+export function isSelfSelectable(table: Pick<SelfTable, "slots">, givenHanja: string, given: string): boolean {
   const h = [...givenHanja];
   const e = [...given];
   if (h.length !== table.slots.length || e.length !== table.slots.length) return false;
   return table.slots.every((s, i) => s.eum === e[i] && s.chars.some((c) => c.hanja === h[i]));
+}
+
+/**
+ * 셀프 작명 입력 조건만 남긴 쿼리스트링 (직접 짓기 폼에는 글자 수·돌림자·글로벌·젠더 뉴트럴·정렬 칸이 없다).
+ * 추천받기에서 돌아올 때와 저장·주문의 입력 조건이 같은 값이 되도록 한다
+ */
+export const selfQueryOf = (p: NamingParams) =>
+  toNamingQuery({ ...p, length: "any", dolrimja: null, globalFriendly: false, neutral: false, rarity: "any" }, false);
+
+/**
+ * 주소로 들어온 셀프 작명 조합(새로 고르는 부분의 한글·한자)을 확인하고 성명학 분석을 만든다.
+ * 결과 화면·저장·리포트 주문에서 쓴다. 조합이 셀프 작명 후보가 아니면 오류 문장
+ */
+export async function loadSelfChoice(supabase: SupabaseClient, p: NamingParams, given: string, givenHanja: string) {
+  const nameError = checkSelfName(given, p.parentSurname?.hangul);
+  if (nameError) return { ok: false as const, error: nameError };
+  try {
+    const syllables = [...given];
+    const fetched = await Promise.all(syllables.map((eum) => fetchByEum(supabase, eum)));
+    const slots = syllables.map((eum, i) => selfSlotOf(eum, fetched[i], p.gender).slot);
+    if (!isSelfSelectable({ slots }, givenHanja, given))
+      return { ok: false as const, error: "고른 한자 조합을 확인할 수 없어요. 한자 고르기에서 다시 골라 주세요." };
+    const prefix = p.parentSurname ?? { hangul: "", hanja: "" };
+    const chosen = await analyzeChosen(supabase, p, prefix.hanja + givenHanja, prefix.hangul + given);
+    if (!chosen) return { ok: false as const, error: "한자 사전을 불러오지 못했습니다." };
+    const hangul = prefix.hangul + given;
+    const fresh = chosen.given.slice(chosen.prefix.length);
+    const meaning = meaningScore(fresh);
+    const trend = Math.max(0, trendScore(given, new Set(syllables)));
+    const recommendation: Recommendation = {
+      givenName: chosen.given,
+      hangul,
+      analysis: chosen.analysis,
+      globalScore: globalPronunciationScore(hangul),
+      ...(chosen.legalAnalysis ? { legalAnalysis: chosen.legalAnalysis } : {}),
+      trend,
+      listedSound: false,
+      meaning,
+      baseScore: baseRankScore(chosen.analysis.totalScore, meaning, trend),
+    };
+    return { ok: true as const, chosen, recommendation };
+  } catch (e) {
+    console.error("[naming] 셀프 작명 조합 확인 실패", e);
+    return { ok: false as const, error: "한자 사전을 불러오지 못했습니다." };
+  }
 }

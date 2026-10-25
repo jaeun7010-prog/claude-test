@@ -8,6 +8,8 @@ import { NATIVE_NAMES } from "@/lib/naming/native-names";
 import { buildNativeCandidates } from "@/lib/naming/native/service";
 import { parseNamingParams, type NamingParams } from "@/lib/naming/params";
 import { analyzeChosen } from "@/lib/naming/service";
+import { loadSelfChoice, selfQueryOf } from "@/lib/naming/self";
+import { selfPickHref, selfResultHref } from "@/lib/naming/self-href";
 import { buildReportSnapshot } from "@/lib/commerce/report-snapshot";
 import { findSavedDuplicate, sajuSummaryOf, savedQueryOf, type SavedNameKind, type SavedNative } from "@/lib/naming/saved";
 import { createClient } from "@/lib/supabase/server";
@@ -43,6 +45,30 @@ function filtersOf(p: NamingParams, nameKind: SavedNameKind) {
   };
 }
 
+type Chosen = NonNullable<Awaited<ReturnType<typeof analyzeChosen>>>;
+
+/** 한자 이름 저장 행 (추천받기·직접 짓기 공통) */
+function hanjaRowOf(p: NamingParams, r: Chosen, givenEum: string, givenHanja: string) {
+  return {
+    surname: p.surname,
+    surname_hanja: p.surnameHanja,
+    birth_datetime: birthDatetimeOf(p),
+    gender: p.gender,
+    given_name: givenEum,
+    given_name_hanja: givenHanja,
+    total_score: r.analysis.totalScore,
+    // 부모 성 함께 쓰기: total_score 와 기본 분석은 새로 고르는 부분 기준, 법적 이름 전체 기준은 legal 에 참고로 둔다
+    analysis: {
+      ...r.analysis,
+      ...(r.legalAnalysis ? { legal: r.legalAnalysis, combination: r.combination } : {}),
+      saju: sajuSummaryOf(p, r.saju),
+      // 2026-10-18부터: 저장 당시 분석 전체(한자 훈·뜻, 사주 상세)를 리포트 스냅숏 형식으로 함께 둔다 (lib/naming/saved.ts)
+      snapshot: buildReportSnapshot(p, r),
+    },
+    filters: filtersOf(p, "hanja"),
+  };
+}
+
 /** 추천 결과 중 하나를 마이페이지(작명 이력)에 저장. 점수는 서버에서 다시 계산한다. */
 export async function saveName(formData: FormData) {
   const qs = String(formData.get("qs") ?? "");
@@ -66,28 +92,54 @@ export async function saveName(formData: FormData) {
   const dup = await findSavedDuplicate(supabase, p, { kind: "hanja", given: givenEum, givenHanja });
   if (dup) redirect(`/mypage/names/${dup}?already=1`);
 
-  const { error } = await supabase.from("user_naming_history").insert({
-    user_id: user.id,
-    surname: p.surname,
-    surname_hanja: p.surnameHanja,
-    birth_datetime: birthDatetimeOf(p),
-    gender: p.gender,
-    given_name: givenEum,
-    given_name_hanja: givenHanja,
-    total_score: r.analysis.totalScore,
-    // 부모 성 함께 쓰기: total_score 와 기본 분석은 새로 고르는 부분 기준, 법적 이름 전체 기준은 legal 에 참고로 둔다
-    analysis: {
-      ...r.analysis,
-      ...(r.legalAnalysis ? { legal: r.legalAnalysis, combination: r.combination } : {}),
-      saju: sajuSummaryOf(p, r.saju),
-      // 2026-10-18부터: 저장 당시 분석 전체(한자 훈·뜻, 사주 상세)를 리포트 스냅숏 형식으로 함께 둔다 (lib/naming/saved.ts)
-      snapshot: buildReportSnapshot(p, r),
-    },
-    filters: filtersOf(p, "hanja"),
-  });
+  const { error } = await supabase
+    .from("user_naming_history")
+    .insert({ user_id: user.id, ...hanjaRowOf(p, r, givenEum, givenHanja) });
   if (error) redirect(`/naming/result?${qs}&saveError=1`);
 
   redirect("/mypage");
+}
+
+/**
+ * 셀프 작명(직접 짓기)으로 고른 조합을 마이페이지에 저장. 주소의 조합이 셀프 작명 후보인지(isSelfSelectable) 확인하고
+ * 점수는 서버에서 다시 계산한다. 저장한 뒤(이미 저장한 이름이어도) 고른 조합 결과 화면으로 돌아온다.
+ * filters.source = "self", filters.selfGiven(새로 고르는 부분)을 남겨 마이페이지의 "최신 기준으로 다시 분석"이 고르기 화면으로 간다
+ */
+export async function saveSelfName(formData: FormData) {
+  const qs = String(formData.get("qs") ?? "");
+  const given = String(formData.get("given") ?? "");
+  const hj = String(formData.get("hj") ?? "");
+
+  const parsed = parseNamingParams(Object.fromEntries(new URLSearchParams(qs)));
+  if (!parsed.ok) redirect("/naming/self");
+  const p = parsed.value;
+  const selfQ = selfQueryOf(p);
+  const back = selfResultHref(selfQ, given, hj);
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect(`/login?next=${encodeURIComponent(back)}`);
+
+  const choice = await loadSelfChoice(supabase, p, given, hj);
+  if (!choice.ok) redirect(selfPickHref(selfQ, given));
+  const prefix = p.parentSurname ?? { hangul: "", hanja: "" };
+  const givenEum = prefix.hangul + given;
+  const givenHanja = prefix.hanja + hj;
+
+  const dup = await findSavedDuplicate(supabase, p, { kind: "hanja", given: givenEum, givenHanja });
+  if (dup) redirect(`${back}&saved=${dup}&already=1`);
+
+  const row = hanjaRowOf(p, choice.chosen, givenEum, givenHanja);
+  const { data, error } = await supabase
+    .from("user_naming_history")
+    .insert({ user_id: user.id, ...row, filters: { ...row.filters, source: "self", selfGiven: given } })
+    .select("id")
+    .single();
+  if (error || !data) redirect(`${back}&saveError=1`);
+
+  redirect(`${back}&saved=${data.id}`);
 }
 
 /**

@@ -9,6 +9,7 @@ import { gradeOf } from "@/lib/naming/score";
 import type { Element, Grade, NamingAnalysis } from "@/lib/naming/types";
 import type { analyzeSaju } from "@/lib/saju";
 import { DEFAULT_BIRTHPLACE_ID } from "@/lib/saju/birthplaces";
+import { selfPickHref, SELF_SOURCE_PARAM, SELF_SOURCE_VALUE } from "./self-href";
 
 /**
  * 마이페이지에 저장한 작명(user_naming_history) 읽기.
@@ -17,6 +18,8 @@ import { DEFAULT_BIRTHPLACE_ID } from "@/lib/saju/birthplaces";
  *  - 2026-10-18부터: analysis.snapshot(리포트 스냅숏과 같은 형식: 한자 훈·뜻, 사주 전체 분석), filters.qs(입력 조건 원문)
  *  - 순우리말 이름 (2026-10-22~): given_name_hanja 와 total_score 는 비우고(null), filters.nameKind = "native",
  *    분석은 analysis.native(우리말 이름 점수). 성명학 점수·등급·4격·스냅숏은 없다. 사주 요약(analysis.saju)은 한자 이름과 같다
+ *  - 셀프 작명(직접 짓기, 2026-10-25~): 한자 이름과 같은 형식에 filters.source = "self", filters.selfGiven(새로 고르는 부분의 한글).
+ *    source 가 없으면 추천받기로 저장한 이름이다
  */
 
 /** 마이페이지 목록·상세·비교에서 읽는 컬럼 */
@@ -60,10 +63,14 @@ export interface SavedNative {
 }
 
 export type SavedNameKind = "hanja" | "native";
+/** 추천받기 / 직접 짓기(셀프 작명) */
+export type SavedSource = "recommend" | "self";
 
 interface SavedFilters {
   qs?: string;
   nameKind?: SavedNameKind;
+  source?: SavedSource;
+  selfGiven?: string;
   length?: NamingParams["length"];
   dolrimja?: NamingParams["dolrimja"];
   parentSurname?: NamingParams["parentSurname"];
@@ -80,6 +87,10 @@ export interface SavedNaming {
   kind: SavedNameKind;
   /** 순우리말 이름 분석. 한자 이름이면 null */
   native: SavedNative | null;
+  /** 직접 짓기로 저장했으면 self (예전 저장분은 recommend) */
+  source: SavedSource;
+  /** 직접 짓기: 새로 고르는 부분의 한글 (부모 성 글자 제외). 추천받기면 null */
+  selfGiven: string | null;
   createdAt: string;
   isFavorite: boolean;
   surname: string;
@@ -195,6 +206,8 @@ export function readSaved(row: SavedRow): SavedNaming {
     id: row.id,
     kind,
     native: kind === "native" ? asNative(a.native) : null,
+    source: f.source === "self" && typeof f.selfGiven === "string" ? "self" : "recommend",
+    selfGiven: f.source === "self" && typeof f.selfGiven === "string" ? f.selfGiven : null,
     createdAt: row.created_at,
     isFavorite: row.is_favorite,
     surname: row.surname,
@@ -217,9 +230,27 @@ export function readSaved(row: SavedRow): SavedNaming {
 /** 저장 시 filters.qs 에 넣는 값 */
 export const savedQueryOf = (p: NamingParams) => toNamingQuery(p);
 
-/** 저장한 이름을 결과 화면에서 다시 볼 때의 주소 (순우리말 이름은 순우리말 탭이 먼저 열린다) */
-export const savedResultHref = (s: Pick<SavedNaming, "qs" | "kind">) =>
-  s.qs ? `/naming/result?${s.qs}${s.kind === "native" ? "&tab=native" : ""}` : null;
+/**
+ * 저장한 이름을 최신 기준으로 다시 볼 때의 주소. 순우리말 이름은 순우리말 탭이 먼저 열리고,
+ * 직접 짓기로 저장한 이름은 고르기 화면에 저장한 한자를 고른 채로 연다
+ */
+export function savedResultHref(
+  s: Pick<SavedNaming, "qs" | "kind" | "source" | "selfGiven" | "givenHanja" | "parentSurname">
+): string | null {
+  if (!s.qs) return null;
+  if (s.source === "self" && s.selfGiven) {
+    const hj = [...s.givenHanja].slice([...(s.parentSurname?.hanja ?? "")].length).join("");
+    return selfPickHref(s.qs, s.selfGiven, hj);
+  }
+  return `/naming/result?${s.qs}${s.kind === "native" ? "&tab=native" : ""}`;
+}
+
+/** 저장한 이름의 리포트·굿즈 주소 (직접 짓기로 저장했으면 주문할 때 셀프 작명 조합으로 확인하도록 from=self) */
+export const savedGoodsHref = (s: Pick<SavedNaming, "qs" | "id" | "given" | "givenHanja" | "source">) =>
+  s.qs
+    ? `/goods?${s.qs}&gh=${encodeURIComponent(s.givenHanja)}&ge=${encodeURIComponent(s.given)}&hid=${s.id}` +
+      (s.source === "self" ? `&${SELF_SOURCE_PARAM}=${SELF_SOURCE_VALUE}` : "")
+    : null;
 
 /** 저장할 때 analysis.saju 에 넣는 사주 요약 (한자·순우리말 공통) */
 export function sajuSummaryOf(p: NamingParams, saju: ReturnType<typeof analyzeSaju>): SavedSajuSummary {

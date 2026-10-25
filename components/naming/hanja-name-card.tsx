@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { saveName } from "@/app/naming/actions";
+import { saveName, saveSelfName } from "@/app/naming/actions";
 import { Button } from "@/components/ui/button";
 import { NameStatsBasic } from "@/components/name-stats-basic";
 import { TierBadge } from "@/components/name-stats-chart";
@@ -94,21 +94,49 @@ function HanjaChars({ r, p, unlocked }: { r: Recommendation; p: NamingParams; un
   );
 }
 
-function OptionActions({ r, qs, loggedIn }: { r: Recommendation; qs: string; loggedIn: boolean }) {
+/** 셀프 작명(직접 짓기) 결과 화면: 저장·로그인 후 이 주소로 돌아온다 */
+export interface SelfCardMode {
+  resultHref: string;
+  /** 새로 고르는 부분 (부모 성 글자 제외) */
+  given: string;
+  givenHanja: string;
+}
+
+function OptionActions({
+  r,
+  qs,
+  loggedIn,
+  self,
+}: {
+  r: Recommendation;
+  qs: string;
+  loggedIn: boolean;
+  self?: SelfCardMode;
+}) {
+  const back = self ? self.resultHref : `/naming/result?${qs}`;
   return (
     <div className="flex flex-wrap gap-2">
       {loggedIn ? (
-        <form action={saveName}>
+        <form action={self ? saveSelfName : saveName}>
           <input type="hidden" name="qs" value={qs} />
-          <input type="hidden" name="gh" value={hanjaOf(r)} />
-          <input type="hidden" name="ge" value={eumOf(r)} />
+          {self ? (
+            <>
+              <input type="hidden" name="given" value={self.given} />
+              <input type="hidden" name="hj" value={self.givenHanja} />
+            </>
+          ) : (
+            <>
+              <input type="hidden" name="gh" value={hanjaOf(r)} />
+              <input type="hidden" name="ge" value={eumOf(r)} />
+            </>
+          )}
           <Button type="submit" size="sm" variant="secondary">
             마이페이지에 저장
           </Button>
         </form>
       ) : (
         <Button asChild size="sm" variant="secondary">
-          <Link href={`/login?next=${encodeURIComponent(`/naming/result?${qs}`)}`}>로그인하고 저장</Link>
+          <Link href={`/login?next=${encodeURIComponent(back)}`}>로그인하고 저장</Link>
         </Button>
       )}
       <Button asChild size="sm" variant="outline">
@@ -129,6 +157,7 @@ export function NameCardBody({
   qs,
   loggedIn,
   ent,
+  self,
 }: {
   group: NameGroup;
   p: NamingParams;
@@ -137,6 +166,8 @@ export function NameCardBody({
   qs: string;
   loggedIn: boolean;
   ent: Entitlement;
+  /** 셀프 작명 결과 화면이면 저장을 셀프 작명 쪽으로 (qs 에는 from=self 가 들어 있어 리포트 주문도 셀프 조합으로 확인한다) */
+  self?: SelfCardMode;
 }) {
   const [best, ...others] = g.options;
   const a = best.analysis;
@@ -219,7 +250,7 @@ export function NameCardBody({
       )}
       <LegalDetails r={best} p={p} unlocked={unlocked(best)} />
 
-      <OptionActions r={best} qs={qs} loggedIn={loggedIn} />
+      <OptionActions r={best} qs={qs} loggedIn={loggedIn} self={self} />
 
       {others.length > 0 && (
         <details className="group rounded-md border">
