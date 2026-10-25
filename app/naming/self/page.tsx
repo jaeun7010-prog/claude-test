@@ -17,7 +17,10 @@ import type { SelfPicks, SelfTable } from "@/lib/naming/self-rank";
 import { suriWebName } from "@/lib/naming/suri81";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "직접 짓기 | 이름핏" };
+// 조건이 들어간 고르기 화면은 주소에 생년월일·시각·출생지가 있어 검색에 나오지 않게 한다 (입력 화면은 그대로)
+export function generateMetadata({ searchParams }: { searchParams: Search }) {
+  return { title: "직접 짓기 | 이름핏", ...(one(searchParams.date) ? { robots: { index: false, follow: false } } : {}) };
+}
 export const dynamic = "force-dynamic";
 
 type Search = Record<string, string | string[] | undefined>;

@@ -12,7 +12,8 @@ import { loadSelfChoice, selfQueryOf } from "@/lib/naming/self";
 import { selfResultHref, SELF_SOURCE_PARAM, SELF_SOURCE_VALUE } from "@/lib/naming/self-href";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "리포트 · 맞춤 굿즈 | 이름핏" };
+// 주소에 생년월일·시각·출생지가 들어 있어 검색에 나오지 않게 한다
+export const metadata = { title: "리포트 · 맞춤 굿즈 | 이름핏", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
 const ELEMENT_HANJA: Record<string, string> = { 목: "木", 화: "火", 토: "土", 금: "金", 수: "水" };
