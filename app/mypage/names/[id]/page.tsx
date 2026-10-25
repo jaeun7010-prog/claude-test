@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { GradeBadge, GyeokGrid, ScoreBreakdownLine } from "@/components/naming/analysis-parts";
 import { CombinationNote } from "@/components/naming/combination-note";
 import { DeleteSavedButton } from "@/components/mypage/delete-saved-button";
+import { ShareNameButton } from "@/components/share/share-name-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isUuid } from "@/lib/commerce/payment-sync";
@@ -255,6 +256,11 @@ export default async function SavedNamePage({
           ) : (
             <p className="text-sm text-muted-foreground">입력 조건이 저장되지 않아 다른 이름을 볼 수 없습니다.</p>
           )}
+          {n && (
+            <ShareNameButton
+              input={{ kind: "native", surname: s.surname, given: s.given, prefixLength: s.given.length - n.name.name.length }}
+            />
+          )}
           <DeleteSavedButton id={s.id} name={fullName} />
         </div>
         <p className="text-xs text-muted-foreground">
@@ -361,6 +367,18 @@ export default async function SavedNamePage({
           <p className="text-sm text-muted-foreground">
             입력 조건이 저장되지 않아 다른 이름을 보거나 주문할 수 없습니다.
           </p>
+        )}
+        {s.givenHanja && (
+          <ShareNameButton
+            input={{
+              kind: "hanja",
+              surname: s.surname,
+              surnameHanja: s.surnameHanja,
+              given: s.given,
+              givenHanja: s.givenHanja,
+              prefixLength: s.parentSurname ? [...s.parentSurname.hangul].length : 0,
+            }}
+          />
         )}
         <DeleteSavedButton id={s.id} name={fullName} />
       </div>

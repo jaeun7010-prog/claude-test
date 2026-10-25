@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ShareActions } from "@/components/share/share-actions";
 import { Button } from "@/components/ui/button";
 import { BLESSINGS, vocative } from "@/lib/share/blessings";
 import { loadNameShare, SHARE_EDIT_PARAM, shareFullHanja, shareFullName, type NameShare } from "@/lib/share/name-share";
@@ -97,6 +98,16 @@ export default async function SharePage({ params, searchParams }: Props) {
   return (
     <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-md px-4 py-8 sm:py-12">
       <NameCard share={share} />
+
+      <div className="mt-4">
+        <ShareActions
+          path={`/s/${share.id}`}
+          imagePath={`/s/${share.id}/image?size=story`}
+          fileName={`이름카드-${shareFullName(share)}.png`}
+          title={`${shareFullName(share)} 이름 카드`}
+          text={share.blessing}
+        />
+      </div>
 
       {(chars || share.meaningNote) && (
         <div className="mt-4 space-y-1 text-center text-xs text-muted-foreground break-keep">

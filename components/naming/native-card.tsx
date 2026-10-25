@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { saveNativeName } from "@/app/naming/actions";
 import { SavedMark, type SavedNotice } from "@/components/naming/saved-status";
+import { ShareNameButton } from "@/components/share/share-name-button";
 import { NameStatsBasic } from "@/components/name-stats-basic";
 import { TierBadge } from "@/components/name-stats-chart";
 import { Button } from "@/components/ui/button";
@@ -43,9 +44,7 @@ function NativeSaveAction({
 }) {
   const markId = saved?.id ?? savedId;
   return loggedIn && markId ? (
-    <div className="flex flex-wrap gap-2">
-      <SavedMark id={markId} justSaved={saved} />
-    </div>
+    <SavedMark id={markId} justSaved={saved} />
   ) : loggedIn ? (
     <form action={saveNativeName}>
       <input type="hidden" name="qs" value={qs} />
@@ -124,7 +123,18 @@ export function NativeCardBody({
         </p>
       )}
 
-      <NativeSaveAction name={c.name.name} qs={qs} loggedIn={loggedIn} savedId={savedId} saved={saved} />
+      <div className="flex flex-wrap gap-2">
+        <NativeSaveAction name={c.name.name} qs={qs} loggedIn={loggedIn} savedId={savedId} saved={saved} />
+        <ShareNameButton
+          input={{
+            kind: "native",
+            surname,
+            given: c.legalName,
+            // 법적 이름 앞의 부모 성 글자 수
+            prefixLength: c.legalName.length - c.name.name.length,
+          }}
+        />
+      </div>
     </>
   );
 }

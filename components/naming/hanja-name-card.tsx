@@ -7,6 +7,7 @@ import { TierBadge } from "@/components/name-stats-chart";
 import { GradeBadge, GyeokGrid, ScoreBreakdownLine } from "@/components/naming/analysis-parts";
 import { LockedPreview } from "@/components/naming/locked-preview";
 import { SavedMark, type SavedNotice } from "@/components/naming/saved-status";
+import { ShareNameButton } from "@/components/share/share-name-button";
 import type { Entitlement } from "@/lib/commerce/entitlement";
 import type { NamingParams } from "@/lib/naming/params";
 import type { SavedLookup } from "@/lib/naming/saved";
@@ -96,6 +97,18 @@ function HanjaChars({ r, p, unlocked }: { r: Recommendation; p: NamingParams; un
   );
 }
 
+type ShareCardInput = Parameters<typeof ShareNameButton>[0]["input"];
+
+/** 이름 카드 공유: 법적 이름(부모 성 포함)과 부모 성 글자 수 */
+const shareInputOf = (p: NamingParams, r: Recommendation): ShareCardInput => ({
+  kind: "hanja",
+  surname: p.surname,
+  surnameHanja: p.surnameHanja,
+  given: eumOf(r),
+  givenHanja: hanjaOf(r),
+  prefixLength: p.parentSurname ? [...p.parentSurname.hangul].length : 0,
+});
+
 /** 셀프 작명(직접 짓기) 결과 화면: 저장·로그인 후 이 주소로 돌아온다 */
 export interface SelfCardMode {
   resultHref: string;
@@ -112,6 +125,7 @@ function OptionActions({
   saved,
   savedId,
   reportOrderId,
+  share,
 }: {
   r: Recommendation;
   qs: string;
@@ -123,6 +137,8 @@ function OptionActions({
   savedId: string | null;
   /** 이미 산 리포트 주문 id (같은 아이 + 같은 이름) */
   reportOrderId: string | null;
+  /** 이름 카드 공유에 넘길 이름 (생년월일·사주 없음) */
+  share: ShareCardInput;
 }) {
   const back = self ? self.resultHref : `/naming/result?${qs}`;
   const savedMarkId = saved?.id ?? savedId;
@@ -171,6 +187,7 @@ function OptionActions({
             <Link href={goodsHref(qs, r)}>리포트 · 맞춤 굿즈</Link>
           </Button>
         )}
+        <ShareNameButton input={share} />
       </div>
     </>
   );
@@ -210,6 +227,7 @@ export function NameCardBody({
     saved: savedFor(r),
     savedId: savedLookup("hanja", hanjaOf(r), eumOf(r)),
     reportOrderId: ent.reportOrderId(hanjaOf(r), eumOf(r)),
+    share: shareInputOf(p, r),
   });
   const a = best.analysis;
   const unlocked = (r: Recommendation) => ent.name(hanjaOf(r), eumOf(r));
