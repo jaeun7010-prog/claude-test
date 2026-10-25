@@ -28,6 +28,7 @@ import { cleanSelfHanja, FROM_SELF_GIVEN, FROM_SELF_HANJA, selfPickHref } from "
 import { GRADE_MIN, SCORE_WEIGHTS } from "@/lib/naming/score";
 import { DISPLAY_LIMIT, runNaming } from "@/lib/naming/service";
 import { getLatestSnapshot } from "@/lib/name-stats/snapshot";
+import { loadSavedLookup, NO_SAVED } from "@/lib/naming/saved";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "추천 결과 | 이름핏" };
@@ -73,10 +74,12 @@ export default async function ResultPage({
   } = await supabase.auth.getUser();
 
   // 순우리말 탭도 서버에서 함께 만든다 (사주는 한자 쪽 결과를 그대로 쓴다)
-  const [native, ent] = await Promise.all([
+  const [native, ent, savedLookup] = await Promise.all([
     runNativeNaming(supabase, p, result.saju),
     // 유료 내용(사주 상세·이름 상세)은 결제한 리포트가 있을 때만 그린다 (lib/commerce/entitlement.ts)
     loadEntitlement(supabase, !!user, namingChildQuery(p)),
+    // 이미 저장한 이름은 카드에 "✓ 저장한 이름" (같은 아이 + 같은 이름)
+    user ? loadSavedLookup(supabase, p) : NO_SAVED,
   ]);
   const snapshot = result.stats || native.stats ? await getLatestSnapshot() : null;
 
@@ -140,6 +143,7 @@ export default async function ResultPage({
           loggedIn={!!user}
           ent={ent}
           saved={savedNotice && savedHanja ? { ...savedNotice, givenHanja: savedHanja } : undefined}
+          savedLookup={savedLookup}
         />
       ),
     };
@@ -166,6 +170,7 @@ export default async function ResultPage({
         qs={nativeQs}
         loggedIn={!!user}
         saved={savedNotice && savedNative === c.legalName ? savedNotice : undefined}
+        savedId={savedLookup("native", null, c.legalName)}
       />
     ),
   }));

@@ -6,9 +6,10 @@ import { NameStatsBasic } from "@/components/name-stats-basic";
 import { TierBadge } from "@/components/name-stats-chart";
 import { GradeBadge, GyeokGrid, ScoreBreakdownLine } from "@/components/naming/analysis-parts";
 import { LockedPreview } from "@/components/naming/locked-preview";
-import { SavedStatus, type SavedNotice } from "@/components/naming/saved-status";
+import { SavedMark, type SavedNotice } from "@/components/naming/saved-status";
 import type { Entitlement } from "@/lib/commerce/entitlement";
 import type { NamingParams } from "@/lib/naming/params";
+import type { SavedLookup } from "@/lib/naming/saved";
 import { nameMeaningOf } from "@/lib/naming/name-meaning";
 import { hanjaDetailOf } from "@/lib/naming/hanja-detail";
 import { hunEum, type NameGroup, type Recommendation } from "@/lib/naming/recommend";
@@ -109,19 +110,28 @@ function OptionActions({
   loggedIn,
   self,
   saved,
+  savedId,
+  reportOrderId,
 }: {
   r: Recommendation;
   qs: string;
   loggedIn: boolean;
   self?: SelfCardMode;
+  /** 방금 저장하고 돌아왔을 때 */
   saved?: SavedNotice;
+  /** 화면을 열 때 이미 저장한 이름이면 그 저장 id (같은 아이 + 같은 이름) */
+  savedId: string | null;
+  /** 이미 산 리포트 주문 id (같은 아이 + 같은 이름) */
+  reportOrderId: string | null;
 }) {
   const back = self ? self.resultHref : `/naming/result?${qs}`;
+  const savedMarkId = saved?.id ?? savedId;
   return (
     <>
-      {saved && <SavedStatus saved={saved} />}
       <div className="flex flex-wrap gap-2">
-        {loggedIn ? (
+        {loggedIn && savedMarkId ? (
+          <SavedMark id={savedMarkId} justSaved={saved} />
+        ) : loggedIn ? (
           <form action={self ? saveSelfName : saveName}>
             <input type="hidden" name="qs" value={qs} />
             {self ? (
@@ -144,9 +154,23 @@ function OptionActions({
             <Link href={`/login?next=${encodeURIComponent(back)}`}>로그인하고 저장</Link>
           </Button>
         )}
-        <Button asChild size="sm" variant="outline">
-          <Link href={goodsHref(qs, r)}>리포트 · 맞춤 굿즈</Link>
-        </Button>
+        {reportOrderId ? (
+          <>
+            <Button asChild size="sm">
+              <Link href={`/report/${reportOrderId}`}>리포트 보기</Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href={`/report/${reportOrderId}?download=1`}>PDF 다운로드</Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link href={goodsHref(qs, r)}>맞춤 굿즈</Link>
+            </Button>
+          </>
+        ) : (
+          <Button asChild size="sm" variant="outline">
+            <Link href={goodsHref(qs, r)}>리포트 · 맞춤 굿즈</Link>
+          </Button>
+        )}
       </div>
     </>
   );
@@ -163,6 +187,7 @@ export function NameCardBody({
   ent,
   self,
   saved,
+  savedLookup,
 }: {
   group: NameGroup;
   p: NamingParams;
@@ -175,9 +200,17 @@ export function NameCardBody({
   self?: SelfCardMode;
   /** 추천받기 결과 화면: 저장하고 돌아온 한자 조합 (그 조합의 저장 버튼 위에 안내) */
   saved?: SavedNotice & { givenHanja: string };
+  /** 이미 저장한 이름 찾기 (같은 아이 + 같은 이름, lib/naming/saved.ts 의 loadSavedLookup) */
+  savedLookup: SavedLookup;
 }) {
   const [best, ...others] = g.options;
   const savedFor = (r: Recommendation) => (saved && saved.givenHanja === hanjaOf(r) ? saved : undefined);
+  // 저장·리포트 표시 (다른 한자 조합까지 조합마다)
+  const marks = (r: Recommendation) => ({
+    saved: savedFor(r),
+    savedId: savedLookup("hanja", hanjaOf(r), eumOf(r)),
+    reportOrderId: ent.reportOrderId(hanjaOf(r), eumOf(r)),
+  });
   const a = best.analysis;
   const unlocked = (r: Recommendation) => ent.name(hanjaOf(r), eumOf(r));
   return (
@@ -258,7 +291,7 @@ export function NameCardBody({
       )}
       <LegalDetails r={best} p={p} unlocked={unlocked(best)} />
 
-      <OptionActions r={best} qs={qs} loggedIn={loggedIn} self={self} saved={savedFor(best)} />
+      <OptionActions r={best} qs={qs} loggedIn={loggedIn} self={self} {...marks(best)} />
 
       {others.length > 0 && (
         <details className="group rounded-md border" open={others.some((r) => savedFor(r)) || undefined}>
@@ -281,7 +314,7 @@ export function NameCardBody({
                 </div>
                 <ScoreBreakdownLine analysis={r.analysis} />
                 <LegalDetails r={r} p={p} unlocked={unlocked(r)} />
-                <OptionActions r={r} qs={qs} loggedIn={loggedIn} saved={savedFor(r)} />
+                <OptionActions r={r} qs={qs} loggedIn={loggedIn} {...marks(r)} />
               </li>
             ))}
           </ul>

@@ -7,7 +7,7 @@ import { CombinationNote } from "@/components/naming/combination-note";
 import { NameCardBody } from "@/components/naming/hanja-name-card";
 import { SajuCard } from "@/components/naming/saju-card";
 import { SurnameDefaultNote } from "@/components/naming/surname-default-note";
-import { ALREADY_PARAM, SAVED_PARAM, SavedStatus } from "@/components/naming/saved-status";
+import { ALREADY_PARAM, SAVED_PARAM } from "@/components/naming/saved-status";
 import { loadEntitlement } from "@/lib/commerce/entitlement";
 import { isUuid } from "@/lib/commerce/payment-sync";
 import { getLatestSnapshot } from "@/lib/name-stats/snapshot";
@@ -17,6 +17,7 @@ import { GRADE_MIN, SCORE_WEIGHTS } from "@/lib/naming/score";
 import { loadSelfChoice, selfQueryOf } from "@/lib/naming/self";
 import { selfPickHref, selfResultHref, SELF_SOURCE_PARAM, SELF_SOURCE_VALUE } from "@/lib/naming/self-href";
 import { loadNameSummaries } from "@/lib/stats/name-stats";
+import { loadSavedLookup, NO_SAVED } from "@/lib/naming/saved";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "직접 지은 이름 | 이름핏" };
@@ -59,8 +60,9 @@ export default async function SelfResultPage({ searchParams }: { searchParams: S
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [ent, stats] = await Promise.all([
+  const [ent, savedLookup, stats] = await Promise.all([
     loadEntitlement(supabase, !!user, namingChildQuery(p)),
+    user ? loadSavedLookup(supabase, p) : NO_SAVED,
     loadNameSummaries(supabase, [r.hangul]).catch((e) => {
       console.error("[naming] 통계 조회 실패", e);
       return null;
@@ -99,7 +101,6 @@ export default async function SelfResultPage({ searchParams }: { searchParams: S
         </p>
       </header>
 
-      {saved && <SavedStatus saved={saved} />}
       {searchParams.saveError && (
         <p role="alert" className="text-sm text-destructive">
           저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.
@@ -131,6 +132,8 @@ export default async function SelfResultPage({ searchParams }: { searchParams: S
               loggedIn={!!user}
               ent={ent}
               self={{ resultHref: selfResultHref(selfQ, given, hj), given, givenHanja: hj }}
+              saved={saved ? { ...saved, givenHanja: fullHanja } : undefined}
+              savedLookup={savedLookup}
             />
           </CardContent>
         </Card>

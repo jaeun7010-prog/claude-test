@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { saveNativeName } from "@/app/naming/actions";
-import { SavedStatus, type SavedNotice } from "@/components/naming/saved-status";
+import { SavedMark, type SavedNotice } from "@/components/naming/saved-status";
 import { NameStatsBasic } from "@/components/name-stats-basic";
 import { TierBadge } from "@/components/name-stats-chart";
 import { Button } from "@/components/ui/button";
@@ -26,8 +26,27 @@ const ITEM_LABEL = {
 const ITEM_KEYS = Object.keys(ITEM_LABEL) as (keyof typeof ITEM_LABEL)[];
 
 /** 결과 화면에서 저장 (로그인 처리는 한자 이름 저장과 같다). qs 는 순우리말 탭이 열리는 결과 화면 쿼리 */
-function NativeSaveAction({ name, qs, loggedIn }: { name: string; qs: string; loggedIn: boolean }) {
-  return loggedIn ? (
+function NativeSaveAction({
+  name,
+  qs,
+  loggedIn,
+  savedId,
+  saved,
+}: {
+  name: string;
+  qs: string;
+  loggedIn: boolean;
+  /** 화면을 열 때 이미 저장한 이름이면 그 저장 id */
+  savedId: string | null;
+  /** 방금 저장하고 돌아왔을 때 */
+  saved?: SavedNotice;
+}) {
+  const markId = saved?.id ?? savedId;
+  return loggedIn && markId ? (
+    <div className="flex flex-wrap gap-2">
+      <SavedMark id={markId} justSaved={saved} />
+    </div>
+  ) : loggedIn ? (
     <form action={saveNativeName}>
       <input type="hidden" name="qs" value={qs} />
       <input type="hidden" name="nn" value={name} />
@@ -51,6 +70,7 @@ export function NativeCardBody({
   qs,
   loggedIn,
   saved,
+  savedId,
 }: {
   candidate: NativeCandidate;
   surname: string;
@@ -64,6 +84,8 @@ export function NativeCardBody({
   loggedIn: boolean;
   /** 이 이름을 저장하고 돌아왔을 때 */
   saved?: SavedNotice;
+  /** 이미 저장한 이름이면 그 저장 id (같은 아이 + 같은 법적 이름) */
+  savedId: string | null;
 }) {
   const s = c.score;
   return (
@@ -102,8 +124,7 @@ export function NativeCardBody({
         </p>
       )}
 
-      {saved && <SavedStatus saved={saved} />}
-      <NativeSaveAction name={c.name.name} qs={qs} loggedIn={loggedIn} />
+      <NativeSaveAction name={c.name.name} qs={qs} loggedIn={loggedIn} savedId={savedId} saved={saved} />
     </>
   );
 }

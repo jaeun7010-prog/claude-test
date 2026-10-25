@@ -20,11 +20,21 @@ export interface SavedNotice {
 export const savedBackHref = (back: string, id: string, already: boolean, extra = "") =>
   `${back}&${SAVED_PARAM}=${id}${already ? `&${ALREADY_PARAM}=1` : ""}${extra}#saved`;
 
-export function SavedStatus({ saved }: { saved: SavedNotice }) {
+/**
+ * 저장 버튼 자리: 방금 저장했으면 "✓ 마이페이지에 저장했어요"(이미 저장했으면 "✓ 이미 저장한 이름이에요"),
+ * 화면을 열 때 이미 저장한 이름이면 "✓ 저장한 이름". 셋 다 "저장한 이름 보기" 링크를 붙인다
+ */
+export function SavedMark({ id, justSaved }: { id: string; justSaved?: SavedNotice }) {
+  const text = justSaved ? (justSaved.already ? "✓ 이미 저장한 이름이에요" : "✓ 마이페이지에 저장했어요") : "✓ 저장한 이름";
   return (
-    <p id="saved" role="status" className="scroll-mt-20 rounded-md bg-secondary p-3 text-sm">
-      {saved.already ? "이미 마이페이지에 저장한 이름이에요. " : "마이페이지에 저장했어요. "}
-      <Link href={`/mypage/names/${saved.id}`} className="text-primary underline underline-offset-2">
+    <p
+      id={justSaved ? "saved" : undefined}
+      role={justSaved ? "status" : undefined}
+      className="flex min-h-9 scroll-mt-20 flex-wrap items-center rounded-md bg-secondary px-3 py-1.5 text-sm"
+    >
+      {text}
+      <span className="mx-1.5 text-muted-foreground">·</span>
+      <Link href={`/mypage/names/${justSaved?.id ?? id}`} className="text-primary underline underline-offset-2">
         저장한 이름 보기
       </Link>
     </p>
