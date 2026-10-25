@@ -4,6 +4,12 @@
 
 # 프로젝트: 이름핏 (NameFit) - 사주 맞춤 작명 & 희소성 통계 플랫폼
 
+## 상호·도메인·연락처 (2026-10-25 사용자 확정)
+- 상호: **이름핏**. 화면·홍보 문구는 한글 "이름핏", 주소·계정 이름은 영문 "namefit". "NameFit"은 상표 출원용 영문 표기.
+- 도메인: **namefit.kr** (구매 완료). namefit.co.kr은 아직 사지 않았다.
+- 운영 이메일: **namefit.kr@gmail.com**. 문의, 개인정보처리방침·이용약관 연락처 등에 쓴다.
+- 배포 환경 변수 `NEXT_PUBLIC_SITE_URL=https://namefit.kr`. 이 값으로 이름 카드 그림 아래 주소("이름핏 · namefit.kr"), 링크 복사 주소, 링크 미리보기 그림의 절대 주소(`metadataBase`)가 namefit.kr로 나온다. 로컬 `.env.local`에는 넣지 않는다 (넣으면 개발 중 링크 복사도 namefit.kr로 나감).
+
 ## Tech Stack
 - Framework: Next.js 14+ (App Router), TypeScript, Tailwind CSS, shadcn/ui
 - Database & Auth: Supabase (PostgreSQL, Supabase Auth)
@@ -501,7 +507,11 @@
 - 이름핏의 차별점: 깊은 사주 분석(억부·조후·합충형·격국) + 간직하는 PDF 리포트 + 광고 없는 화면 + 정직한 근거(기준일·출처, 학파 차이 안내, "실시간" 같은 과장 없음). 화면 문구·기능을 정할 때 이 방향을 따른다.
 
 ### 출시 전 꼭 필요한 것
-- **도메인과 공유 미리보기**: 도메인을 정해 `NEXT_PUBLIC_SITE_URL`에 넣는다(이름 카드 아래 주소, 링크 미리보기 그림의 절대 주소). 배포한 주소로 카톡·문자 미리보기에 카드 그림이 뜨는지 확인한다(localhost는 카톡·문자 서버가 들어올 수 없다).
+- **도메인 연결**: namefit.kr(구매 완료)을 배포 서버에 연결하고 https가 되는지 확인한다. Supabase Auth의 Site URL·Redirect URLs에도 https://namefit.kr을 넣는다.
+- **도메인과 공유 미리보기**: 배포 환경 변수 `NEXT_PUBLIC_SITE_URL=https://namefit.kr` (이름 카드 아래 주소 "이름핏 · namefit.kr", 링크 복사, 링크 미리보기 그림의 절대 주소). 배포한 주소로 카톡·문자 미리보기에 카드 그림이 뜨는지, 카드 아래 주소가 namefit.kr로 나오는지 확인한다(localhost는 카톡·문자 서버가 들어올 수 없다). 이미 만든 카드 그림도 그릴 때 이 값을 읽으므로 함께 바뀐다.
+- **운영 이메일 넣기**: 개인정보처리방침·이용약관·문의 화면의 연락처를 namefit.kr@gmail.com으로.
+- **상표 출원**: "이름핏"·"NameFit".
+- **SNS 계정**: 인스타그램·블로그·유튜브 (계정 이름은 namefit).
 - **테스트 이름 카드 지우기**: 개발하며 만든 `name_shares` 줄은 모두 테스트다(2026-10-25 기준 12개: 김하린 2 · 이남궁서윤 · 김윤하 · 남궁정성 · 박초아 · 김하늘빛 · 김하윤 2 · 김보미 · 김박수빈 · 김서윤, 사용자 확인 중에 더 생길 수 있음). 출시 전에 표를 비운다(`delete from name_shares;`, service_role / SQL 편집기).
 - **카카오톡 공유 버튼** (2026-10-25 사용자 결정: 배포 후): Kakao Developers 앱 만들기 → JavaScript 키를 `NEXT_PUBLIC_KAKAO_JS_KEY`에, 플랫폼 Web에 사이트 도메인 등록 → 공유 페이지에 카카오 SDK로 공유 버튼. 카드를 고친 뒤에는 카카오 공유 디버거에서 미리보기 캐시를 지운다.
 - **결제 기능 점검**: `SUPABASE_SERVICE_ROLE_KEY` 설정(지금 로컬 `.env.local`에 없어 주문 생성·결제 반영이 안 된다), 포트원 테스트 결제로 결제 후 유료 내용이 열리는지 확인. 함께 볼 것: PDF 四쪽 이름 뜻 줄(한자 4자 이상이면 A4를 넘는지), 저장 이름에서 주문할 때 `orders.history_id` 연결.
