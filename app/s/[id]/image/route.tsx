@@ -93,16 +93,27 @@ function Card({ share, size }: { share: NameShare; size: Size }) {
   );
 }
 
+/** 한글 파일 이름은 filename*, 못 읽는 다운로드 관리자용으로 영문 이름도 함께 */
+const downloadDisposition = (share: NameShare) =>
+  `attachment; filename="namefit-card-${share.id}.png"; filename*=UTF-8''${encodeURIComponent(
+    `이름카드-${shareFullName(share)}.png`
+  )}`;
+
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const share = await loadNameShare(createAdminClient(), params.id);
   if (!share) return new Response("Not found", { status: 404 });
-  const size: Size = new URL(request.url).searchParams.get("size") === "story" ? "story" : "og";
+  const query = new URL(request.url).searchParams;
+  const size: Size = query.get("size") === "story" ? "story" : "og";
   const text = [shareFullHanja(share) ?? "", shareFullName(share), share.meaning, `“${share.blessing}”`, siteLabel()].join("");
   const fonts = await loadCardFonts(text);
   return new ImageResponse(<Card share={share} size={size} />, {
     width: SIZES[size].width,
     height: SIZES[size].height,
     fonts,
-    headers: { "Cache-Control": "public, max-age=86400, s-maxage=31536000, immutable" },
+    headers: {
+      "Cache-Control": "public, max-age=86400, s-maxage=31536000, immutable",
+      // ?download=1: 이미지 저장 버튼. 앱 안 브라우저(카카오톡 등)는 blob 주소를 내려받지 못해 이 주소를 첨부 파일로 받는다
+      ...(query.get("download") === "1" ? { "Content-Disposition": downloadDisposition(share) } : {}),
+    },
   });
 }
