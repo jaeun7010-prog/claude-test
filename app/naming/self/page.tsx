@@ -27,7 +27,7 @@ type Search = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
 /** 직접 짓기 입력 화면 (주소에 조건이 없을 때) */
-function SelfInput() {
+function SelfInput({ initialSurname, initialGiven }: { initialSurname: string; initialGiven: string }) {
   return (
     <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
       <h1 className="font-serif text-3xl font-bold">사주 맞춤 작명</h1>
@@ -37,7 +37,7 @@ function SelfInput() {
       <div className="mb-8">
         <NamingModeTabs active="self" />
       </div>
-      <NamingForm mode="self" />
+      <NamingForm mode="self" initialSurname={initialSurname} initialGiven={initialGiven} />
     </main>
   );
 }
@@ -77,7 +77,13 @@ function suriNamesOf(t: SelfTable): Record<number, string> {
 }
 
 export default async function SelfNamingPage({ searchParams }: { searchParams: Search }) {
-  if (!one(searchParams.surname)) return <SelfInput />;
+  // 첫 화면 입력 칸에서 넘어온 성(hs)·이름(hg)은 입력 화면에 미리 채우기만 한다
+  if (!one(searchParams.surname)) {
+    const hangulOrEmpty = (v: string) => (/^[가-힣]{1,2}$/.test(v) ? v : "");
+    return (
+      <SelfInput initialSurname={hangulOrEmpty(one(searchParams.hs))} initialGiven={hangulOrEmpty(one(searchParams.hg))} />
+    );
+  }
 
   const parsed = parseNamingParams(searchParams);
   if (!parsed.ok) return <SelfError message={parsed.error} />;

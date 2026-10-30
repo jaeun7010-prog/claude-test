@@ -36,14 +36,16 @@ function SurnameFields({
   hangulName,
   hanjaName,
   placeholder,
+  initial = "",
 }: {
   label: string;
   /** 폼 필드 이름 (URL 파라미터) */
   hangulName: string;
   hanjaName: string;
   placeholder: string;
+  initial?: string;
 }) {
-  const [surname, setSurname] = useState("");
+  const [surname, setSurname] = useState(initial);
   const [surnameHanja, setSurnameHanja] = useState("");
   const s = surname.trim();
   const valid = /^[가-힣]{1,2}$/.test(s) && (s.length === 1 || COMPOUND_SURNAMES.includes(s));
@@ -103,7 +105,15 @@ function SurnameFields({
 /**
  * 작명 입력 폼. `self`(직접 짓기)는 이름 조건 대신 부모가 정한 한글 이름을 받아 /naming/self로 보낸다
  */
-export function NamingForm({ mode = "recommend" }: { mode?: "recommend" | "self" }) {
+export function NamingForm({
+  mode = "recommend",
+  initialSurname = "",
+  initialGiven = "",
+}: {
+  mode?: "recommend" | "self";
+  initialSurname?: string;
+  initialGiven?: string;
+}) {
   const self = mode === "self";
   const [noTime, setNoTime] = useState(false);
   const [place, setPlace] = useState(DEFAULT_BIRTHPLACE_ID);
@@ -121,7 +131,7 @@ export function NamingForm({ mode = "recommend" }: { mode?: "recommend" | "self"
     <form action={self ? "/naming/self" : "/naming/result"} method="get" className="space-y-6">
       <section className="space-y-3">
         <h2 className="font-serif text-lg font-bold">성씨</h2>
-        <SurnameFields label="성" hangulName="surname" hanjaName="sh" placeholder="예: 김, 남궁" />
+        <SurnameFields label="성" hangulName="surname" hanjaName="sh" placeholder="예: 김, 남궁" initial={initialSurname} />
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={withParent} onChange={(e) => setWithParent(e.target.checked)} />
           부모 성 함께 쓰기 (예: 김박서윤)
@@ -250,6 +260,7 @@ export function NamingForm({ mode = "recommend" }: { mode?: "recommend" | "self"
               id="given"
               name="given"
               placeholder="예: 서윤"
+              defaultValue={initialGiven}
               maxLength={SELF_MAX_LENGTH}
               pattern={`[가-힣]{1,${SELF_MAX_LENGTH}}`}
               title={`한글 1~${SELF_MAX_LENGTH}자`}

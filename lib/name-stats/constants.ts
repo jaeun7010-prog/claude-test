@@ -3,6 +3,9 @@ export const STATS_START_YEAR = 2008;
 
 export const DEFAULT_SOURCE_NAME = "대법원 전자가족관계등록시스템";
 
+/** 가짜 통계(data/samples)를 올릴 때 쓰는 출처명. 홍보 화면에는 이 자료를 보여 주지 않는다 */
+export const TEST_SOURCE_NAME = "테스트 데이터";
+
 /** 관리자 업로드용 CSV 저장 방법 (화면 안내와 인코딩 오류 메시지에서 함께 사용) */
 export const CSV_SAVE_GUIDE = "엑셀에서 '다른 이름으로 저장' → 파일 형식 'CSV UTF-8(쉼표로 분리)'로 저장";
 

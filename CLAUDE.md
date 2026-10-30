@@ -566,6 +566,7 @@
 **글꼴** (`app/layout.tsx`)
 - 화면 글자: Pretendard (`font-sans`, `next/font/local`, OFL). 이름과 한자: Noto Serif KR (`font-serif`).
 - PDF 리포트만 나눔명조(`--font-myeongjo`)를 그대로 쓴다. 글꼴이 바뀌면 쪽 넘침을 다시 확인해야 한다.
+- 페이지 제목은 고딕 800(`font-extrabold`), **명조는 이름과 한자에만** 쓴다 (2026-10-30 사용자 결정). 축원 문구도 고딕. 지금 다른 화면 제목에 남은 `font-serif`는 3단계에서 고친다.
 - 크기: 제목 `text-3xl font-extrabold`(30) · 본문 `text-base`~`text-[17px]` · 보조 `text-sm`(14) · 가장 작은 글자 `text-xs`(13으로 바꿔 둠).
 - `cn()`(tailwind-merge)은 모르는 `text-이름`을 글자색으로 보므로 글자 크기 토큰을 새로 만들지 않는다.
 
@@ -581,6 +582,13 @@
 - `NameCardFrame`: `tone="sand"`(테두리 12px) · `tone="sky"`(테두리 10px). 돌·백일 이름 카드와 리포트 이름 칸.
 - `NameWithHanja`: 글자마다 [한글 위 / 한자 아래] 묶음을 가로로 놓는다 (letter-spacing으로 맞추지 않는다). 순우리말은 `hanja` 없이. 크기는 `nameSize`·`hanjaSize`.
 - 개발 중 확인 화면: `/design-check` (배포 환경에서는 404).
+
+**첫 화면** (`app/page.tsx`, `components/landing/landing-page.tsx`, 2026-10-30 2단계)
+- "무료" 칩은 흰 바탕 + 코랄 글자(`bg-card text-coral-text`). 시안의 보라색과 오행이 아닌 곳의 초록색은 규칙에 맞게 바다·모래 색으로 바꿨다.
+- 통계는 실제 자료만: 최신 스냅숏이 없거나 출처명이 `TEST_SOURCE_NAME`("테스트 데이터")이면 "통계 준비 중". 자료가 들어오면 예시 이름 서윤의 그래프·건수·기준일이 자동으로 나온다.
+- 가격은 `REPORT_PRICE`를 읽는다. 대표자명·사업자등록번호·약관·개인정보처리방침·리포트 미리 보기·전체 출처 화면은 없어서 숨기거나 "준비 중"으로 뒀다 (코드에 TODO).
+- 돌·백일 카드는 아직 없어 "준비 중"으로 표시한다 (카드 종류 확장을 만들 때 뗀다).
+- 첫 화면 성·이름 입력은 `/naming/self?hs=김&hg=서윤`으로 넘겨 직접 짓기 입력 칸을 미리 채운다. 생년월일은 그 화면에서 받는다.
 
 ## 프로젝트 구조
 - `lib/supabase/client.ts`(브라우저), `server.ts`(서버 컴포넌트/액션), `middleware.ts`(세션 갱신), 루트 `middleware.ts`
