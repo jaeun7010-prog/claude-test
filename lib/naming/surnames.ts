@@ -3,14 +3,14 @@ import type { Element, HanjaChar } from "./types";
 /** 복성 목록 (두 글자 성). 한글 성이 이 목록에 있으면 2자로 취급 */
 export const COMPOUND_SURNAMES = ["남궁", "제갈", "황보", "선우", "독고", "사공", "서문", "동방"];
 
-/** 성씨 자원오행 확신. 낮음은 성 → 이름 첫 관계의 상극 감점을 절반만 반영한다 (elements.ts의 evaluateResourceFlow) */
+/** 성씨 자원오행 확신 (이름핏 자체 기준). 낮음은 성 → 이름 첫 관계의 상극 감점을 절반만 반영한다 (elements.ts의 evaluateResourceFlow) */
 export type SurnameConfidence = "높음" | "보통" | "낮음";
 
 /**
  * 성씨 한자의 자원오행 (2026-10-23 사용자 결정, 작명소 방식).
  * 기준: 부수 우선 + 간지·방위·색을 뜻하는 글자는 글자 뜻 (申 지지 → 금, 朱 붉을 → 화, 南 → 화, 黃 → 토 등).
  * 사전(hanja_dict)의 부수 기반 자원오행은 범위가 좁아 주요 성씨 대부분이 비어 있으므로, 성씨 자리에서는 이 표를 먼저 쓴다.
- * 이름 자리의 같은 글자는 사전 값을 그대로 쓴다. 참고: 이재승·김만태(2018) 「한국 성씨한자의 자원오행에 대한 고찰」.
+ * 이름 자리의 같은 글자는 사전 값을 그대로 쓴다.
  * 값이나 확신을 바꿀 때는 등급 분포를 다시 재고 사용자에게 표로 먼저 보여 준다.
  */
 export const SURNAME_ELEMENTS: Record<string, readonly [Element, SurnameConfidence]> = {

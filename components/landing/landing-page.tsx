@@ -87,7 +87,7 @@ function StartButton({ className }: { className?: string }) {
 const SAMPLE_SCORES = [
   { label: "사주 보완", value: 34, max: SCORE_WEIGHTS.saju },
   { label: "수리", value: 29, max: SCORE_WEIGHTS.suri },
-  { label: "발음 오행", value: 18, max: SCORE_WEIGHTS.pronunciation },
+  { label: "발음 오행", value: 16, max: SCORE_WEIGHTS.pronunciation },
   { label: "자원 오행", value: 13, max: SCORE_WEIGHTS.resource },
 ];
 
@@ -101,7 +101,7 @@ function SampleResultCard({ stats }: { stats: LandingStats | null }) {
         </div>
         <div className="flex size-16 flex-none flex-col items-center justify-center rounded-[20px] bg-sea text-white">
           <span className="text-[22px] font-extrabold leading-none">S</span>
-          <span className="text-xs font-bold">94점</span>
+          <span className="text-xs font-bold">92점</span>
         </div>
       </div>
       <dl className="flex flex-col gap-2 text-xs">
@@ -120,14 +120,14 @@ function SampleResultCard({ stats }: { stats: LandingStats | null }) {
         ))}
       </dl>
       <div className="flex items-center justify-between gap-2.5 rounded-2xl bg-cream px-3.5 py-3">
-        <div className="min-w-0">
-          <p className="text-xs font-bold text-ink-faint">
-            출생신고 통계{stats && ` · ${formatAsOfDate(stats.asOfDate)} 기준`}
-          </p>
-          <p className="text-sm font-bold">
-            {stats ? `같은 이름 여자아이 ${stats.latest.female.toLocaleString("ko-KR")}명` : "통계 준비 중"}
-          </p>
-        </div>
+        {stats ? (
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-ink-faint">출생신고 통계 · {formatAsOfDate(stats.asOfDate)} 기준</p>
+            <p className="text-sm font-bold">같은 이름 여자아이 {stats.latest.female.toLocaleString("ko-KR")}명</p>
+          </div>
+        ) : (
+          <p className="text-sm font-bold">출생 통계 준비 중</p>
+        )}
         {stats?.tier === "흔함" && (
           <span className="flex-none rounded-full bg-sand-light px-2.5 py-1 text-xs font-bold text-sand-text">
             많이 쓰는 이름
@@ -135,7 +135,7 @@ function SampleResultCard({ stats }: { stats: LandingStats | null }) {
         )}
       </div>
       <p className="border-t border-dashed border-input pt-2.5 text-xs text-ink-faint">
-        근거: 성명학 4대 요소 · 대법원 인명용 한자 · 대법원 출생신고 통계
+        근거: 성명학 4대 요소 · 인명용 한자 자료(Unihan){stats && " · 대법원 출생신고 통계"}
       </p>
     </PebbleFrame>
   );
@@ -149,7 +149,7 @@ function Hero({ stats }: { stats: LandingStats | null }) {
     >
       <div className="flex min-w-0 flex-[1_1_520px] flex-col gap-5">
         <span className="self-start rounded-full bg-sand-light px-3.5 py-1.5 text-sm font-bold text-sand-text">
-          사주 작명에 출생 통계까지 · 추천 이름 무료
+          {stats ? "사주 작명에 출생 통계까지 · 추천 이름 무료" : "사주 작명 · 추천 이름 무료"}
         </span>
         <h1 id="hero-title" className="text-[clamp(28px,3.4vw,44px)] font-extrabold leading-[1.25] tracking-tight">
           우리 아이 사주에 맞는 이름,
@@ -157,7 +157,9 @@ function Hero({ stats }: { stats: LandingStats | null }) {
           <span className="text-sea">근거까지</span> 보여 드려요
         </h1>
         <p className="max-w-[30em] text-lg text-ink-soft">
-          성씨와 태어난 날만 넣으면 추천 이름 30개를 점수, 출처, 출생 통계와 함께 무료로 받아요.
+          {stats
+            ? "성씨와 태어난 날만 넣으면 추천 이름 30개를 점수, 출처, 출생 통계와 함께 무료로 받아요."
+            : "성씨와 태어난 날만 넣으면 추천 이름 30개를 점수와 출처까지 무료로 받아요."}
         </p>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
           <StartButton />
@@ -199,6 +201,7 @@ const PROMISES = [
   {
     title: "출생 통계까지 함께",
     text: "몇 명이 쓰는 이름인지 보여요",
+    noStats: { title: "출생 통계 (준비 중)", text: "자료를 받으면 몇 명이 쓰는 이름인지 보여 드려요" },
     tone: "bg-sky-light text-sea",
     icon: <path d="M5 20V10M12 20V4M19 20v-7" />,
   },
@@ -210,21 +213,24 @@ const PROMISES = [
   },
 ];
 
-function Promises() {
+function Promises({ hasStats }: { hasStats: boolean }) {
   return (
     <section aria-label="이름핏의 약속" className="mx-auto max-w-[1120px] px-4 pb-16 pt-2 sm:px-6">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {PROMISES.map((p) => (
-          <div key={p.title} className="flex items-center gap-3.5 rounded-3xl border bg-card px-5 py-4">
-            <span className={cn("flex size-11 flex-none items-center justify-center rounded-[14px]", p.tone)}>
-              <Icon>{p.icon}</Icon>
-            </span>
-            <div>
-              <p className="font-extrabold">{p.title}</p>
-              <p className="text-sm text-ink-faint">{p.text}</p>
+        {PROMISES.map((p) => {
+          const words = !hasStats && p.noStats ? p.noStats : p;
+          return (
+            <div key={p.title} className="flex items-center gap-3.5 rounded-3xl border bg-card px-5 py-4">
+              <span className={cn("flex size-11 flex-none items-center justify-center rounded-[14px]", p.tone)}>
+                <Icon>{p.icon}</Icon>
+              </span>
+              <div>
+                <p className="font-extrabold">{words.title}</p>
+                <p className="text-sm text-ink-faint">{words.text}</p>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
@@ -234,11 +240,16 @@ const WHY_ITEMS = [
   { label: "기준", before: "작명가마다 보는 기준이 달라요", after: "공개된 한 가지 기준으로 계산해요" },
   { label: "근거", before: "결과만 받고, 이유는 듣기 어려워요", after: "항목별 점수와 참고 자료를 함께 보여 드려요" },
   { label: "계산", before: "획수와 오행을 사람이 손으로 세요", after: "인명용 한자 자료로 자동 계산해요" },
-  { label: "통계", before: "이름이 얼마나 흔한지 알기 어려워요", after: "출생신고 통계로 몇 명이 쓰는지 보여 드려요" },
+  {
+    label: "통계",
+    before: "이름이 얼마나 흔한지 알기 어려워요",
+    after: "출생신고 통계로 몇 명이 쓰는지 보여 드려요",
+    afterNoStats: "출생신고 통계를 준비하고 있어요",
+  },
   { label: "비용", before: "후보 이름을 받을 때마다 비용이 들어요", after: "추천 이름 30개와 점수는 무료예요" },
 ];
 
-function Why() {
+function Why({ hasStats }: { hasStats: boolean }) {
   return (
     <section id="why" aria-labelledby="why-title" className="scroll-mt-16 border-y bg-card">
       <div className="mx-auto flex max-w-[1120px] flex-col gap-8 px-4 py-16 sm:px-6 sm:py-[72px]">
@@ -257,7 +268,7 @@ function Why() {
               <p className="text-[15px] text-ink-faint">{w.before}</p>
               <p className="flex items-start gap-2 font-bold">
                 <CheckIcon />
-                {w.after}
+                {(!hasStats && w.afterNoStats) || w.after}
               </p>
             </div>
           ))}
@@ -323,13 +334,15 @@ function Stats({ stats }: { stats: LandingStats | null }) {
     >
       <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-4">
         <span className="self-start rounded-full bg-sky-light px-3.5 py-1.5 text-sm font-bold text-sea-deep">
-          사주에 통계까지
+          {stats ? "사주에 통계까지" : "통계 준비 중"}
         </span>
         <h2 id="stats-title" className={SECTION_TITLE}>
           이 이름, 몇 명이나 쓸까요?
         </h2>
         <p className={SECTION_LEAD}>
-          사주 작명과 함께 출생신고 통계를 보여 드려요. 너무 흔한 이름이 걱정될 때 바로 확인하세요.
+          {stats
+            ? "사주 작명과 함께 출생신고 통계를 보여 드려요. 너무 흔한 이름이 걱정될 때 바로 확인하세요."
+            : "출생신고 통계를 준비하고 있어요. 자료를 받으면 이런 내용을 보여 드려요."}
         </p>
         <ul className="flex flex-col gap-2.5 font-medium">
           {[
@@ -343,9 +356,11 @@ function Stats({ stats }: { stats: LandingStats | null }) {
             </li>
           ))}
         </ul>
-        <Button asChild variant="outline" className="self-start border-sea font-extrabold text-sea">
-          <Link href="/stats">이름 통계 보기</Link>
-        </Button>
+        {stats && (
+          <Button asChild variant="outline" className="self-start border-sea font-extrabold text-sea">
+            <Link href="/stats">이름 통계 보기</Link>
+          </Button>
+        )}
       </div>
       <div className="flex min-w-0 flex-[1_1_420px] flex-col gap-4 rounded-3xl border bg-card p-5 sm:p-7">
         <NameWithHanja name="서윤" nameSize={30} />
@@ -365,7 +380,7 @@ function Stats({ stats }: { stats: LandingStats | null }) {
 function Free({ hasStats }: { hasStats: boolean }) {
   const items = [
     "사주에 필요한 오행 분석",
-    "추천 이름 30개와 등급",
+    "추천 이름 최대 30개와 등급",
     hasStats ? "출생신고 이름 통계" : "출생신고 이름 통계 (준비 중)",
     "순우리말 이름 전부",
     "생각해 둔 이름 점수 확인",
@@ -556,12 +571,32 @@ const SCORE_PARTS = [
   { label: "자원 오행", value: SCORE_WEIGHTS.resource, text: "한자 부수에 담긴 오행", bar: "bg-score-4 text-ink" },
 ];
 
-function SourceCard({ kicker, title, text, paper }: { kicker: string; title: string; text: string; paper?: boolean }) {
+function SourceCard({
+  kicker,
+  title,
+  text,
+  paper,
+  otherView,
+}: {
+  kicker: string;
+  title: string;
+  text: string;
+  paper?: boolean;
+  /** 이름핏과 입장이 다른 연구 */
+  otherView?: boolean;
+}) {
   return (
     <div className="rounded-[18px] border bg-cream px-5 py-4">
       <p className={cn("text-xs font-bold", paper ? "text-sand-text" : "text-sea")}>{kicker}</p>
       <p className="font-extrabold">{title}</p>
-      <p className="text-sm text-ink-faint">{text}</p>
+      {otherView && (
+        <span className="mt-1 inline-block rounded-full bg-sand-light px-2.5 py-0.5 text-xs font-bold text-sand-text">
+          다른 입장
+        </span>
+      )}
+      <p className="text-sm text-ink-faint">
+        <HanjaText text={text} />
+      </p>
     </div>
   );
 }
@@ -612,28 +647,34 @@ function Sources({ hasStats }: { hasStats: boolean }) {
         <div className="flex flex-col gap-3.5">
           <div className="flex flex-wrap items-baseline gap-3">
             <h3 className="text-xl font-extrabold">계산 자료와 참고 연구</h3>
-            <span className="text-[15px] text-ink-faint">공공 자료 4가지로 계산하고, 성명학 논문 2편을 참고했어요</span>
+            <span className="text-[15px] text-ink-faint">
+              공공 자료로 계산하고, 사전으로 뜻을 확인하고, 성명학 논문을 참고했어요
+            </span>
           </div>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-3">
-            <SourceCard kicker="공공 자료" title="대법원 인명용 한자" text="이름에 쓸 수 있는 한자와 획수" />
+            <SourceCard kicker="계산" title="인명용 한자 자료(Unihan)" text="이름에 쓸 수 있는 한자와 획수" />
+            <SourceCard kicker="계산" title="통계청 성씨·본관 조사(2015)" text="성씨 목록과 성씨 한자" />
+            <SourceCard kicker="뜻 확인" title="국립국어원 표준국어대사전" text="순우리말 이름의 뜻" />
             <SourceCard
-              kicker="공공 자료"
+              kicker={hasStats ? "통계" : "통계 · 준비 중"}
               title="대법원 출생신고 이름 통계"
-              text={hasStats ? "이름이 얼마나 흔한지 · 기준일 표시" : "이름이 얼마나 흔한지 · 자료 준비 중"}
+              text={hasStats ? "이름이 얼마나 흔한지 · 기준일 표시" : "이름이 얼마나 흔한지"}
             />
-            <SourceCard kicker="공공 자료" title="국립국어원 표준국어대사전" text="순우리말 이름의 뜻" />
-            <SourceCard kicker="공공 자료" title="통계청 성씨·본관 조사(2015)" text="성씨 목록과 성씨 한자" />
+          </div>
+          <p className="mt-2 font-bold">입장이 다른 연구도 함께 살폈어요</p>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-3">
             <SourceCard
               paper
               kicker="참고 논문 · 한국산학기술학회논문지(2019)"
               title="훈민정음 한글발음의 성명학 적용 논점 고찰"
-              text="발음 오행을 이름에 적용하는 방식"
+              text="발음 오행을 지나치게 엄격하게 쓰지 않도록, 상극 감점을 줄이는 데 참고했어요"
             />
             <SourceCard
               paper
+              otherView
               kicker="참고 논문 · 한국융합인문학(2018)"
               title="한글 순음·후음의 오행배속에 대한 성명학적 고찰"
-              text="입술소리·목구멍소리를 어느 오행으로 볼지"
+              text="ㅇ·ㅎ을 水로 보는 입장이에요. 이름핏은 ㅇ·ㅎ을 土로 보는 방식을 따라요"
             />
           </div>
           <p className="text-sm text-ink-faint">점수 배점과 등급 기준은 위 자료와 연구를 참고해 이름핏이 정했어요.</p>
@@ -647,10 +688,10 @@ function Sources({ hasStats }: { hasStats: boolean }) {
 const STEPS = [
   { title: "아이 정보 넣기", text: "성씨, 성별, 태어난 날과 시각", tone: "bg-score-1 text-white" },
   { title: "사주 분석", text: "아이에게 필요한 오행을 찾아요", tone: "bg-score-2 text-white" },
-  { title: "이름 30개 받기", text: "점수순으로, 근거와 통계까지", tone: "bg-score-3 text-ink" },
+  { title: "이름 30개 받기", text: "점수순으로, 근거와 통계까지", noStatsText: "점수순으로, 근거까지", tone: "bg-score-3 text-ink" },
 ];
 
-function Steps() {
+function Steps({ hasStats }: { hasStats: boolean }) {
   return (
     <section
       aria-labelledby="steps-title"
@@ -667,7 +708,7 @@ function Steps() {
             </span>
             <div>
               <p className="text-lg font-extrabold">{s.title}</p>
-              <p className="text-[15px] text-ink-faint">{s.text}</p>
+              <p className="text-[15px] text-ink-faint">{(!hasStats && s.noStatsText) || s.text}</p>
             </div>
           </li>
         ))}
@@ -676,7 +717,7 @@ function Steps() {
   );
 }
 
-function SelfNaming() {
+function SelfNaming({ hasStats }: { hasStats: boolean }) {
   return (
     <section
       id="self"
@@ -688,7 +729,9 @@ function SelfNaming() {
           <h2 id="self-title" className="mb-2 text-[clamp(24px,3vw,32px)] font-extrabold leading-[1.3] tracking-tight">
             생각해 둔 이름이 있나요?
           </h2>
-          <p className="text-ink-soft">점수와 근거, 출생 통계를 무료로 확인해 보세요. 한자는 다음 화면에서 골라요.</p>
+          <p className="text-ink-soft">
+            {hasStats ? "점수와 근거, 출생 통계를" : "점수와 근거를"} 무료로 확인해 보세요. 한자는 다음 화면에서 골라요.
+          </p>
         </div>
         {/* 입력한 성·이름을 직접 짓기 입력 화면에 미리 채운다. 생년월일은 그 화면에서 받는다 */}
         <form action="/naming/self" method="get" className="flex min-w-0 flex-[1_1_360px] flex-wrap items-end gap-2.5">
@@ -779,16 +822,17 @@ const FAQS = [
   {
     q: "흔한 이름은 점수가 낮게 나오나요?",
     a: "아니요. 점수는 사주, 획수, 소리, 한자로만 매겨요. 얼마나 흔한지는 출생 통계로 따로 보여 드려요.",
+    noStatsA: "아니요. 점수는 사주, 획수, 소리, 한자로만 매겨요. 얼마나 흔한지는 출생 통계가 준비되면 따로 보여 드려요.",
   },
   {
     q: "작명소마다 이름이 다른 건 왜 그런가요?",
     a: "필요한 오행을 찾는 법, 발음 오행을 나누는 법이 학파마다 달라서예요. 이름핏은 쓰는 기준과 출처를 공개해요.",
   },
-  { q: "아이 정보는 안전한가요?", a: "생년월일, 태어난 시각, 출생지는 공유 카드와 주소에 넣지 않아요." },
+  { q: "아이 정보는 안전한가요?", a: "공유 카드에는 생년월일과 사주가 들어가지 않아요." },
   { q: "리포트를 받은 뒤 기준이 바뀌면요?", a: "결제한 리포트는 받은 날의 내용 그대로 보관돼요." },
 ];
 
-function Faq() {
+function Faq({ hasStats }: { hasStats: boolean }) {
   return (
     <section aria-labelledby="faq-title" className="mx-auto flex max-w-[820px] flex-col gap-5 px-4 py-16 sm:px-6 sm:py-20">
       <h2 id="faq-title" className="text-[clamp(26px,3.4vw,34px)] font-extrabold tracking-tight">
@@ -797,14 +841,14 @@ function Faq() {
       {FAQS.map((f) => (
         <details key={f.q} className="rounded-[18px] border bg-card px-5 py-3">
           <summary className="flex min-h-11 cursor-pointer items-center text-[17px] font-extrabold">{f.q}</summary>
-          <p className="pb-2 pt-1 text-ink-soft">{f.a}</p>
+          <p className="pb-2 pt-1 text-ink-soft">{(!hasStats && f.noStatsA) || f.a}</p>
         </details>
       ))}
     </section>
   );
 }
 
-function FinalCall() {
+function FinalCall({ hasStats }: { hasStats: boolean }) {
   return (
     <section aria-labelledby="end-title" className="mx-auto max-w-[1120px] px-4 pb-16 sm:px-6 sm:pb-20">
       <div className="relative isolate flex flex-col items-center gap-4 overflow-hidden rounded-[36px] bg-sand-light px-6 py-16 text-center">
@@ -821,7 +865,9 @@ function FinalCall() {
         <h2 id="end-title" className="text-[clamp(26px,3.6vw,40px)] font-extrabold leading-[1.3] tracking-tight">
           우리 아이 이름, 오늘 받아 보세요
         </h2>
-        <p className="text-[17px] text-ink-soft">추천 이름 30개와 점수, 근거, 출생 통계까지 무료예요.</p>
+        <p className="text-[17px] text-ink-soft">
+          추천 이름 30개와 점수, {hasStats ? "근거, 출생 통계까지" : "근거까지"} 무료예요.
+        </p>
         <StartButton />
       </div>
     </section>
@@ -863,17 +909,17 @@ export function LandingPage({ stats }: { stats: LandingStats | null }) {
     <div className="overflow-x-clip break-keep">
       <main>
         <Hero stats={stats} />
-        <Promises />
-        <Why />
+        <Promises hasStats={hasStats} />
+        <Why hasStats={hasStats} />
         <Stats stats={stats} />
         <Free hasStats={hasStats} />
         <Options hasStats={hasStats} />
         <Sources hasStats={hasStats} />
-        <Steps />
-        <SelfNaming />
+        <Steps hasStats={hasStats} />
+        <SelfNaming hasStats={hasStats} />
         <NameCards />
-        <Faq />
-        <FinalCall />
+        <Faq hasStats={hasStats} />
+        <FinalCall hasStats={hasStats} />
       </main>
       <LandingFooter />
     </div>
