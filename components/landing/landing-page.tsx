@@ -566,7 +566,7 @@ function Options({ hasStats }: { hasStats: boolean }) {
 
 const SCORE_PARTS = [
   { label: "사주 보완", value: SCORE_WEIGHTS.saju, text: "사주에 부족한 기운을 이름이 채우는지", bar: "bg-score-1 text-white" },
-  { label: "수리", value: SCORE_WEIGHTS.suri, text: "획수로 보는 81수 4격", bar: "bg-score-2 text-white" },
+  { label: "수리", value: SCORE_WEIGHTS.suri, text: "획수로 보는 81수 4격 · 작명에서 전통적으로 쓰는 방식", bar: "bg-score-2 text-white" },
   { label: "발음 오행", value: SCORE_WEIGHTS.pronunciation, text: "이름 소리의 오행 흐름", bar: "bg-score-3 text-ink" },
   { label: "자원 오행", value: SCORE_WEIGHTS.resource, text: "한자 부수에 담긴 오행", bar: "bg-score-4 text-ink" },
 ];
@@ -661,20 +661,35 @@ function Sources({ hasStats }: { hasStats: boolean }) {
               text={hasStats ? "이름이 얼마나 흔한지 · 기준일 표시" : "이름이 얼마나 흔한지"}
             />
           </div>
-          <p className="mt-2 font-bold">입장이 다른 연구도 함께 살폈어요</p>
+          <p className="mt-2 font-bold">참고한 연구</p>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-3">
             <SourceCard
               paper
-              kicker="참고 논문 · 한국산학기술학회논문지(2019)"
-              title="훈민정음 한글발음의 성명학 적용 논점 고찰"
-              text="발음 오행을 지나치게 엄격하게 쓰지 않도록, 상극 감점을 줄이는 데 참고했어요"
+              kicker="이재승·김만태(2018) · 문화와융합 40(3)"
+              title="한국 성씨한자의 자원오행에 대한 고찰"
+              text="성씨 한자의 자원오행 판단과, 오행이 분명하지 않은 성씨를 따로 다루는 기준"
             />
             <SourceCard
               paper
+              kicker="이재승(2019) · 동방문화와 사상 6"
+              title="사주명조의 계량화를 통한 성명학적 용신법 고찰"
+              text="사주를 수치로 계산해 필요한 오행을 찾고 이름에 담는 방식"
+            />
+            <SourceCard
+              paper
+              kicker="김기승·이종훈(2019) · 한국산학기술학회논문지 20(2)"
+              title="훈민정음 한글발음의 성명학 적용 논점 고찰"
+              text="발음 오행을 지나치게 엄격하게 쓰지 않도록 상극 감점을 줄이는 데 참고"
+            />
+          </div>
+          <p className="mt-2 font-bold">입장이 다른 연구도 살폈어요</p>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-3">
+            <SourceCard
+              paper
               otherView
-              kicker="참고 논문 · 한국융합인문학(2018)"
+              kicker="이재승·김만태(2018) · 한국융합인문학 6(3)"
               title="한글 순음·후음의 오행배속에 대한 성명학적 고찰"
-              text="ㅇ·ㅎ을 水로 보는 입장이에요. 이름핏은 ㅇ·ㅎ을 土로 보는 방식을 따라요"
+              text="ㅇ·ㅎ을 水로 보는 해례본 방식을 지지해요. 이름핏은 작명에서 널리 쓰는, ㅇ·ㅎ을 土로 보는 방식을 따라요."
             />
           </div>
           <p className="text-sm text-ink-faint">점수 배점과 등급 기준은 위 자료와 연구를 참고해 이름핏이 정했어요.</p>

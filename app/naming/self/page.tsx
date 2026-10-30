@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { NamingForm } from "@/components/naming-form";
+import { AddressNote } from "@/components/naming/address-note";
 import { NamingModeTabs } from "@/components/naming/naming-mode-tabs";
 import { SajuCard } from "@/components/naming/saju-card";
 import { SurnameDefaultNote } from "@/components/naming/surname-default-note";
@@ -15,11 +16,13 @@ import { cleanSelfHanja } from "@/lib/naming/self-href";
 import { packSelfTable } from "@/lib/naming/self-pack";
 import type { SelfPicks, SelfTable } from "@/lib/naming/self-rank";
 import { suriWebName } from "@/lib/naming/suri81";
+import { openSearch, redirectIfPlain, SEALED_PARAM, sealQuery } from "@/lib/naming/url-seal";
 import { createClient } from "@/lib/supabase/server";
 
-// 조건이 들어간 고르기 화면은 주소에 생년월일·시각·출생지가 있어 검색에 나오지 않게 한다 (입력 화면은 그대로)
+// 조건이 들어간 고르기 화면은 생년월일·시각·출생지가 보이므로 검색에 나오지 않게 한다 (입력 화면은 그대로)
 export function generateMetadata({ searchParams }: { searchParams: Search }) {
-  return { title: "직접 짓기 | 이름핏", ...(one(searchParams.date) ? { robots: { index: false, follow: false } } : {}) };
+  const hasConditions = one(searchParams.date) || one(searchParams[SEALED_PARAM]);
+  return { title: "직접 짓기 | 이름핏", ...(hasConditions ? { robots: { index: false, follow: false } } : {}) };
 }
 export const dynamic = "force-dynamic";
 
@@ -77,15 +80,17 @@ function suriNamesOf(t: SelfTable): Record<number, string> {
 }
 
 export default async function SelfNamingPage({ searchParams }: { searchParams: Search }) {
+  redirectIfPlain("/naming/self", searchParams);
+  const search = openSearch(searchParams);
   // 첫 화면 입력 칸에서 넘어온 성(hs)·이름(hg)은 입력 화면에 미리 채우기만 한다
-  if (!one(searchParams.surname)) {
+  if (!one(search.surname)) {
     const hangulOrEmpty = (v: string) => (/^[가-힣]{1,2}$/.test(v) ? v : "");
     return (
       <SelfInput initialSurname={hangulOrEmpty(one(searchParams.hs))} initialGiven={hangulOrEmpty(one(searchParams.hg))} />
     );
   }
 
-  const parsed = parseNamingParams(searchParams);
+  const parsed = parseNamingParams(search);
   if (!parsed.ok) return <SelfError message={parsed.error} />;
   const p = parsed.value;
   const given = one(searchParams.given).trim();
@@ -103,14 +108,14 @@ export default async function SelfNamingPage({ searchParams }: { searchParams: S
   const t = result.table;
   // 추천받기로 옮겨 갈 때: 같은 사주·성, 정한 이름과 같은 글자 수
   const base = new URLSearchParams(toNamingQuery({ ...p, dolrimja: null, length: given.length === 1 ? "1" : "2" }));
-  const recommendHref = `/naming/result?${base}`;
+  const recommendHref = `/naming/result?${sealQuery(base.toString())}`;
   const dolrimjaHref =
     given.length === 2
       ? `/naming/result?${(() => {
           const q = new URLSearchParams(base);
           q.set("dol", given[0]);
           q.set("dolpos", "1");
-          return q;
+          return sealQuery(q.toString());
         })()}`
       : null;
 
@@ -136,6 +141,8 @@ export default async function SelfNamingPage({ searchParams }: { searchParams: S
           <Link href="/naming/self">다시 입력</Link>
         </Button>
       </header>
+
+      <AddressNote />
 
       <SurnameDefaultNote p={p} />
 
@@ -183,7 +190,7 @@ export default async function SelfNamingPage({ searchParams }: { searchParams: S
           suriNames={suriNamesOf(t)}
           recommendHref={recommendHref}
           dolrimjaHref={dolrimjaHref}
-          selfQuery={selfQueryOf(p)}
+          selfQuery={sealQuery(selfQueryOf(p))}
         />
       </section>
     </main>

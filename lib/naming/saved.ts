@@ -10,6 +10,7 @@ import type { Element, Grade, NamingAnalysis } from "@/lib/naming/types";
 import type { analyzeSaju } from "@/lib/saju";
 import { DEFAULT_BIRTHPLACE_ID } from "@/lib/saju/birthplaces";
 import { selfPickHref, SELF_SOURCE_PARAM, SELF_SOURCE_VALUE } from "./self-href";
+import { sealQuery } from "./url-seal";
 
 /**
  * 마이페이지에 저장한 작명(user_naming_history) 읽기.
@@ -240,15 +241,15 @@ export function savedResultHref(
   if (!s.qs) return null;
   if (s.source === "self" && s.selfGiven) {
     const hj = [...s.givenHanja].slice([...(s.parentSurname?.hanja ?? "")].length).join("");
-    return selfPickHref(s.qs, s.selfGiven, hj);
+    return selfPickHref(sealQuery(s.qs), s.selfGiven, hj);
   }
-  return `/naming/result?${s.qs}${s.kind === "native" ? "&tab=native" : ""}`;
+  return `/naming/result?${sealQuery(s.qs)}${s.kind === "native" ? "&tab=native" : ""}`;
 }
 
 /** 저장한 이름의 리포트·굿즈 주소 (직접 짓기로 저장했으면 주문할 때 셀프 작명 조합으로 확인하도록 from=self) */
 export const savedGoodsHref = (s: Pick<SavedNaming, "qs" | "id" | "given" | "givenHanja" | "source">) =>
   s.qs
-    ? `/goods?${s.qs}&gh=${encodeURIComponent(s.givenHanja)}&ge=${encodeURIComponent(s.given)}&hid=${s.id}` +
+    ? `/goods?${sealQuery(s.qs)}&gh=${encodeURIComponent(s.givenHanja)}&ge=${encodeURIComponent(s.given)}&hid=${s.id}` +
       (s.source === "self" ? `&${SELF_SOURCE_PARAM}=${SELF_SOURCE_VALUE}` : "")
     : null;
 

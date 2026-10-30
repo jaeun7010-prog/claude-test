@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { DataSourceNote } from "@/components/data-source-note";
+import { AddressNote } from "@/components/naming/address-note";
 import type { ResultItem } from "@/components/naming/result-list";
 import { NamingTabs } from "@/components/naming/naming-tabs";
 import { NativeCardBody } from "@/components/naming/native-card";
@@ -29,9 +30,10 @@ import { GRADE_MIN, SCORE_WEIGHTS } from "@/lib/naming/score";
 import { DISPLAY_LIMIT, runNaming } from "@/lib/naming/service";
 import { getLatestSnapshot } from "@/lib/name-stats/snapshot";
 import { loadSavedLookup, NO_SAVED } from "@/lib/naming/saved";
+import { openSearch, redirectIfPlain, sealQuery } from "@/lib/naming/url-seal";
 import { createClient } from "@/lib/supabase/server";
 
-// 주소에 생년월일·시각·출생지가 들어 있어 검색에 나오지 않게 한다
+// 화면에 생년월일·시각·출생지가 보이므로 검색에 나오지 않게 한다
 export const metadata = { title: "추천 결과 | 이름핏", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
@@ -40,7 +42,8 @@ export default async function ResultPage({
 }: {
   searchParams: Record<string, string | string[] | undefined>;
 }) {
-  const parsed = parseNamingParams(searchParams);
+  redirectIfPlain("/naming/result", searchParams);
+  const parsed = parseNamingParams(openSearch(searchParams));
   if (!parsed.ok) {
     return (
       <main className="mx-auto max-w-2xl space-y-4 px-6 py-12">
@@ -92,7 +95,7 @@ export default async function ResultPage({
       ? {
           given: selfGiven,
           href: selfPickHref(
-            selfQueryOf(p),
+            sealQuery(selfQueryOf(p)),
             selfGiven,
             cleanSelfHanja(one(searchParams[FROM_SELF_HANJA]), [...selfGiven].length)
           ),
@@ -229,6 +232,8 @@ export default async function ResultPage({
           <Link href="/naming">다시 입력</Link>
         </Button>
       </header>
+
+      <AddressNote />
 
       <SurnameDefaultNote p={p} />
 

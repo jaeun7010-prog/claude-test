@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataSourceNote } from "@/components/data-source-note";
+import { AddressNote } from "@/components/naming/address-note";
 import { CombinationNote } from "@/components/naming/combination-note";
 import { NameCardBody } from "@/components/naming/hanja-name-card";
 import { SajuCard } from "@/components/naming/saju-card";
@@ -18,9 +19,10 @@ import { loadSelfChoice, selfQueryOf } from "@/lib/naming/self";
 import { selfPickHref, selfResultHref, SELF_SOURCE_PARAM, SELF_SOURCE_VALUE } from "@/lib/naming/self-href";
 import { loadNameSummaries } from "@/lib/stats/name-stats";
 import { loadSavedLookup, NO_SAVED } from "@/lib/naming/saved";
+import { openSearch, redirectIfPlain, sealQuery } from "@/lib/naming/url-seal";
 import { createClient } from "@/lib/supabase/server";
 
-// 주소에 생년월일·시각·출생지가 들어 있어 검색에 나오지 않게 한다
+// 화면에 생년월일·시각·출생지가 보이므로 검색에 나오지 않게 한다
 export const metadata = { title: "직접 지은 이름 | 이름핏", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
@@ -45,12 +47,13 @@ function Problem({ message, href }: { message: string; href: string }) {
  * 주소의 조합은 셀프 작명 후보인지 서버에서 다시 확인한다 (loadSelfChoice → isSelfSelectable).
  */
 export default async function SelfResultPage({ searchParams }: { searchParams: Search }) {
-  const parsed = parseNamingParams(searchParams);
+  redirectIfPlain("/naming/self/result", searchParams);
+  const parsed = parseNamingParams(openSearch(searchParams));
   if (!parsed.ok) return <Problem message={parsed.error} href="/naming/self" />;
   const p = parsed.value;
   const given = one(searchParams.given).trim();
   const hj = one(searchParams.hj).trim();
-  const selfQ = selfQueryOf(p);
+  const selfQ = sealQuery(selfQueryOf(p));
   const pickHref = selfPickHref(selfQ, given, hj);
 
   const supabase = createClient();
@@ -101,6 +104,8 @@ export default async function SelfResultPage({ searchParams }: { searchParams: S
           · {p.birthplace.label} 출생 · 월주 기준 절기 {chosen.saju.pillars.meta.monthTerm.ko}
         </p>
       </header>
+
+      <AddressNote />
 
       {searchParams.saveError && (
         <p role="alert" className="text-sm text-destructive">

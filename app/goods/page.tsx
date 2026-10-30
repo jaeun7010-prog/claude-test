@@ -10,9 +10,10 @@ import { namingChildKey, parseNamingParams } from "@/lib/naming/params";
 import { analyzeChosen } from "@/lib/naming/service";
 import { loadSelfChoice, selfQueryOf } from "@/lib/naming/self";
 import { selfResultHref, SELF_SOURCE_PARAM, SELF_SOURCE_VALUE } from "@/lib/naming/self-href";
+import { openQuery, openSearch, redirectIfPlain, sealQuery } from "@/lib/naming/url-seal";
 import { createClient } from "@/lib/supabase/server";
 
-// 주소에 생년월일·시각·출생지가 들어 있어 검색에 나오지 않게 한다
+// 사주를 보여 주는 화면이라 검색에 나오지 않게 한다
 export const metadata = { title: "리포트 · 맞춤 굿즈 | 이름핏", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,8 @@ export default async function GoodsPage({
 }: {
   searchParams: Record<string, string | string[] | undefined>;
 }) {
-  const parsed = parseNamingParams(searchParams);
+  redirectIfPlain("/goods", searchParams);
+  const parsed = parseNamingParams(openSearch(searchParams));
   const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
   const gh = first(searchParams.gh);
   const ge = first(searchParams.ge);
@@ -57,7 +59,7 @@ export default async function GoodsPage({
     const selfHanja = [...gh].slice(n).join("");
     const self = await loadSelfChoice(supabase, parsed.value, selfGiven, selfHanja);
     if (!self.ok) return <Problem message={self.error} />;
-    selfBack = selfResultHref(selfQueryOf(parsed.value), selfGiven, selfHanja);
+    selfBack = selfResultHref(sealQuery(selfQueryOf(parsed.value)), selfGiven, selfHanja);
   }
 
   const {
@@ -84,7 +86,7 @@ export default async function GoodsPage({
   const loginHref = `/login?next=${encodeURIComponent(here)}`;
   // 이 이름의 리포트를 이미 샀으면 결제 대신 리포트 보기 (같은 리포트를 두 번 사지 않게)
   const reportOrderId = user
-    ? (await loadEntitlement(supabase, true, namingChildKey(qs), hid)).reportOrderId(gh, ge)
+    ? (await loadEntitlement(supabase, true, namingChildKey(openQuery(qs)), hid)).reportOrderId(gh, ge)
     : null;
   const fullName = `${p.surname}${ge}`;
 

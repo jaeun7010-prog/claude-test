@@ -17,6 +17,7 @@ import { findReportOrder, loadPaidReports } from "@/lib/commerce/entitlement";
 import { CATEGORY_LABEL } from "@/lib/naming/native/score";
 import { nativeRegistrationText, registrationText } from "@/lib/naming/registration";
 import { namingChildKey } from "@/lib/naming/params";
+import { sealQuery } from "@/lib/naming/url-seal";
 import { readSaved, SAVED_COLUMNS, type SavedRow } from "@/lib/naming/saved";
 import { createClient } from "@/lib/supabase/server";
 
@@ -64,7 +65,7 @@ function orderItemOf(o: OrderRow): OrderListItem {
     trackingNumber: o.tracking_number,
     reorderHref:
       qs && n
-        ? `/goods?${qs}&gh=${encodeURIComponent(str(n.givenHanja))}&ge=${encodeURIComponent(str(n.given))}` +
+        ? `/goods?${sealQuery(qs)}&gh=${encodeURIComponent(str(n.givenHanja))}&ge=${encodeURIComponent(str(n.given))}` +
           (o.history_id ? `&hid=${o.history_id}` : "")
         : null,
   };

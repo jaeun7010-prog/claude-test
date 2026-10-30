@@ -10,10 +10,30 @@ import { parseNamingParams, type NamingParams } from "@/lib/naming/params";
 import { analyzeChosen } from "@/lib/naming/service";
 import { loadSelfChoice, selfQueryOf } from "@/lib/naming/self";
 import { selfPickHref, selfResultHref } from "@/lib/naming/self-href";
+import { openSearch, sealQuery } from "@/lib/naming/url-seal";
 import { buildReportSnapshot } from "@/lib/commerce/report-snapshot";
 import { findSavedDuplicate, sajuSummaryOf, savedQueryOf, type SavedNameKind, type SavedNative } from "@/lib/naming/saved";
 import { createClient } from "@/lib/supabase/server";
 import { SAVED_HANJA_PARAM, SAVED_NATIVE_PARAM, savedBackHref } from "@/components/naming/saved-status";
+
+/** 입력 폼 값 → 쿼리스트링 (폼을 주소로 보내지 않아 생년월일이 평문 주소에 한 번도 실리지 않는다) */
+function formQuery(formData: FormData): string {
+  const q = new URLSearchParams();
+  formData.forEach((v, k) => {
+    if (typeof v === "string" && v && !k.startsWith("$ACTION")) q.append(k, v);
+  });
+  return q.toString();
+}
+
+/** 추천받기 입력 → 결과 화면 */
+export async function openNamingResult(formData: FormData) {
+  redirect(`/naming/result?${sealQuery(formQuery(formData))}`);
+}
+
+/** 직접 짓기 입력 → 한자 고르기 화면 */
+export async function openSelfPicker(formData: FormData) {
+  redirect(`/naming/self?${sealQuery(formQuery(formData))}`);
+}
 
 /** 출생 시각이 있으면 출생지 시간대 기준 UTC 시각 */
 function birthDatetimeOf(p: NamingParams): string | null {
@@ -87,7 +107,7 @@ export async function saveName(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(`/naming/result?${qs}`)}`);
 
-  const parsed = parseNamingParams(Object.fromEntries(new URLSearchParams(qs)));
+  const parsed = parseNamingParams(openSearch(Object.fromEntries(new URLSearchParams(qs))));
   if (!parsed.ok) redirect("/naming");
   const p = parsed.value;
 
@@ -118,10 +138,10 @@ export async function saveSelfName(formData: FormData) {
   const given = String(formData.get("given") ?? "");
   const hj = String(formData.get("hj") ?? "");
 
-  const parsed = parseNamingParams(Object.fromEntries(new URLSearchParams(qs)));
+  const parsed = parseNamingParams(openSearch(Object.fromEntries(new URLSearchParams(qs))));
   if (!parsed.ok) redirect("/naming/self");
   const p = parsed.value;
-  const selfQ = selfQueryOf(p);
+  const selfQ = sealQuery(selfQueryOf(p));
   const back = selfResultHref(selfQ, given, hj);
 
   const supabase = createClient();
@@ -166,7 +186,7 @@ export async function saveNativeName(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect(`/login?next=${encodeURIComponent(resultHref)}`);
 
-  const parsed = parseNamingParams(Object.fromEntries(new URLSearchParams(qs)));
+  const parsed = parseNamingParams(openSearch(Object.fromEntries(new URLSearchParams(qs))));
   if (!parsed.ok) redirect("/naming");
   const p = parsed.value;
 

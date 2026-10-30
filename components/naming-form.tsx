@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useFormStatus } from "react-dom";
 
+import { openNamingResult, openSelfPicker } from "@/app/naming/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -102,6 +104,16 @@ function SurnameFields({
   );
 }
 
+/** 서버 액션으로 넘어가는 동안 다시 누르지 못하게 한다 */
+function SubmitButton({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" size="lg" className="w-full" disabled={pending}>
+      {pending ? "계산하고 있어요…" : label}
+    </Button>
+  );
+}
+
 /**
  * 작명 입력 폼. `self`(직접 짓기)는 이름 조건 대신 부모가 정한 한글 이름을 받아 /naming/self로 보낸다
  */
@@ -128,7 +140,7 @@ export function NamingForm({
   );
 
   return (
-    <form action={self ? "/naming/self" : "/naming/result"} method="get" className="space-y-6">
+    <form action={self ? openSelfPicker : openNamingResult} className="space-y-6">
       <section className="space-y-3">
         <h2 className="font-serif text-lg font-bold">성씨</h2>
         <SurnameFields label="성" hangulName="surname" hanjaName="sh" placeholder="예: 김, 남궁" initial={initialSurname} />
@@ -360,9 +372,7 @@ export function NamingForm({
       </section>
       )}
 
-      <Button type="submit" size="lg" className="w-full">
-        {self ? "한자 고르기" : "이름 추천받기"}
-      </Button>
+      <SubmitButton label={self ? "한자 고르기" : "이름 추천받기"} />
     </form>
   );
 }
