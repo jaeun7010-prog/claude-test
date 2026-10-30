@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 
+import { Logo } from "@/components/brand/LogoMark";
 import { cn } from "@/lib/utils";
 
 /** 메뉴를 넣지 않는 화면 (PDF 리포트처럼 문서만 보여야 하는 곳) */
@@ -45,7 +46,7 @@ export function SiteNav({ loggedIn, isAdmin }: { loggedIn: boolean; isAdmin: boo
         aria-current={active ? "page" : undefined}
         className={cn(
           "rounded-md text-sm transition-colors",
-          mobile ? "block px-3 py-2" : "px-3 py-1.5",
+          mobile ? "flex min-h-11 items-center px-3" : "inline-flex h-11 items-center px-3",
           active ? "bg-secondary font-semibold text-foreground" : "text-muted-foreground hover:text-foreground"
         )}
       >
@@ -57,15 +58,15 @@ export function SiteNav({ loggedIn, isAdmin }: { loggedIn: boolean; isAdmin: boo
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-4xl items-center justify-between gap-4 px-4">
-        <Link href="/" className="font-serif text-xl font-bold" aria-current={pathname === "/" ? "page" : undefined}>
-          이름핏
+        <Link href="/" className="flex h-11 items-center" aria-current={pathname === "/" ? "page" : undefined}>
+          <Logo />
         </Link>
         <nav aria-label="주요 메뉴" className="hidden items-center gap-1 sm:flex">
           {items.map((it) => link(it, false))}
         </nav>
         <button
           type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-md hover:bg-secondary sm:hidden"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-secondary sm:hidden"
           aria-label={open ? "메뉴 닫기" : "메뉴 열기"}
           aria-expanded={open}
           aria-controls="mobile-menu"

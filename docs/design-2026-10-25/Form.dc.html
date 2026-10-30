@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>아이 정보 입력</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&amp;family=Noto+Serif+KR:wght@500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#2D5F8A}a:hover{color:#234C70}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FFF9F2; font-family: 'Noto Sans KR', system-ui, sans-serif; color: #1F2D3A; display: flex; flex-direction: column; word-break: keep-all">
+
+  <div style="height: 56px; padding: 0 8px; display: flex; align-items: center; justify-content: space-between">
+    <a href="Main.dc.html" aria-label="뒤로" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #1F2D3A"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <span style="font-weight: 800; font-size: 17px">이름 받기</span>
+    <span style="width: 44px"></span>
+  </div>
+
+  <div style="padding: 4px 20px 0; display: flex; flex-direction: column; gap: 8px">
+    <div role="img" aria-label="3단계 중 2단계" style="display: flex; gap: 6px">
+      <span style="flex: 1; height: 6px; border-radius: 999px; background: #2D5F8A; display: block"></span>
+      <span style="flex: 1; height: 6px; border-radius: 999px; background: #8CC3E6; display: block"></span>
+      <span style="flex: 1; height: 6px; border-radius: 999px; background: #EADFD3; display: block"></span>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 13px; color: #5B6672">
+      <span style="color: #2D5F8A; font-weight: 700">성씨·성별 완료</span>
+      <span style="font-weight: 700; color: #1F2D3A">태어난 날</span>
+      <span>확인</span>
+    </div>
+  </div>
+
+  <div style="flex: 1; overflow: hidden; padding: 20px 20px 0; display: flex; flex-direction: column; gap: 22px">
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; border: 1px solid #F0E4D8">
+      <span style="font-size: 15px"><b style="font-family: 'Noto Serif KR', serif">김(金)</b>씨 · 여자아이</span>
+      <a href="#" style="padding: 8px 6px; font-size: 14px; font-weight: 700">고치기</a>
+    </div>
+
+    <h1 style="margin: 0; font-size: 24px; line-height: 1.35; font-weight: 800; letter-spacing: -0.02em">아이가 태어난 날을<br>알려 주세요</h1>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label for="birth" style="font-size: 15px; font-weight: 700">생년월일</label>
+      <div style="display: flex; gap: 8px">
+        <div role="group" aria-label="달력 종류" style="display: flex; padding: 4px; border-radius: 14px; background: #F3E9DF">
+          <button type="button" onClick="{{pickSolar}}" style="height: 44px; padding: 0 14px; border: 0; border-radius: 11px; background: {{solarBg}}; color: {{solarFg}}; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer">양력</button>
+          <button type="button" onClick="{{pickLunar}}" style="height: 44px; padding: 0 14px; border: 0; border-radius: 11px; background: {{lunarBg}}; color: {{lunarFg}}; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer">음력</button>
+        </div>
+        <input id="birth" type="text" value="2026. 03. 14" readonly style="flex: 1; min-width: 0; height: 52px; box-sizing: border-box; padding: 0 14px; border-radius: 14px; border: 1px solid #E6CDB8; background: #FFFFFF; font-size: 17px; font-family: inherit; color: #1F2D3A">
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label for="time" style="font-size: 15px; font-weight: 700">태어난 시각</label>
+      <input id="time" type="text" value="{{timeText}}" readonly disabled="{{noTime}}" style="height: 52px; box-sizing: border-box; padding: 0 14px; border-radius: 14px; border: 1px solid #E6CDB8; background: {{timeBg}}; font-size: 17px; font-family: inherit; color: {{timeFg}}">
+      <label style="display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; cursor: pointer">
+        <input type="checkbox" checked="{{noTime}}" onChange="{{toggleNoTime}}" style="width: 22px; height: 22px; accent-color: #2D5F8A; margin: 0">
+        시각을 몰라요
+      </label>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label for="place" style="font-size: 15px; font-weight: 700">태어난 곳</label>
+      <input id="place" type="text" value="서울" readonly style="height: 52px; box-sizing: border-box; padding: 0 14px; border-radius: 14px; border: 1px solid #E6CDB8; background: #FFFFFF; font-size: 17px; font-family: inherit; color: #1F2D3A">
+      <p style="margin: 0; display: flex; gap: 6px; align-items: flex-start; font-size: 14px; color: #4A5663">
+        <svg style="flex: none; margin-top: 2px; color: #2D5F8A" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7.5v.5"></path></svg>
+        태어난 곳에 따라 시각을 조금 보정해요
+      </p>
+    </div>
+  </div>
+
+  <div style="padding: 14px 20px 28px; background: #FFF9F2; border-top: 1px solid #F0E4D8; display: flex; flex-direction: column; gap: 8px">
+    <a href="Loading.dc.html" style="height: 56px; border-radius: 18px; background: #2D5F8A; color: #FFFFFF; text-decoration: none; font-size: 18px; font-weight: 800; display: flex; align-items: center; justify-content: center">이름 30개 받기</a>
+    <span style="text-align: center; font-size: 13px; color: #5B6672">카드 등록 없이 무료예요</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { cal: 'solar', noTime: false };
+  }
+  renderVals() {
+    const solar = this.state.cal === 'solar';
+    const noTime = this.state.noTime;
+    return {
+      pickSolar: () => this.setState({ cal: 'solar' }),
+      pickLunar: () => this.setState({ cal: 'lunar' }),
+      solarBg: solar ? '#FFFFFF' : 'transparent',
+      solarFg: solar ? '#1F2D3A' : '#5B6672',
+      lunarBg: solar ? 'transparent' : '#FFFFFF',
+      lunarFg: solar ? '#5B6672' : '#1F2D3A',
+      noTime: noTime,
+      toggleNoTime: () => this.setState({ noTime: !this.state.noTime }),
+      timeText: noTime ? '시각 없이 계산해요' : '오전 09:20',
+      timeBg: noTime ? '#F3E9DF' : '#FFFFFF',
+      timeFg: noTime ? '#5B6672' : '#1F2D3A'
+    };
+  }
+}
+</script>
+</body>
+</html>

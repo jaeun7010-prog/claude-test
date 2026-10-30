@@ -4,7 +4,7 @@ import { BRANCHES_KO, STEMS_KO, type Pillar } from "@/lib/saju";
 
 /**
  * 프리미엄 리포트 본문. html2canvas 가 Tailwind 의 `hsl(var(--x))` 색상을 못 읽을 수 있어
- * 이 문서만 CLAUDE.md 테마 색(ivory/navy/sand)의 HEX 값을 인라인으로 쓴다.
+ * 이 문서만 HEX 값을 인라인으로 쓴다 (디자인 규칙의 새 색으로 아직 바꾸지 않은 예전 테마 색).
  */
 const C = { ivory: "#fdfbf7", navy: "#2d3a52", sand: "#f4eae1", muted: "#5d6679", line: "#c9bba8" };
 const FONT = 'var(--font-myeongjo), "Nanum Myeongjo", serif';

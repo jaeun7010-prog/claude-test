@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { Nanum_Myeongjo } from "next/font/google";
+import { Nanum_Myeongjo, Noto_Serif_KR } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site/site-header";
 
@@ -11,6 +11,15 @@ const pretendard = localFont({
   weight: "45 920",
 });
 
+// 이름과 한자
+const notoSerif = Noto_Serif_KR({
+  weight: ["500", "700"],
+  variable: "--font-noto-serif",
+  display: "swap",
+  preload: false,
+});
+
+// PDF 리포트 전용. 글꼴이 바뀌면 쪽 넘침을 다시 확인해야 한다
 const myeongjo = Nanum_Myeongjo({
   weight: ["400", "700", "800"],
   variable: "--font-myeongjo",
@@ -31,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className={`${pretendard.variable} ${myeongjo.variable}`}>
+    <html lang="ko" className={`${pretendard.variable} ${notoSerif.variable} ${myeongjo.variable}`}>
       <body>
         <SiteHeader />
         {children}

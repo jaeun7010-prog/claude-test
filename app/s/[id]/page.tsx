@@ -72,7 +72,7 @@ function BlessingPicker({ share }: { share: NameShare }) {
               value={i}
               disabled={active}
               className={`rounded-lg border px-3 py-2 text-left text-sm break-keep ${
-                active ? "border-navy bg-sand font-semibold" : "hover:bg-sand/60"
+                active ? "border-primary bg-secondary font-semibold" : "hover:bg-secondary/60"
               }`}
             >
               {active ? "✓ " : ""}

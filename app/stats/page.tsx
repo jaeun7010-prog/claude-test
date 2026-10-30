@@ -72,7 +72,7 @@ export default async function StatsPage({
       {stat && (
         <Card>
           <CardHeader>
-            <CardTitle>{stat.name}</CardTitle>
+            <CardTitle className="font-serif font-bold">{stat.name}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <NameStatsBasic stat={stat} asOfDate={snapshot?.asOfDate ?? null} />

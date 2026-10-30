@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>추천 이름 결과</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&amp;family=Noto+Serif+KR:wght@500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#2D5F8A}a:hover{color:#234C70}
+</style>
+</helmet>
+<div style="width: 390px; min-height: 1600px; box-sizing: border-box; background: #FFF9F2; font-family: 'Noto Sans KR', system-ui, sans-serif; color: #1F2D3A; display: flex; flex-direction: column; word-break: keep-all">
+
+  <div style="height: 56px; padding: 0 8px; display: flex; align-items: center; justify-content: space-between">
+    <a href="Form.dc.html" aria-label="뒤로" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #1F2D3A"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <span style="font-weight: 800; font-size: 17px">추천 이름</span>
+    <a href="#" style="height: 44px; padding: 0 10px; display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 700; color: #1F2D3A; text-decoration: none">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-9.6A4 4 0 0 1 12 8a4 4 0 0 1 7 2.4C19 15.6 12 20 12 20z"></path></svg>저장 {{savedCount}}
+    </a>
+  </div>
+
+  <div style="padding: 4px 16px 0; display: flex; flex-direction: column; gap: 16px">
+    <section aria-labelledby="need" style="padding: 20px; border-radius: 24px; background: #FFFFFF; border: 1px solid #F0E4D8; display: flex; flex-direction: column; gap: 14px">
+      <div style="font-size: 13px; color: #5B6672">김(金)씨 여자아이 · 2026. 03. 14 오전 9:20 · 서울</div>
+      <h1 id="need" style="margin: 0; font-size: 22px; line-height: 1.4; font-weight: 800; letter-spacing: -0.02em">이 아이에게는<br><span style="color: #2D5F8A">물(水)</span>과 <span style="color: #2F6B2C">나무(木)</span>가 필요해요</h1>
+      <div role="img" aria-label="사주 여덟 글자의 오행: 목 1, 화 3, 토 2, 금 2, 수 0" style="display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; align-items: center; gap: 10px; font-size: 14px">
+          <span style="width: 44px; font-weight: 700; color: #2F6B2C"><span style="font-family: 'Noto Serif KR', serif">木</span> 목</span>
+          <span style="flex: 1; height: 12px; border-radius: 999px; background: #F3ECE4; display: block"><span style="display: block; width: 25%; height: 12px; border-radius: 999px; background: #6FAE6A"></span></span>
+          <span style="width: 64px; text-align: right; font-weight: 700">1 <span style="color: #2F6B2C">부족</span></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; font-size: 14px">
+          <span style="width: 44px; font-weight: 700; color: #A8452A"><span style="font-family: 'Noto Serif KR', serif">火</span> 화</span>
+          <span style="flex: 1; height: 12px; border-radius: 999px; background: #F3ECE4; display: block"><span style="display: block; width: 75%; height: 12px; border-radius: 999px; background: #EE8A6E"></span></span>
+          <span style="width: 64px; text-align: right; font-weight: 700">3 많음</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; font-size: 14px">
+          <span style="width: 44px; font-weight: 700; color: #8A6510"><span style="font-family: 'Noto Serif KR', serif">土</span> 토</span>
+          <span style="flex: 1; height: 12px; border-radius: 999px; background: #F3ECE4; display: block"><span style="display: block; width: 50%; height: 12px; border-radius: 999px; background: #EDC14F"></span></span>
+          <span style="width: 64px; text-align: right; font-weight: 700">2</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; font-size: 14px">
+          <span style="width: 44px; font-weight: 700; color: #4E5660"><span style="font-family: 'Noto Serif KR', serif">金</span> 금</span>
+          <span style="flex: 1; height: 12px; border-radius: 999px; background: #F3ECE4; display: block"><span style="display: block; width: 50%; height: 12px; border-radius: 999px; background: #A3AAB3"></span></span>
+          <span style="width: 64px; text-align: right; font-weight: 700">2</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; font-size: 14px">
+          <span style="width: 44px; font-weight: 700; color: #2D5F8A"><span style="font-family: 'Noto Serif KR', serif">水</span> 수</span>
+          <span style="flex: 1; height: 12px; border-radius: 999px; background: #F3ECE4; display: block"><span style="display: block; width: 3%; height: 12px; border-radius: 999px; background: #4F8FC0"></span></span>
+          <span style="width: 64px; text-align: right; font-weight: 700">0 <span style="color: #2D5F8A">없음</span></span>
+        </div>
+      </div>
+      <a href="Report.dc.html" style="align-self: flex-start; padding: 6px 0; font-size: 14px; font-weight: 700">왜 물과 나무인가요?</a>
+    </section>
+
+    <div role="group" aria-label="이름 조건" style="display: flex; gap: 8px; flex-wrap: wrap">
+      <sc-for list="{{chips}}" as="chip" hint-placeholder-count="3">
+        <button type="button" aria-pressed="{{chip.pressed}}" onClick="{{chip.pick}}" style="height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid {{chip.border}}; background: {{chip.bg}}; color: {{chip.fg}}; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer">{{chip.label}}</button>
+      </sc-for>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #5B6672">
+      <span>{{countText}}</span>
+      <span style="font-weight: 700; color: #1F2D3A">추천순</span>
+    </div>
+
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px">
+      <sc-for list="{{names}}" as="n" hint-placeholder-count="4">
+        <li style="padding: 18px; border-radius: 22px; background: #FFFFFF; border: {{n.border}}; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; gap: 14px; align-items: flex-start">
+            <span style="width: 20px; padding-top: 6px; font-size: 14px; font-weight: 800; color: #5B6672">{{n.rank}}</span>
+            <div style="flex: 1; min-width: 0">
+              <sc-if value="{{n.hasGrade}}" hint-placeholder-val="{{ true }}">
+                <div style="display: flex; gap: 4px; align-items: flex-start; font-family: 'Noto Serif KR', serif">
+                  <sc-for list="{{n.chars}}" as="c" hint-placeholder-count="3">
+                    <span style="display: flex; flex-direction: column; align-items: center"><span style="font-size: 28px; font-weight: 700; line-height: 1.2">{{c.k}}</span><span style="font-size: 15px; color: #4A5663; line-height: 1.4">{{c.h}}</span></span>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{n.isNative}}" hint-placeholder-val="{{ false }}">
+                <div style="font-family: 'Noto Serif KR', serif; font-size: 28px; font-weight: 700; line-height: 1.2">{{n.name}}</div>
+              </sc-if>
+              <div style="margin-top: 6px; font-size: 14px; color: #3D4A57">{{n.meaning}}</div>
+            </div>
+            <sc-if value="{{n.hasGrade}}" hint-placeholder-val="{{ true }}">
+              <span style="flex: none; width: 54px; height: 54px; border-radius: 17px; background: {{n.badgeBg}}; color: {{n.badgeFg}}; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1"><b style="font-size: 19px">{{n.grade}}</b><span style="font-size: 12px; font-weight: 700">{{n.score}}점</span></span>
+            </sc-if>
+            <sc-if value="{{n.isNative}}" hint-placeholder-val="{{ false }}">
+              <span style="flex: none; padding: 6px 10px; border-radius: 999px; background: #FDE6DD; color: #B4502F; font-size: 13px; font-weight: 800">순우리말</span>
+            </sc-if>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-left: 34px">
+            <span style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px">
+              <span style="padding: 4px 10px; border-radius: 999px; background: #F3ECE4; color: #3D4A57; font-weight: 600">{{n.common}}</span>
+              <span style="padding: 4px 10px; border-radius: 999px; background: #F3ECE4; color: #3D4A57; font-weight: 600">{{n.detail}}</span>
+            </span>
+            <button type="button" aria-label="이 이름 저장" style="flex: none; width: 44px; height: 44px; border: 0; border-radius: 14px; background: #FFF4EA; color: #B4502F; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-9.6A4 4 0 0 1 12 8a4 4 0 0 1 7 2.4C19 15.6 12 20 12 20z"></path></svg></button>
+          </div>
+          <sc-if value="{{n.isFirst}}" hint-placeholder-val="{{ false }}">
+            <a href="Report.dc.html" style="margin-left: 34px; height: 46px; border-radius: 14px; border: 1.5px solid #2D5F8A; color: #2D5F8A; text-decoration: none; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center">점수 근거 보기</a>
+          </sc-if>
+        </li>
+      </sc-for>
+    </ul>
+
+    <button type="button" style="height: 52px; border-radius: 16px; border: 1px solid #E6D6C6; background: #FFFFFF; color: #1F2D3A; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer">이름 더 보기</button>
+    <a href="#" style="align-self: center; padding: 10px; font-size: 15px; font-weight: 700">같은 조건으로 다른 이름 보기</a>
+
+    <div style="margin-bottom: 32px; padding: 20px; border-radius: 22px; background: #FDE6D3; display: flex; flex-direction: column; gap: 10px">
+      <div style="font-size: 17px; font-weight: 800">마음에 드는 이름을 골랐나요?</div>
+      <div style="font-size: 14px; color: #3D4A57">상세 리포트에는 81수 풀이와 한자 하나하나의 뜻이 모두 들어 있어요.</div>
+      <a href="Report.dc.html" style="align-self: flex-start; padding: 8px 0; font-size: 15px; font-weight: 800; color: #8A4A26">리포트 미리 보기</a>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1600}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { filter: 'all' };
+  }
+  renderVals() {
+    const all = [
+      { name: '김서윤', hanja: '金 瑞 潤', meaning: '상서롭고 윤택하게', grade: 'S', score: 94, kind: 'hanja', rare: false, common: '많이 쓰는 이름', detail: '사주 34 · 수리 29' },
+      { name: '김하린', hanja: '金 河 潾', meaning: '맑은 물처럼 깨끗하게', grade: 'S', score: 92, kind: 'hanja', rare: false, common: '많이 쓰는 이름', detail: '사주 35 · 수리 27' },
+      { name: '김서담', hanja: '金 瑞 潭', meaning: '상서로운 깊은 못', grade: 'A', score: 89, kind: 'hanja', rare: true, common: '드문 이름', detail: '사주 33 · 수리 26' },
+      { name: '김지안', hanja: '金 智 安', meaning: '지혜롭고 편안하게', grade: 'A', score: 87, kind: 'hanja', rare: false, common: '꽤 쓰는 이름', detail: '사주 30 · 수리 28' },
+      { name: '김윤슬', hanja: '순우리말', meaning: '햇빛이나 달빛에 비치어 반짝이는 잔물결', grade: '', score: 0, kind: 'native', rare: true, common: '드문 이름', detail: '사전에 실린 말' }
+    ];
+    const f = this.state.filter;
+    const list = all.filter((x) => f === 'all' || (f === 'rare' && x.rare) || (f === 'native' && x.kind === 'native'));
+    const badge = { S: ['#2D5F8A', '#FFFFFF'], A: ['#E6F2FA', '#234C70'], B: ['#FDE6D3', '#8A4A26'] };
+    const names = list.map((x, i) => ({
+      ...x,
+      chars: x.kind === 'hanja' ? x.name.split('').map((k, j) => ({ k: k, h: x.hanja.replace(/ /g, '').charAt(j) })) : [],
+      rank: i + 1,
+      hasGrade: x.kind === 'hanja',
+      isNative: x.kind === 'native',
+      isFirst: i === 0 && f === 'all',
+      badgeBg: x.grade ? badge[x.grade][0] : '#FFFFFF',
+      badgeFg: x.grade ? badge[x.grade][1] : '#1F2D3A',
+      border: i === 0 && f === 'all' ? '2px solid #2D5F8A' : '1px solid #F0E4D8'
+    }));
+    const defs = [
+      { id: 'all', label: '전체 30' },
+      { id: 'rare', label: '드문 이름' },
+      { id: 'native', label: '순우리말' }
+    ];
+    const chips = defs.map((d) => {
+      const on = d.id === f;
+      return {
+        label: d.label,
+        pressed: on ? 'true' : 'false',
+        bg: on ? '#1F2D3A' : '#FFFFFF',
+        fg: on ? '#FFFFFF' : '#1F2D3A',
+        border: on ? '#1F2D3A' : '#E6D6C6',
+        pick: () => this.setState({ filter: d.id })
+      };
+    });
+    return {
+      names: names,
+      chips: chips,
+      savedCount: 2,
+      countText: f === 'all' ? '30개 중 5개 표시' : (names.length + '개')
+    };
+  }
+}
+</script>
+</body>
+</html>

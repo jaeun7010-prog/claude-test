@@ -44,7 +44,7 @@ function Badge({ badge }: { badge: SelfBadge }) {
   if (!badge) return null;
   return (
     <span
-      className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${
+      className={`rounded px-1.5 py-0.5 text-xs font-semibold ${
         badge === "최고" ? "bg-primary text-primary-foreground" : "border border-primary text-primary"
       }`}
     >
@@ -200,7 +200,7 @@ export function SelfPicker({
         {picked && resultHref ? (
           <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3">
             <GradeBadge grade={picked.grade} score={picked.totalScore} size="sm" />
-            <Button asChild size="sm" className="h-8 px-3">
+            <Button asChild size="sm">
               <Link href={resultHref}>결과 보기</Link>
             </Button>
           </div>
@@ -346,7 +346,7 @@ export function SelfPicker({
                             "같은 한자"
                           )}
                           <Badge badge={r.badge} />
-                          {weakLabel && <span className="rounded bg-secondary px-1 text-[11px]">{weakLabel}</span>}
+                          {weakLabel && <span className="rounded bg-secondary px-1 text-xs">{weakLabel}</span>}
                         </span>
                       </span>
                     </button>

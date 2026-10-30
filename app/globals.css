@@ -4,35 +4,74 @@
 
 @layer base {
   :root {
-    /* 테마 컬러: Warm Ivory #fdfbf7 / Deep Navy #2d3a52 / Sand Beige #f4eae1 */
-    --ivory: 40 60% 98%;
-    --navy: 219 29% 25%;
-    --sand: 28 46% 92%;
+    /* 디자인 토큰 (CLAUDE.md "디자인 규칙"). 값은 시안 HEX를 HSL로 바꾼 것 */
+    --sea: 207.7 50.8% 35.9%; /* #2D5F8A 주 버튼·강조 */
+    --sea-deep: 208.1 52.4% 28.8%; /* #234C70 누른 상태 */
+    --ink: 208.9 30.3% 17.5%; /* #1F2D3A 본문 글자 */
+    --ink-soft: 211.2 14.5% 33.9%; /* #4A5663 보조 글자 */
+    --ink-faint: 211.3 11.2% 40.2%; /* #5B6672 흐린 글자 */
+    --cream: 32.3 100% 97.5%; /* #FFF9F2 페이지 바탕 */
+    --white: 0 0% 100%; /* #FFFFFF 카드 */
+    --line: 30 44.4% 89.4%; /* #F0E4D8 테두리 */
+    --input-line: 27.4 47.9% 81.2%; /* #E6CDB8 입력 칸 테두리 */
+    --sand: 24.7 85.8% 77.8%; /* #F7BE96 모래 */
+    --sand-light: 27.1 91.3% 91%; /* #FDE6D3 연모래 */
+    --sand-tint: 28.6 100% 95.9%; /* #FFF4EA 모래 액자 안쪽 */
+    --sand-text: 21.6 56.8% 34.5%; /* #8A4A26 B등급 글자 */
+    --sky: 203.3 64.3% 72.5%; /* #8CC3E6 하늘 */
+    --sky-pebble: 204.3 67% 79.8%; /* #A9D2EE 조약돌 하늘 */
+    --sky-light: 204 66.7% 94.1%; /* #E6F2FA 연하늘 */
+    --sky-tint: 204 62.5% 96.9%; /* #F2F8FC 하늘 액자 안쪽 */
+    --coral: 13.1 79% 68.2%; /* #EE8A6E 장식 */
+    --coral-text: 14.9 58.6% 44.5%; /* #B4502F "무료" 같은 강조, 한 화면에 한 번 */
 
-    --background: var(--ivory);
-    --foreground: var(--navy);
-    --card: var(--ivory);
-    --card-foreground: var(--navy);
-    --popover: var(--ivory);
-    --popover-foreground: var(--navy);
-    --primary: var(--navy);
-    --primary-foreground: var(--ivory);
-    --secondary: var(--sand);
-    --secondary-foreground: var(--navy);
-    --muted: var(--sand);
-    --muted-foreground: 219 15% 42%;
-    --accent: var(--sand);
-    --accent-foreground: var(--navy);
+    /* 오행 색: 오행을 뜻할 때만, 항상 한자와 함께 */
+    --wood-bar: 115.6 29.6% 54.9%; /* #6FAE6A */
+    --wood-bg: 106.7 40.9% 91.4%; /* #E4F2E0 */
+    --wood-text: 117.1 41.7% 29.6%; /* #2F6B2C */
+    --fire-bar: 13.1 79% 68.2%; /* #EE8A6E */
+    --fire-bg: 16.9 88.9% 92.9%; /* #FDE6DD */
+    --fire-text: 12.9 60% 41.2%; /* #A8452A */
+    --earth-bar: 43.3 81.4% 62%; /* #EDC14F */
+    --earth-bg: 44.3 87.5% 90.6%; /* #FCF1D2 */
+    --earth-text: 41.8 79.2% 30.2%; /* #8A6510 */
+    --metal-bar: 213.8 9.5% 67.1%; /* #A3AAB3 */
+    --metal-bg: 216 17.2% 94.3%; /* #EEF0F3 */
+    --metal-text: 213.3 10.3% 34.1%; /* #4E5660 */
+    --water-bar: 206 47.3% 53.1%; /* #4F8FC0 */
+    --water-bg: 206.1 62.2% 92.7%; /* #E1EEF8 */
+    --water-text: 207.7 50.8% 35.9%; /* #2D5F8A */
+
+    /* 점수 막대 (사주 보완·수리·발음 오행·자원 오행): 오행 색이 아니라 바다색 계열 */
+    --score-1: 207.7 50.8% 35.9%; /* #2D5F8A */
+    --score-2: 207.3 40.2% 50.8%; /* #4F86B4 */
+    --score-3: 203.3 64.3% 72.5%; /* #8CC3E6 */
+    --score-4: 202.7 62.7% 88.4%; /* #CFE6F4 */
+
+    --background: var(--cream);
+    --foreground: var(--ink);
+    --card: var(--white);
+    --card-foreground: var(--ink);
+    --popover: var(--white);
+    --popover-foreground: var(--ink);
+    --primary: var(--sea);
+    --primary-foreground: var(--white);
+    --secondary: var(--sand-light);
+    --secondary-foreground: var(--ink);
+    --muted: var(--sand-light);
+    --muted-foreground: var(--ink-faint);
+    --accent: var(--sand-light);
+    --accent-foreground: var(--ink);
     --destructive: 0 62% 45%;
-    --destructive-foreground: var(--ivory);
-    --border: 28 30% 84%;
-    --input: 28 30% 84%;
-    --ring: var(--navy);
+    --destructive-foreground: var(--white);
+    --border: var(--line);
+    --input: var(--input-line);
+    --ring: var(--sea);
 
     /* 차트 범주색 (validate_palette 통과: 남=blue, 여=orange) */
     --chart-male: #2a78d6;
     --chart-female: #eb6834;
-    --radius: 0.5rem;
+    --radius: 1rem;
   }
 }
 
@@ -43,7 +82,7 @@
   body {
     @apply bg-background font-sans text-foreground antialiased;
   }
-  /* 한문·제목 등 고풍스러운 영역은 font-serif(나눔명조) 사용 */
+  /* 이름과 한자는 font-serif(Noto Serif KR). 그 밖의 글자는 Pretendard */
 }
 
 .dark {

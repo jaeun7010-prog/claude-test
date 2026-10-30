@@ -4,24 +4,22 @@ import type { Grade } from "@/lib/naming/types";
 
 const GRADE_STYLE: Record<Grade, string> = {
   S: "border-primary bg-primary text-primary-foreground",
-  A: "border-primary text-primary",
-  B: "border-transparent bg-secondary text-foreground",
-  C: "border-border text-muted-foreground",
+  A: "border-sky-light bg-sky-light text-sea-deep",
+  B: "border-sand-light bg-sand-light text-sand-text",
+  C: "border-border bg-card text-muted-foreground",
 };
 
-/** 성명학 등급을 크게, 점수를 작게 */
+/** 성명학 등급과 점수를 한 칸에 함께 */
 export function GradeBadge({ grade, score, size = "lg" }: { grade: Grade; score: number; size?: "lg" | "sm" }) {
-  const box = size === "lg" ? "h-14 w-14 text-3xl" : "h-10 w-10 text-xl";
+  const box = size === "lg" ? "h-14 w-14 rounded-[18px] text-xl" : "h-12 w-12 rounded-2xl text-base";
   return (
-    <div className="flex shrink-0 flex-col items-center gap-1">
-      <span
-        className={`flex items-center justify-center rounded-full border-2 font-serif font-bold ${box} ${GRADE_STYLE[grade]}`}
-        aria-label={`성명학 ${grade}등급`}
-      >
-        {grade}
-      </span>
-      <span className="text-xs text-muted-foreground">{score.toFixed(1)}점</span>
-    </div>
+    <span
+      className={`flex shrink-0 flex-col items-center justify-center border font-bold leading-tight ${box} ${GRADE_STYLE[grade]}`}
+      aria-label={`성명학 ${grade}등급 ${score.toFixed(1)}점`}
+    >
+      {grade}
+      <span className="text-xs font-semibold leading-tight">{score.toFixed(1)}점</span>
+    </span>
   );
 }
 
@@ -29,7 +27,7 @@ export function GradeBadge({ grade, score, size = "lg" }: { grade: Grade; score:
 export function GradeChip({ grade }: { grade: Grade }) {
   return (
     <span
-      className={`inline-flex h-5 w-5 items-center justify-center rounded-full border font-serif text-xs font-bold ${GRADE_STYLE[grade]}`}
+      className={`inline-flex h-5 w-5 items-center justify-center rounded-full border text-xs font-bold ${GRADE_STYLE[grade]}`}
       aria-label={`${grade}등급`}
     >
       {grade}

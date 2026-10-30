@@ -542,19 +542,45 @@
 - 순우리말 이름 목록 넓히기 — 특히 목·금 기운이 필요한 남자아이용. 대법원 통계가 오면 실제 쓰는 순우리말 이름으로 보강 (2026-10-22 사용자 결정). 지금은 124개뿐이라 1위를 용신이 거의 정한다(무작위 40건에 서로 다른 1위 6~8개, 순우리말 6단계 검증). 이름을 더할 때는 쓰임 표(`usage.ts`)에도 넣는다.
 - 순우리말 이름 쓰임 표(`lib/naming/native/usage.ts`, 임시 판단)를 출생 건수 구간으로 바꾸기 (`NativeUsageSource`).
 
-## 테마 컬러
-`app/globals.css`의 `:root`에 HSL 토큰으로 정의되어 있고, `tailwind.config.ts`에서 `ivory`/`navy`/`sand` 및 shadcn 시맨틱 토큰으로 노출됩니다. 컬러 값을 직접 쓰지 말고 토큰을 사용하세요.
+## 디자인 규칙 (2026-10-30, 시안 `docs/design-2026-10-25/`)
+시안 `.dc.html`은 시안 도구 형식이라 붙여 쓰지 않고 색·크기·배치만 참고한다. 컬러 값을 직접 쓰지 말고 토큰을 쓴다 (`app/globals.css`의 `:root`, `tailwind.config.ts`).
 
-| 이름 | HEX | 토큰 | 용도 |
+**색 토큰**
+| 이름 | HEX | Tailwind | 용도 |
 |---|---|---|---|
-| Warm Ivory | `#fdfbf7` | `--ivory` | background, card, popover, primary-foreground |
-| Deep Navy | `#2d3a52` | `--navy` | foreground, primary, ring |
-| Sand Beige | `#f4eae1` | `--sand` | secondary, muted, accent |
+| 바다 / 진한 바다 | `#2D5F8A` / `#234C70` | `sea` / `sea-deep` | 주 버튼·강조 / 누른 상태 (`primary`, `ring`) |
+| 먹 / 보조 / 흐린 글자 | `#1F2D3A` / `#4A5663` / `#5B6672` | `ink` / `ink-soft` / `ink-faint` | 본문 (`foreground`) / 보조 / 흐림 (`muted-foreground`) |
+| 크림 / 카드 / 테두리 | `#FFF9F2` / `#FFFFFF` / `#F0E4D8` | `cream` / `card` / `line` | 바탕 (`background`) / 카드 / 테두리 (`border`) |
+| 입력 칸 테두리 | `#E6CDB8` | `input` | Form 시안 값 |
+| 모래 / 연모래 | `#F7BE96` / `#FDE6D3` | `sand` / `sand-light` | 연모래는 `secondary`·`muted`·`accent` |
+| 하늘 / 조약돌 하늘 / 연하늘 | `#8CC3E6` / `#A9D2EE` / `#E6F2FA` | `sky` / `sky-pebble` / `sky-light` | 기본 Tailwind `sky-500` 같은 단계는 쓸 수 없다 |
+| 액자 안쪽 | `#FFF4EA` / `#F2F8FC` | `sand-tint` / `sky-tint` | `NameCardFrame` |
+| 코랄 / 코랄 글자 | `#EE8A6E` / `#B4502F` | `coral` / `coral-text` | 장식 / "무료" 같은 강조, 한 화면에 한 번만 |
 
-## 폰트
-`app/layout.tsx`에서 불러와 CSS 변수로 노출합니다.
-- **Pretendard** (`--font-pretendard`, Tailwind `font-sans`): 본문 기본 폰트. `app/fonts/PretendardVariable.woff2`를 `next/font/local`로 로드합니다.
-- **나눔명조** (`--font-myeongjo`, Tailwind `font-serif`): 제목, 한문, 프리미엄 리포트 등 고풍스러운 영역에 사용합니다. `next/font/google`의 `Nanum_Myeongjo`로 로드합니다.
+- 오행 색은 오행을 뜻할 때만, 항상 한자와 함께: 木 `wood` · 火 `fire` · 土 `earth` · 金 `metal` · 水 `water`에 `-bar`·`-bg`·`-text` (예: `bg-wood-bg text-wood-text`).
+- 등급 배지 (`grade-badge.tsx`, 글자와 점수를 함께): S 바다 바탕 + 흰 글자, A `sky-light` + `sea-deep`, B `sand-light` + `sand-text`. C는 시안에 없어 흰 바탕 + 테두리 + 흐린 글자로 뒀다.
+- 점수 막대(사주 보완·수리·발음 오행·자원 오행)는 오행 색이 아니라 `score-1`~`score-4` (바다색 계열).
+- 차트 범주색(`--chart-male`·`--chart-female`)은 그대로.
+- PDF 리포트(`report-document.tsx`)와 공유 카드 그림(`app/s/[id]/image`)은 아직 예전 색을 값으로 직접 쓴다. PDF는 결제한 리포트 모양이 걸려 있어 바꾸기 전에 사용자에게 먼저 알린다.
+
+**글꼴** (`app/layout.tsx`)
+- 화면 글자: Pretendard (`font-sans`, `next/font/local`, OFL). 이름과 한자: Noto Serif KR (`font-serif`).
+- PDF 리포트만 나눔명조(`--font-myeongjo`)를 그대로 쓴다. 글꼴이 바뀌면 쪽 넘침을 다시 확인해야 한다.
+- 크기: 제목 `text-3xl font-extrabold`(30) · 본문 `text-base`~`text-[17px]` · 보조 `text-sm`(14) · 가장 작은 글자 `text-xs`(13으로 바꿔 둠).
+- `cn()`(tailwind-merge)은 모르는 `text-이름`을 글자색으로 보므로 글자 크기 토큰을 새로 만들지 않는다.
+
+**모양과 쓰기 규칙**
+- 모서리: 카드 `rounded-3xl`(24) · 버튼 `rounded-2xl`(16), 주 버튼 18 · 칩 `rounded-full`. `--radius`는 16px (`rounded-lg` 16, `rounded-md` 14).
+- 주 버튼: `<Button size="lg">`(52px, 바다색). 한 화면에 하나, 휴대폰에서는 엄지가 닿는 아래쪽에.
+- 누르는 곳 44px 이상(`Button`의 모든 크기와 `Input`은 44px 이상), 글자 대비 4.5:1 이상.
+- 글: 결론 먼저, 한 문장에 한 가지. 숫자 옆에는 출처와 기준일. 붓질 무늬나 그림 사진은 쓰지 않는다.
+
+**공통 부품** (`components/brand/`)
+- `LogoMark`(발도장, `color` 기본 `#1F2D3A`) · `Logo`(머리글: 발도장 + "이름핏" 가로) · `LogoStacked`(SNS 프로필·리포트 표지: 발도장 아래 "이름핏"). 사이트 아이콘은 `app/icon.svg`.
+- `PebbleFrame`: 흰 카드 뒤 왼쪽 위 모래·오른쪽 아래 하늘 조약돌 두 개.
+- `NameCardFrame`: `tone="sand"`(테두리 12px) · `tone="sky"`(테두리 10px). 돌·백일 이름 카드와 리포트 이름 칸.
+- `NameWithHanja`: 글자마다 [한글 위 / 한자 아래] 묶음을 가로로 놓는다 (letter-spacing으로 맞추지 않는다). 순우리말은 `hanja` 없이. 크기는 `nameSize`·`hanjaSize`.
+- 개발 중 확인 화면: `/design-check` (배포 환경에서는 404).
 
 ## 프로젝트 구조
 - `lib/supabase/client.ts`(브라우저), `server.ts`(서버 컴포넌트/액션), `middleware.ts`(세션 갱신), 루트 `middleware.ts`

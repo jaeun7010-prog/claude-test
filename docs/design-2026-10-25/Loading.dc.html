@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>이름을 고르는 중</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&amp;family=Noto+Serif+KR:wght@500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#2D5F8A}a:hover{color:#234C70}
+@keyframes nfPulse{0%,100%{opacity:1}50%{opacity:.35}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FFF9F2; font-family: 'Noto Sans KR', system-ui, sans-serif; color: #1F2D3A; display: flex; flex-direction: column; word-break: keep-all">
+  <div style="height: 56px"></div>
+  <div style="flex: 1; padding: 8px 20px 0; display: flex; flex-direction: column; gap: 22px">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em">{{headline}}</h1>
+      <p style="margin: 0; font-size: 15px; color: #4A5663">김(金)씨 여자아이 · 2026. 03. 14 오전 9:20</p>
+    </div>
+
+    <div role="progressbar" aria-valuemin="0" aria-valuemax="3" aria-valuenow="{{step}}" aria-label="진행 상황" style="height: 8px; border-radius: 999px; background: #EADFD3">
+      <div style="height: 8px; border-radius: 999px; background: #2D5F8A; width: {{progress}}; transition: width .5s"></div>
+    </div>
+
+    <ol style="margin: 0; padding: 18px; list-style: none; border-radius: 22px; background: #FFFFFF; border: 1px solid #F0E4D8; display: flex; flex-direction: column; gap: 16px">
+      <sc-for list="{{items}}" as="item" hint-placeholder-count="3">
+        <li style="display: flex; gap: 12px; align-items: flex-start">
+          <sc-if value="{{item.isDone}}" hint-placeholder-val="{{ true }}">
+            <span style="flex: none; width: 28px; height: 28px; border-radius: 50%; background: #2D5F8A; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+          </sc-if>
+          <sc-if value="{{item.isCurrent}}" hint-placeholder-val="{{ false }}">
+            <span style="flex: none; width: 28px; height: 28px; border-radius: 50%; border: 3px solid #8CC3E6; box-sizing: border-box; display: flex; align-items: center; justify-content: center"><span style="width: 10px; height: 10px; border-radius: 50%; background: #2D5F8A; animation: nfPulse 1s ease-in-out infinite; display: block"></span></span>
+          </sc-if>
+          <sc-if value="{{item.isWait}}" hint-placeholder-val="{{ false }}">
+            <span style="flex: none; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #E0D2C4; box-sizing: border-box; display: block"></span>
+          </sc-if>
+          <div style="display: flex; flex-direction: column; gap: 4px; padding-top: 2px">
+            <span style="font-size: 16px; font-weight: 800; color: {{item.titleColor}}">{{item.title}}</span>
+            <span style="font-size: 14px; color: #5B6672">{{item.sub}}</span>
+            <sc-if value="{{item.showElements}}" hint-placeholder-val="{{ false }}">
+              <span style="display: flex; gap: 6px; margin-top: 2px">
+                <span style="padding: 3px 10px; border-radius: 999px; background: #E1EEF8; color: #2D5F8A; font-size: 13px; font-weight: 700"><span style="font-family: 'Noto Serif KR', serif">水</span> 수</span>
+                <span style="padding: 3px 10px; border-radius: 999px; background: #E4F2E0; color: #2F6B2C; font-size: 13px; font-weight: 700"><span style="font-family: 'Noto Serif KR', serif">木</span> 목</span>
+              </span>
+            </sc-if>
+          </div>
+        </li>
+      </sc-for>
+    </ol>
+
+    <div aria-hidden="true" style="display: flex; flex-direction: column; gap: 10px">
+      <div style="padding: 16px; border-radius: 18px; background: #FFFFFF; border: 1px solid #F0E4D8; display: flex; gap: 14px; align-items: center">
+        <span style="width: 48px; height: 48px; border-radius: 14px; background: #F1E8DF; display: block"></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 8px"><span style="height: 14px; width: 55%; border-radius: 6px; background: #F1E8DF; display: block"></span><span style="height: 10px; width: 80%; border-radius: 6px; background: #F5EEE7; display: block"></span></span>
+      </div>
+      <div style="padding: 16px; border-radius: 18px; background: #FFFFFF; border: 1px solid #F0E4D8; display: flex; gap: 14px; align-items: center">
+        <span style="width: 48px; height: 48px; border-radius: 14px; background: #F1E8DF; display: block"></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 8px"><span style="height: 14px; width: 45%; border-radius: 6px; background: #F1E8DF; display: block"></span><span style="height: 10px; width: 70%; border-radius: 6px; background: #F5EEE7; display: block"></span></span>
+      </div>
+    </div>
+
+    <div style="padding: 14px 16px; border-radius: 16px; background: #FDE6D3; font-size: 14px; color: #3D4A57">
+      <b style="color: #8A4A26">알고 계셨나요?</b> 같은 정씨도 <span style="font-family: 'Noto Serif KR', serif">鄭</span>(19획)과 <span style="font-family: 'Noto Serif KR', serif">丁</span>(2획)은 획수가 달라서 어울리는 이름도 달라요.
+    </div>
+  </div>
+
+  <div style="padding: 14px 20px 28px; min-height: 98px; box-sizing: border-box">
+    <sc-if value="{{done}}" hint-placeholder-val="{{ false }}">
+      <a href="Result.dc.html" style="height: 56px; border-radius: 18px; background: #2D5F8A; color: #FFFFFF; text-decoration: none; font-size: 18px; font-weight: 800; display: flex; align-items: center; justify-content: center">이름 30개 보기</a>
+    </sc-if>
+    <sc-if value="{{waiting}}" hint-placeholder-val="{{ true }}">
+      <p style="margin: 0; height: 56px; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #5B6672">잠시만 기다려 주세요</p>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { step: 1 };
+  }
+  componentDidMount() {
+    this.timer = setInterval(() => {
+      if (this.state.step >= 3) { clearInterval(this.timer); return; }
+      this.setState({ step: this.state.step + 1 });
+    }, 1600);
+  }
+  componentWillUnmount() {
+    clearInterval(this.timer);
+  }
+  renderVals() {
+    const s = this.state.step;
+    const defs = [
+      { title: '사주 계산', subDone: '이 아이에게 필요한 오행이에요', subNow: '태어난 날과 시각으로 계산하는 중' },
+      { title: '어울리는 한자 찾기', subDone: '인명용 한자에서 골랐어요', subNow: '인명용 한자에서 찾는 중' },
+      { title: '점수 매기기', subDone: '100점 기준으로 계산했어요', subNow: '100점 기준으로 계산하는 중' }
+    ];
+    const items = defs.map((d, i) => {
+      const doneNow = i < s;
+      const isCurrent = i === s && s < 3;
+      const finished = s === 3;
+      const done = finished ? true : doneNow;
+      return {
+        title: d.title,
+        sub: done ? d.subDone : (isCurrent ? d.subNow : '기다리는 중'),
+        isDone: done,
+        isCurrent: !done && isCurrent,
+        isWait: !done && !isCurrent,
+        showElements: i === 0 && done,
+        titleColor: done || isCurrent ? '#1F2D3A' : '#5B6672'
+      };
+    });
+    const finished = s === 3;
+    return {
+      step: s,
+      items: items,
+      done: finished,
+      waiting: !finished,
+      headline: finished ? '이름 30개를 골랐어요' : '이름을 고르고 있어요',
+      progress: finished ? '100%' : (s === 1 ? '34%' : '67%')
+    };
+  }
+}
+</script>
+</body>
+</html>
