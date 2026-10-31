@@ -45,6 +45,6 @@ export const registrationCaveat = (locked: boolean) =>
   locked
     ? REGISTRATION_CAVEAT.replace(
         "법적 이름 전체 기준 점수는 각 이름의 자세히 보기에 있습니다.",
-        "법적 이름 전체 기준 점수는 프리미엄 리포트에서 확인할 수 있습니다."
+        "법적 이름 전체 기준 점수는 상세 리포트에서 확인할 수 있습니다."
       )
     : REGISTRATION_CAVEAT;

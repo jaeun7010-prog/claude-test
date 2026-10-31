@@ -16,7 +16,7 @@ const FAKE_LINES = [
 export function LockedPreview({
   what,
   href,
-  label = "프리미엄 리포트로 보기",
+  label = "상세 리포트로 보기",
   size = "block",
 }: {
   /** 가려진 내용 이름 (예: 오행 비율 · 용신을 고른 이유) */

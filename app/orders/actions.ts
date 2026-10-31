@@ -103,7 +103,7 @@ export async function createOrder(input: CheckoutInput): Promise<CreateOrderResu
   if (input.kind === "report") {
     row = {
       order_type: "premium_report",
-      item_name: `이름핏 프리미엄 리포트 - ${fullName}(${fullHanja})`,
+      item_name: `이름핏 상세 리포트 - ${fullName}(${fullHanja})`,
       item_options: base,
       quantity: 1,
       amount: REPORT_PRICE,

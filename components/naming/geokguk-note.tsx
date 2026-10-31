@@ -29,7 +29,7 @@ export function GeokgukNote({
   detailed = true,
 }: {
   yongsin: YongsinResult;
-  /** false면 쉬운 설명만 그린다 (격 이름·근거·상신은 프리미엄 리포트 결제 후) */
+  /** false면 쉬운 설명만 그린다 (격 이름·근거·상신은 상세 리포트 결제 후) */
   detailed?: boolean;
 }) {
   const g = yongsin.geokguk;

@@ -3,7 +3,7 @@ import type { ReportSnapshot } from "@/lib/commerce/report-snapshot";
 import { BRANCHES_KO, STEMS_KO, type Pillar } from "@/lib/saju";
 
 /**
- * 프리미엄 리포트 본문. html2canvas 가 Tailwind 의 `hsl(var(--x))` 색상을 못 읽을 수 있어
+ * 상세 리포트 본문. html2canvas 가 Tailwind 의 `hsl(var(--x))` 색상을 못 읽을 수 있어
  * 이 문서만 HEX 값을 인라인으로 쓴다 (디자인 규칙의 크림·먹·바다·연모래·흐린 글자·입력 칸 테두리).
  * 스냅숏의 내용은 그대로 두고 모양만 이 파일에서 정한다.
  */

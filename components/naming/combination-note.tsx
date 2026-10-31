@@ -9,7 +9,7 @@ export function CombinationNote({
   items: CombinationItem[];
   /** 예: 김 + 박 */
   label: string;
-  /** 결제 전: 안내 문구에서 "자세히 보기" 대신 프리미엄 리포트로 안내한다 (내용은 모두 무료) */
+  /** 결제 전: 안내 문구에서 "자세히 보기" 대신 상세 리포트로 안내한다 (내용은 모두 무료) */
   locked?: boolean;
 }) {
   const weak = items.filter((x) => x.tone === "weak");

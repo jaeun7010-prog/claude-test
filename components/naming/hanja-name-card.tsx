@@ -36,7 +36,7 @@ function LegalDetails({ r, p, unlocked }: { r: Recommendation; p: NamingParams; 
   if (!unlocked) {
     return (
       <p className="text-xs text-muted-foreground">
-        법적 이름 전체 기준 (참고): {l.grade}등급 {l.totalScore.toFixed(1)}점 · 상세는 프리미엄 리포트에 있습니다
+        법적 이름 전체 기준 (참고): {l.grade}등급 {l.totalScore.toFixed(1)}점 · 상세는 상세 리포트에 있습니다
       </p>
     );
   }

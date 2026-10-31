@@ -17,7 +17,7 @@ export function RelationsNote({
   relations: SajuRelation[];
   rawScores: ElementScores;
   scores: ElementScores;
-  /** false면 쉬운 설명만 그린다 (용어·근거·비율은 프리미엄 리포트 결제 후) */
+  /** false면 쉬운 설명만 그린다 (용어·근거·비율은 상세 리포트 결제 후) */
   detailed?: boolean;
 }) {
   if (relations.length === 0) {

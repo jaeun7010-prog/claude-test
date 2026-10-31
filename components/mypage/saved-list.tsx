@@ -27,7 +27,7 @@ export interface SavedListItem {
   /** 직접 짓기(셀프 작명)로 저장한 이름 */
   self: boolean;
   createdAt: string;
-  /** 이 이름의 프리미엄 리포트를 결제했는지 */
+  /** 이 이름의 상세 리포트를 결제했는지 */
   reportPurchased: boolean;
 }
 

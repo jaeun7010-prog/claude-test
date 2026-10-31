@@ -50,7 +50,7 @@ function orderItemOf(o: OrderRow): OrderListItem {
   const kind = o.order_type === "premium_report" ? "report" : "goods";
   const productLabel =
     kind === "report"
-      ? "프리미엄 리포트"
+      ? "상세 리포트"
       : (PRODUCTS as Record<string, { label: string }>)[str(opt.product)]?.label ?? "맞춤 굿즈";
   const qs = str(opt.qs);
   return {

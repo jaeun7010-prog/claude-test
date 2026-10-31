@@ -104,7 +104,7 @@ export function SajuCard({
           <LockedPreview
             what="오행 비율 · 기운 관계와 격국의 근거 · 용신을 고른 이유"
             href="#names"
-            label="이름을 고르고 프리미엄 리포트로 보기"
+            label="이름을 고르고 상세 리포트로 보기"
           />
         )}
         <p className="text-xs text-muted-foreground">

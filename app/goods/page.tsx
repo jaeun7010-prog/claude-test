@@ -72,8 +72,6 @@ export default async function GoodsPage({
   const { yongsin } = chosen.saju;
   const lacking = lackingElement(yongsin.scores, yongsin.yongsin);
   const lucky = ELEMENT_LUCKY[lacking];
-  const total = Object.values(yongsin.scores).reduce((a, b) => a + b, 0);
-  const pct = total > 0 ? Math.round((yongsin.scores[lacking] / total) * 100) : 0;
 
   // 주문 생성 시 서버가 같은 값으로 사주를 다시 계산한다 (클라이언트 값은 신뢰하지 않음)
   const qs = new URLSearchParams(
@@ -128,12 +126,10 @@ export default async function GoodsPage({
       <section className="space-y-4">
         <h2 className="text-2xl font-extrabold">사주 맞춤 자수 굿즈</h2>
         <p className="text-sm text-muted-foreground break-keep">
-          사주에서 가장 부족한 기운은{" "}
           <b className="text-foreground">
-            {ELEMENT_HANJA[lacking]}
-            {lacking}
-          </b>
-          ({pct}%)입니다. 행운 동물 <b className="text-foreground">{lucky.animal}</b>, 행운 색상{" "}
+            {ELEMENT_HANJA[lacking]} {lacking}
+          </b>{" "}
+          기운이 부족해요. 행운 동물 <b className="text-foreground">{lucky.animal}</b>, 행운 색상{" "}
           <b className="text-foreground">{lucky.color}</b>으로 기운을 채워 보세요.
         </p>
         <div className="grid gap-4 md:grid-cols-2">

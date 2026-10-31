@@ -110,5 +110,5 @@ export const COMBINATION_GUIDE =
 export const combinationGuide = (locked: boolean) =>
   locked
     ? "함께 쓰기를 원하시면 이 점을 참고하세요. 이름 등급은 새로 고르는 부분이 얼마나 잘 맞는지로 매겼고, " +
-      "법적 이름 전체 기준의 4격과 점수는 프리미엄 리포트에서 확인할 수 있습니다."
+      "법적 이름 전체 기준의 4격과 점수는 상세 리포트에서 확인할 수 있습니다."
     : COMBINATION_GUIDE;

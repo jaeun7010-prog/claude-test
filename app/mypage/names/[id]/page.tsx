@@ -359,7 +359,7 @@ export default async function SavedNamePage({
               </>
             ) : (
               <Button asChild size="sm" variant="outline">
-                <Link href={goodsHref!}>프리미엄 리포트 · 맞춤 굿즈</Link>
+                <Link href={goodsHref!}>상세 리포트 · 맞춤 굿즈</Link>
               </Button>
             )}
           </>

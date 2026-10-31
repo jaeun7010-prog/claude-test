@@ -11,7 +11,7 @@ export interface OrderListItem {
   /** 아이 이름 (성 + 이름). 주문에 이름 정보가 없으면 주문명 */
   name: string;
   hanja: string;
-  /** 예: 프리미엄 리포트, 자수 턱받이 × 2 */
+  /** 예: 상세 리포트, 자수 턱받이 × 2 */
   product: string;
   amount: number;
   status: string;

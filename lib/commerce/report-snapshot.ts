@@ -72,7 +72,7 @@ export function suriReportItems(analysis: NamingAnalysis, female: boolean): Suri
 }
 
 /**
- * 프리미엄 리포트 고정 내용. 주문 생성 때 계산해 orders.report_snapshot 에 한 번만 저장하고,
+ * 상세 리포트 고정 내용. 주문 생성 때 계산해 orders.report_snapshot 에 한 번만 저장하고,
  * 리포트는 이 값만으로 그린다. 엔진(사주·작명 규칙)이 바뀌어도 결제한 리포트는 바뀌지 않는다.
  * 필드를 바꿀 때는 version 을 올리고, 예전 version 도 계속 그릴 수 있게 유지한다.
  */
