@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 
 import { savePriorities } from "@/app/naming/priorities-actions";
 import { PriorityPanel } from "@/components/naming/priority-panel";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
   DEFAULT_PRIORITIES,
   badgesOf,
@@ -24,12 +27,16 @@ export interface ResultItem {
   demoted?: boolean;
   /** 같은 첫소리 제한에 쓰는 값 (`firstSoundKey`). 한자 이름만 넣는다 */
   firstSound?: string;
+  /** 처음부터 보여 줄 카드 (저장하고 돌아온 이름) */
+  pinned?: boolean;
   metrics: NameMetrics;
   /** 서버에서 그린 카드 본문 */
   body: ReactNode;
 }
 
 const STORAGE_KEY = "namefit:naming-priorities";
+/** 처음에 보여 주고 "이름 더 보기"로 늘리는 개수 */
+const PAGE_SIZE = 10;
 
 function readStored(): Priorities | null {
   try {
@@ -143,13 +150,22 @@ export function ResultList({
     [items, priorities, rareAvailable, limit]
   );
 
+  const [count, setCount] = useState(PAGE_SIZE);
+  // 저장하고 돌아온 이름은 뒤쪽에 있어도 보이게 한다
+  const pinnedAt = shown.reduce((last, { item }, i) => (item.pinned ? i : last), -1);
+  const visible = Math.max(count, pinnedAt + 1);
+
   return (
     <div className="space-y-4">
-      <h2 className="font-serif text-2xl font-bold">추천 이름 {shown.length}개</h2>
-      {shown.map(({ item, score }) => (
-        <Card key={item.hangul}>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-2xl font-extrabold">추천 이름 {shown.length}개</h2>
+        {visible < shown.length && <span className="text-sm text-muted-foreground">{visible}개 표시</span>}
+      </div>
+      {shown.slice(0, visible).map(({ item, score }, i) => (
+        <Card key={item.hangul} className={cn(i === 0 && "border-2 border-primary")}>
           <CardContent className="space-y-3 p-4 sm:p-5">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+              <span className="font-extrabold text-muted-foreground">{i + 1}</span>
               <span className="font-medium">
                 {item.grade && `성명학 ${item.grade}등급 · `}내 기준 맞춤 {Math.round(score)}점
               </span>
@@ -163,6 +179,17 @@ export function ResultList({
           </CardContent>
         </Card>
       ))}
+      {visible < shown.length ? (
+        <Button type="button" variant="outline" size="lg" className="w-full" onClick={() => setCount(visible + PAGE_SIZE)}>
+          이름 더 보기
+        </Button>
+      ) : (
+        <div className="text-center">
+          <Link href="/naming" className="inline-flex min-h-11 items-center text-[15px] font-bold text-primary">
+            조건을 바꿔 다른 이름 보기
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

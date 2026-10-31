@@ -39,7 +39,7 @@ export default async function StatsPage({
   return (
     <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-2xl space-y-8 px-6 py-12">
       <header>
-        <h1 className="font-serif text-3xl font-bold">이름 희소성 통계</h1>
+        <h1 className="text-3xl font-extrabold">이름 희소성 통계</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {STATS_START_YEAR}년 이후 같은 이름(성 제외)으로 출생신고된 건수와 성비를 연도별로 확인합니다.
         </p>

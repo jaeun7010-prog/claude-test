@@ -107,7 +107,7 @@ export default async function MyPage() {
     <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-3xl space-y-8 px-4 py-8 sm:px-6 sm:py-12">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="font-serif text-3xl font-bold">마이페이지</h1>
+          <h1 className="text-3xl font-extrabold">마이페이지</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {displayName}님, 환영합니다.
           </p>

@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LockedPreview } from "@/components/naming/locked-preview";
+import { ELEMENT_STYLE, ELEMENTS, elementPercents } from "@/components/naming/element-need";
 import { GeokgukNote } from "@/components/naming/geokguk-note";
 import { RelationsNote } from "@/components/naming/relations-note";
 import { TimeCorrectionNote } from "@/components/naming/time-correction-note";
@@ -42,9 +43,9 @@ export function SajuCard({
   detailed: boolean;
 }) {
   const { pillars, yongsin } = saju;
-  const total = Object.values(yongsin.scores).reduce((a, b) => a + b, 0);
+  const percents = elementPercents(yongsin.scores);
   return (
-    <Card>
+    <Card id="saju" className="scroll-mt-20">
       <CardHeader>
         <CardTitle>사주 원국</CardTitle>
       </CardHeader>
@@ -66,21 +67,15 @@ export function SajuCard({
 
         {detailed && (
           <div className="space-y-2">
-            {(["목", "화", "토", "금", "수"] as const).map((e) => (
+            {ELEMENTS.map((e) => (
               <div key={e} className="flex items-center gap-3 text-sm">
-                <span className="w-8 font-serif">
-                  {ELEMENT_HANJA[e]}
-                  {e}
+                <span className={`w-11 font-bold ${ELEMENT_STYLE[e].text}`}>
+                  <span className="font-serif">{ELEMENT_STYLE[e].hanja}</span> {e}
                 </span>
-                <div className="h-2 flex-1 rounded-full bg-secondary">
-                  <div
-                    className="h-2 rounded-full bg-primary"
-                    style={{ width: `${Math.round((yongsin.scores[e] / total) * 100)}%` }}
-                  />
+                <div className="h-3 flex-1 rounded-full bg-secondary">
+                  <div className={`h-3 rounded-full ${ELEMENT_STYLE[e].bar}`} style={{ width: `${percents[e]}%` }} />
                 </div>
-                <span className="w-10 text-right text-muted-foreground">
-                  {Math.round((yongsin.scores[e] / total) * 100)}%
-                </span>
+                <span className="w-10 text-right text-muted-foreground">{percents[e]}%</span>
               </div>
             ))}
           </div>

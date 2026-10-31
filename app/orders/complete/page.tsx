@@ -2,9 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { PaymentConfirm } from "@/components/payment-confirm";
+import { ReportDone } from "@/components/report/report-done";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { won } from "@/lib/commerce/catalog";
+import { isReportSnapshot } from "@/lib/commerce/report-snapshot";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "결제 결과 | 이름핏" };
@@ -27,13 +29,16 @@ export default async function OrderCompletePage({
   const { data: order } = UUID.test(orderId)
     ? await supabase
         .from("orders")
-        .select("id, status, item_name, amount, order_type, paid_at")
+        .select("id, status, item_name, amount, order_type, paid_at, report_snapshot")
         .eq("id", orderId)
         .maybeSingle()
     : { data: null };
 
   // 리다이렉트 결제(모바일)에서 포트원이 붙여 주는 실패 정보
   const failed = !!searchParams.code;
+
+  if (order?.order_type === "premium_report" && order.status !== "pending" && isReportSnapshot(order.report_snapshot))
+    return <ReportDone orderId={order.id} snapshot={order.report_snapshot} />;
 
   return (
     <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-xl space-y-6 px-6 py-12">

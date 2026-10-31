@@ -6,7 +6,7 @@ import { AddressNote } from "@/components/naming/address-note";
 import type { ResultItem } from "@/components/naming/result-list";
 import { NamingTabs } from "@/components/naming/naming-tabs";
 import { NativeCardBody } from "@/components/naming/native-card";
-import { NameCardBody } from "@/components/naming/hanja-name-card";
+import { goodsHref, NameCardBody } from "@/components/naming/hanja-name-card";
 import { SajuCard } from "@/components/naming/saju-card";
 import { SurnameDefaultNote } from "@/components/naming/surname-default-note";
 import {
@@ -18,8 +18,9 @@ import {
 } from "@/components/naming/saved-status";
 import { isUuid } from "@/lib/commerce/payment-sync";
 import { CombinationNote } from "@/components/naming/combination-note";
+import { ElementNeed } from "@/components/naming/element-need";
 import { loadEntitlement } from "@/lib/commerce/entitlement";
-import { namingChildQuery, parseNamingParams } from "@/lib/naming/params";
+import { birthMeta, namingChildQuery, parseNamingParams } from "@/lib/naming/params";
 import { firstSoundKey, parsePriorities, type Priorities } from "@/lib/naming/priorities";
 import { NATIVE_SCORE_WEIGHTS } from "@/lib/naming/native/score";
 import { NATIVE_DISPLAY_LIMIT, runNativeNaming } from "@/lib/naming/native/service";
@@ -131,6 +132,7 @@ export default async function ResultPage({
       demoted: g.soundFill,
       // 같은 첫소리는 상위에 FIRST_SOUND_MAX개까지 (부모 성 함께 쓰기는 새로 고르는 첫 글자 기준)
       firstSound: firstSoundKey([...g.hangul][p.parentSurname ? [...p.parentSurname.hangul].length : 0] ?? ""),
+      pinned: !!savedHanja && g.options.some((r) => r.givenName.map((c) => c.hanja).join("") === savedHanja),
       metrics: {
         baseScore: best.baseScore,
         globalScore: best.globalScore,
@@ -164,6 +166,7 @@ export default async function ResultPage({
     metrics: c.metrics,
     // 강한 놀림말 이름은 맞춤 점수·정렬과 관계없이 맨 뒤 (compareNativeScore와 같은 규칙)
     demoted: c.score.teasing?.level === "strong",
+    pinned: savedNative === c.legalName,
     body: (
       <NativeCardBody
         candidate={c}
@@ -190,7 +193,7 @@ export default async function ResultPage({
       {startedNative && !p.dolrimja && p.length !== "1" && (
         <p role="status" className="rounded-md bg-secondary p-3 text-sm">
           순우리말 이름으로 골라 돌림자 없이 추천했습니다. 돌림자를 넣으려면{" "}
-          <Link href="/naming" className="text-primary underline">
+          <Link href="/naming" className="-my-3 inline-block py-3 text-primary underline">
             조건을 바꿔 주세요
           </Link>
           .
@@ -213,25 +216,17 @@ export default async function ResultPage({
           </Link>
         </Button>
       )}
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="font-serif text-2xl font-bold break-keep sm:text-3xl">
-            {p.surname}
-            {p.surnameHanja && ` (${p.surnameHanja})`}씨
-            {p.parentSurname && ` · ${p.parentSurname.hangul}(${p.parentSurname.hanja}) 함께 쓰기`} 추천 이름
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {p.birth.year}.{p.birth.month}.{p.birth.day}
-            {p.hasTime
-              ? ` ${String(p.birth.hour).padStart(2, "0")}:${String(p.birth.minute).padStart(2, "0")}`
-              : " (시각 미상)"}{" "}
-            · {p.birthplace.label} 출생 · 월주 기준 절기 {result.saju.pillars.meta.monthTerm.ko}
-          </p>
-        </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/naming">다시 입력</Link>
-        </Button>
-      </header>
+      <ElementNeed
+        yongsin={result.saju.yongsin}
+        meta={`${p.surname}${p.surnameHanja ? `(${p.surnameHanja})` : ""}씨${
+          p.parentSurname ? ` · ${p.parentSurname.hangul}(${p.parentSurname.hanja}) 함께 쓰기` : ""
+        } · ${birthMeta(p)} · 월주 기준 절기 ${result.saju.pillars.meta.monthTerm.ko}`}
+        action={
+          <Button asChild variant="outline" size="sm" className="shrink-0">
+            <Link href="/naming">다시 입력</Link>
+          </Button>
+        }
+      />
 
       <AddressNote />
 
@@ -266,8 +261,6 @@ export default async function ResultPage({
         </p>
       )}
 
-      <SajuCard saju={result.saju} p={p} detailed={ent.saju} />
-
       <section id="names" className="scroll-mt-16 space-y-4">
         <NamingTabs
           initialTab={startedNative ? "native" : "hanja"}
@@ -291,10 +284,25 @@ export default async function ResultPage({
                 {result.stats && <DataSourceNote />}
               </>
             ),
+            outro: result.groups[0] && (
+              <div className="space-y-2 rounded-3xl bg-sand-light p-5">
+                <p className="text-[17px] font-extrabold">마음에 드는 이름을 골랐나요?</p>
+                <p className="text-sm text-ink-soft break-keep">
+                  상세 리포트에는 81수 풀이와 한자 하나하나의 뜻이 모두 들어 있어요.
+                </p>
+                <Link
+                  href={goodsHref(qs, result.groups[0].options[0])}
+                  className="inline-flex min-h-11 items-center text-[15px] font-extrabold text-sand-text underline-offset-4 hover:underline"
+                >
+                  {p.surname}
+                  {result.groups[0].hangul} 리포트 안내 보기
+                </Link>
+              </div>
+            ),
             empty: (
               <>
                 {hanjaNotice}
-                <h2 className="font-serif text-2xl font-bold">추천 이름</h2>
+                <h2 className="text-2xl font-extrabold">추천 이름</h2>
                 <p className="text-sm text-muted-foreground">
                   조건에 맞는 이름이 없습니다. 돌림자나 발음·남녀 공용 조건을 완화해 보세요.
                 </p>
@@ -322,7 +330,7 @@ export default async function ResultPage({
             empty: (
               <>
                 {nativeNotices}
-                <h2 className="font-serif text-2xl font-bold">추천 이름</h2>
+                <h2 className="text-2xl font-extrabold">추천 이름</h2>
                 <p className="text-sm text-muted-foreground">
                   조건에 맞는 순우리말 이름이 없습니다. 글자 수나 발음·남녀 공용 조건을 완화해 보세요.
                 </p>
@@ -331,6 +339,8 @@ export default async function ResultPage({
           }}
         />
       </section>
+
+      <SajuCard saju={result.saju} p={p} detailed={ent.saju} />
     </main>
   );
 }

@@ -6,7 +6,7 @@ export function NativeScoreBadge({ total, size = "lg" }: { total: number; size?:
   return (
     <div className="flex shrink-0 flex-col items-center gap-1" aria-label={`우리말 이름 점수 ${total.toFixed(1)}점`}>
       <span
-        className={`flex items-center justify-center rounded-full border-2 border-primary font-serif font-bold text-primary ${box}`}
+        className={`flex items-center justify-center rounded-full border-2 border-primary font-bold text-primary ${box}`}
       >
         {Math.round(total)}
       </span>

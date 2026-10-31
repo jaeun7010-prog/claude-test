@@ -30,11 +30,11 @@ export function SavedMark({ id, justSaved }: { id: string; justSaved?: SavedNoti
     <p
       id={justSaved ? "saved" : undefined}
       role={justSaved ? "status" : undefined}
-      className="flex min-h-9 scroll-mt-20 flex-wrap items-center rounded-md bg-secondary px-3 py-1.5 text-sm"
+      className="flex min-h-11 scroll-mt-20 flex-wrap items-center rounded-md bg-secondary px-3 py-0.5 text-sm"
     >
       {text}
       <span className="mx-1.5 text-muted-foreground">·</span>
-      <Link href={`/mypage/names/${justSaved?.id ?? id}`} className="text-primary underline underline-offset-2">
+      <Link href={`/mypage/names/${justSaved?.id ?? id}`} className="inline-flex min-h-11 items-center text-primary underline underline-offset-2">
         저장한 이름 보기
       </Link>
     </p>

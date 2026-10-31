@@ -57,7 +57,7 @@ export function TimeCorrectionNote({
         </p>
       )}
       <details className="mt-2 text-xs text-muted-foreground">
-        <summary className="cursor-pointer">자세히 보기</summary>
+        <summary className="min-h-11 cursor-pointer leading-[44px]">자세히 보기</summary>
         <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
           <dt>출생지</dt>
           <dd>

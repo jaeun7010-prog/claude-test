@@ -29,7 +29,7 @@ export default async function AdminNameStatsPage() {
   return (
     <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-2xl space-y-8 px-6 py-12">
       <header>
-        <h1 className="font-serif text-3xl font-bold">이름 통계 업로드</h1>
+        <h1 className="text-3xl font-extrabold">이름 통계 업로드</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           공개 통계를 정리한 CSV를 올리면 검증 후 반영합니다. CSV에 포함된 연도는 통째로 교체되므로
           연도 단위로 남/여 전체 목록을 올려 주세요.
@@ -50,7 +50,7 @@ export default async function AdminNameStatsPage() {
       </Card>
 
       <section className="space-y-2">
-        <h2 className="font-serif text-xl font-bold">최근 반영 이력</h2>
+        <h2 className="text-xl font-extrabold">최근 반영 이력</h2>
         {!snapshots || snapshots.length === 0 ? (
           <p className="text-sm text-muted-foreground">아직 반영된 통계가 없습니다.</p>
         ) : (

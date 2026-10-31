@@ -136,7 +136,7 @@ export default async function ComparePage({
         <Button asChild variant="ghost" size="sm" className="-ml-3">
           <Link href="/mypage">← 마이페이지</Link>
         </Button>
-        <h1 className="font-serif text-3xl font-bold">이름 나란히 비교</h1>
+        <h1 className="text-3xl font-extrabold">이름 나란히 비교</h1>
         <p className="text-sm text-muted-foreground">
           점수는 저장할 때의 값입니다. 가장 높은 점수는 굵게 표시했습니다.
         </p>

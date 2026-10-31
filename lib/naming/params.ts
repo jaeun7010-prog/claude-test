@@ -165,6 +165,14 @@ export function parseNamingParams(raw: Raw): ParseResult {
  * 저장한 이름에서 "같은 조건으로 다른 이름 보기"로 갈 때와 같은 조건 저장인지 비교할 때 쓴다.
  * withRarity=false 면 정렬에만 쓰는 rarity 를 뺀다 (분석 결과와 상관없음)
  */
+/** 화면 맨 위 한 줄: 성별·생년월일시·출생지 */
+export function birthMeta(p: NamingParams): string {
+  const { year, month, day, hour, minute } = p.birth;
+  const who = p.gender === "male" ? "남자아이" : p.gender === "female" ? "여자아이" : "성별 미정";
+  const time = p.hasTime ? `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}` : "시각 미상";
+  return `${who} · ${year}.${month}.${day} ${time} · ${p.birthplace.label}`;
+}
+
 export function toNamingQuery(p: NamingParams, withRarity = true): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   const q = new URLSearchParams();

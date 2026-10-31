@@ -5,6 +5,8 @@ import { ReportPurchase } from "@/components/report-purchase";
 import { Button } from "@/components/ui/button";
 import { PRODUCT_IDS, ELEMENT_LUCKY, lackingElement } from "@/lib/commerce/catalog";
 import { loadEntitlement } from "@/lib/commerce/entitlement";
+import { TEST_SOURCE_NAME } from "@/lib/name-stats/constants";
+import { getLatestSnapshot } from "@/lib/name-stats/snapshot";
 import { isUuid } from "@/lib/commerce/payment-sync";
 import { namingChildKey, parseNamingParams } from "@/lib/naming/params";
 import { analyzeChosen } from "@/lib/naming/service";
@@ -89,35 +91,21 @@ export default async function GoodsPage({
     ? (await loadEntitlement(supabase, true, namingChildKey(openQuery(qs)), hid)).reportOrderId(gh, ge)
     : null;
   const fullName = `${p.surname}${ge}`;
+  const back = hid
+    ? { href: `/mypage/names/${hid}`, label: "저장한 이름" }
+    : selfBack
+      ? { href: selfBack, label: "직접 지은 이름" }
+      : { href: `/naming/result?${qs}`, label: "추천 결과" };
+  const snapshot = await getLatestSnapshot();
+  const hasStats = !!snapshot && snapshot.sourceName !== TEST_SOURCE_NAME;
 
   return (
-    <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-3xl space-y-8 px-6 py-12">
+    <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-2xl space-y-8 px-4 py-8 sm:px-6 sm:py-12">
       <header className="space-y-2">
         <Button asChild variant="ghost" size="sm" className="-ml-3">
-          {hid ? (
-            <Link href={`/mypage/names/${hid}`}>← 저장한 이름</Link>
-          ) : selfBack ? (
-            <Link href={selfBack}>← 직접 지은 이름</Link>
-          ) : (
-            <Link href={`/naming/result?${qs}`}>← 추천 결과</Link>
-          )}
+          <Link href={back.href}>← {back.label}</Link>
         </Button>
-        <h1 className="font-serif text-3xl font-bold">
-          {fullName}
-          <span className="ml-2 text-xl text-muted-foreground">
-            {p.surnameHanja}
-            {gh}
-          </span>
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          사주에서 가장 부족한 기운은{" "}
-          <b className="text-foreground">
-            {ELEMENT_HANJA[lacking]}
-            {lacking}
-          </b>
-          ({pct}%)입니다. 행운 동물 <b className="text-foreground">{lucky.animal}</b>, 행운 색상{" "}
-          <b className="text-foreground">{lucky.color}</b>으로 기운을 채워 보세요.
-        </p>
+        <h1 className="text-3xl font-extrabold">상세 리포트</h1>
       </header>
 
       <ReportPurchase
@@ -127,12 +115,27 @@ export default async function GoodsPage({
         hid={hid}
         reportOrderId={reportOrderId}
         fullName={fullName}
+        fullHanja={`${p.surnameHanja}${gh}`}
+        grade={chosen.analysis.grade}
+        score={chosen.analysis.totalScore}
+        hasStats={hasStats}
+        backHref={back.href}
+        backLabel="무료 결과 계속 보기"
         loggedIn={!!user}
         loginHref={loginHref}
       />
 
       <section className="space-y-4">
-        <h2 className="font-serif text-2xl font-bold">사주 맞춤 자수 굿즈</h2>
+        <h2 className="text-2xl font-extrabold">사주 맞춤 자수 굿즈</h2>
+        <p className="text-sm text-muted-foreground break-keep">
+          사주에서 가장 부족한 기운은{" "}
+          <b className="text-foreground">
+            {ELEMENT_HANJA[lacking]}
+            {lacking}
+          </b>
+          ({pct}%)입니다. 행운 동물 <b className="text-foreground">{lucky.animal}</b>, 행운 색상{" "}
+          <b className="text-foreground">{lucky.color}</b>으로 기운을 채워 보세요.
+        </p>
         <div className="grid gap-4 md:grid-cols-2">
           {PRODUCT_IDS.map((id) => (
             <GoodsCard

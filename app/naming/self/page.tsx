@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { NamingForm } from "@/components/naming-form";
 import { AddressNote } from "@/components/naming/address-note";
+import { ElementNeed } from "@/components/naming/element-need";
 import { NamingModeTabs } from "@/components/naming/naming-mode-tabs";
 import { SajuCard } from "@/components/naming/saju-card";
 import { SurnameDefaultNote } from "@/components/naming/surname-default-note";
@@ -33,7 +34,7 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) 
 function SelfInput({ initialSurname, initialGiven }: { initialSurname: string; initialGiven: string }) {
   return (
     <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
-      <h1 className="font-serif text-3xl font-bold">사주 맞춤 작명</h1>
+      <h1 className="text-3xl font-extrabold">사주 맞춤 작명</h1>
       <p className="mb-6 mt-2 text-sm text-muted-foreground break-keep">
         이름 소리를 이미 정하셨다면, 그 소리에 쓸 수 있는 한자와 아이 사주에 맞는 조합을 점수로 보여 드립니다.
       </p>
@@ -124,7 +125,7 @@ export default async function SelfNamingPage({ searchParams }: { searchParams: S
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-sm text-muted-foreground">직접 짓기</p>
-          <h1 className="font-serif text-2xl font-bold break-keep sm:text-3xl">
+          <h1 className="text-2xl font-extrabold break-keep sm:text-3xl">
             {p.surname}
             {p.parentSurname?.hangul}
             {given} 한자 고르기
@@ -141,6 +142,8 @@ export default async function SelfNamingPage({ searchParams }: { searchParams: S
           <Link href="/naming/self">다시 입력</Link>
         </Button>
       </header>
+
+      <ElementNeed yongsin={result.saju.yongsin} heading="h2" meta={`${p.surname}씨 아이의 사주`} />
 
       <AddressNote />
 
@@ -169,11 +172,9 @@ export default async function SelfNamingPage({ searchParams }: { searchParams: S
         </div>
       )}
 
-      <SajuCard saju={result.saju} p={p} detailed={ent.saju} />
-
       <section id="names" className="scroll-mt-16 space-y-4">
         <div className="space-y-1">
-          <h2 className="font-serif text-2xl font-bold">한자 고르기</h2>
+          <h2 className="text-2xl font-extrabold">한자 고르기</h2>
           <p className="text-xs text-muted-foreground break-keep">
             등급은 추천받기와 같은 성명학 점수예요. 사주 보완 {SCORE_WEIGHTS.saju} · 수리 {SCORE_WEIGHTS.suri} ·
             발음오행 {SCORE_WEIGHTS.pronunciation} · 자원오행 {SCORE_WEIGHTS.resource}점 배점의 100점 만점이고, S{" "}
@@ -193,6 +194,8 @@ export default async function SelfNamingPage({ searchParams }: { searchParams: S
           selfQuery={sealQuery(selfQueryOf(p))}
         />
       </section>
+
+      <SajuCard saju={result.saju} p={p} detailed={ent.saju} />
     </main>
   );
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   LEVEL_LABEL,
   PRIORITY_LABEL,
@@ -21,7 +20,7 @@ const HINT: Record<PriorityKey, string> = {
 };
 
 const selectClass =
-  "flex h-9 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "flex h-11 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function PriorityPanel({
   value,
@@ -36,16 +35,16 @@ export function PriorityPanel({
   /** 저장 상태 안내 문구 */
   status: string | null;
 }) {
+  // 기본값이 아니면 고른 내용이 보이도록 펼쳐서 시작한다
+  const changed = value.rare !== "normal" || value.global !== "normal" || value.sort !== "custom";
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-serif text-xl">우리 집이 중요하게 보는 것</CardTitle>
-        <CardDescription>
+    <details className="rounded-3xl border bg-card shadow-sm" open={changed || undefined}>
+      <summary className="cursor-pointer select-none px-5 py-3 text-[15px] font-bold">우리 집이 중요하게 보는 것</summary>
+      <div className="space-y-4 border-t p-5">
+        <p className="text-sm text-muted-foreground break-keep">
           고른 항목에 가점을 더한 &quot;맞춤 점수&quot;로 순서를 바꿉니다. 성명학 등급·우리말 이름 점수와 리포트
           점수는 바뀌지 않습니다.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        </p>
         {KEYS.map((key) => {
           const disabled = key === "rare" && !rareAvailable;
           return (
@@ -54,7 +53,7 @@ export function PriorityPanel({
                 <span className="text-sm font-medium" id={`priority-${key}`}>
                   {PRIORITY_LABEL[key]}
                 </span>
-                <div role="group" aria-labelledby={`priority-${key}`} className="flex rounded-md border">
+                <div role="group" aria-labelledby={`priority-${key}`} className="flex flex-wrap gap-1.5">
                   {LEVELS.map((level) => {
                     const active = value[key] === level;
                     return (
@@ -64,8 +63,8 @@ export function PriorityPanel({
                         disabled={disabled}
                         aria-pressed={active}
                         onClick={() => onChange({ ...value, [key]: level })}
-                        className={`px-3 py-1.5 text-sm first:rounded-l-md last:rounded-r-md disabled:cursor-not-allowed disabled:opacity-50 ${
-                          active ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                        className={`h-11 rounded-full border px-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                          active ? "border-ink bg-ink text-cream" : "border-input bg-card hover:bg-secondary"
                         }`}
                       >
                         {LEVEL_LABEL[level]}
@@ -103,7 +102,7 @@ export function PriorityPanel({
             {status}
           </p>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </details>
   );
 }

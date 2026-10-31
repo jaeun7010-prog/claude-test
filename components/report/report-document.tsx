@@ -4,10 +4,14 @@ import { BRANCHES_KO, STEMS_KO, type Pillar } from "@/lib/saju";
 
 /**
  * 프리미엄 리포트 본문. html2canvas 가 Tailwind 의 `hsl(var(--x))` 색상을 못 읽을 수 있어
- * 이 문서만 HEX 값을 인라인으로 쓴다 (디자인 규칙의 새 색으로 아직 바꾸지 않은 예전 테마 색).
+ * 이 문서만 HEX 값을 인라인으로 쓴다 (디자인 규칙의 크림·먹·바다·연모래·흐린 글자·입력 칸 테두리).
+ * 스냅숏의 내용은 그대로 두고 모양만 이 파일에서 정한다.
  */
-const C = { ivory: "#fdfbf7", navy: "#2d3a52", sand: "#f4eae1", muted: "#5d6679", line: "#c9bba8" };
+const C = { cream: "#FFF9F2", ink: "#1F2D3A", sea: "#2D5F8A", sand: "#FDE6D3", muted: "#5B6672", line: "#E6CDB8" };
+// Noto Serif KR로 시험하니 세 글자 이름 3쪽이 넘쳐 나눔명조를 유지한다 (2026-10-31)
 const FONT = 'var(--font-myeongjo), "Nanum Myeongjo", serif';
+/** 오행 막대 색 (디자인 규칙) */
+const ELEMENT_BAR: Record<string, string> = { 목: "#6FAE6A", 화: "#EE8A6E", 토: "#EDC14F", 금: "#A3AAB3", 수: "#4F8FC0" };
 
 const NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
 const ELEMENT_HANJA: Record<string, string> = { 목: "木", 화: "火", 토: "土", 금: "金", 수: "水" };
@@ -28,8 +32,8 @@ const PAGE: React.CSSProperties = {
   height: "1121px",
   boxSizing: "border-box",
   padding: "48px",
-  backgroundColor: C.ivory,
-  color: C.navy,
+  backgroundColor: C.cream,
+  color: C.ink,
   fontFamily: FONT,
   breakAfter: "page",
   overflow: "hidden",
@@ -42,7 +46,7 @@ function Frame({ children, footer }: { children: React.ReactNode; footer: string
         style={{
           height: "100%",
           boxSizing: "border-box",
-          border: `3px double ${C.navy}`,
+          border: `3px double ${C.sea}`,
           padding: "40px 44px",
           display: "flex",
           flexDirection: "column",
@@ -58,7 +62,7 @@ function Frame({ children, footer }: { children: React.ReactNode; footer: string
 const h2: React.CSSProperties = {
   margin: "0 0 18px",
   paddingBottom: "8px",
-  borderBottom: `1px solid ${C.navy}`,
+  borderBottom: `1px solid ${C.sea}`,
   fontSize: "22px",
   fontWeight: 700,
 };
@@ -87,6 +91,9 @@ export function ReportDocument({ data }: { data: ReportData }) {
   const legal = data.legalAnalysis ?? null;
   const { pillars, yongsin } = saju;
   const fullHanja = `${data.surnameHanja}${given.map((c) => c.hanja).join("")}`;
+  // 표지 이름: 글자마다 [한글 위 / 한자 아래] (NameWithHanja와 같은 규칙). 이름이 길면 줄인다. 확장 한자는 두 칸이라 코드 포인트로 나눈다
+  const hanjaChars = Array.from(fullHanja);
+  const coverName = Math.min(60, Math.floor(600 / (Array.from(`${data.surname}${given.map((c) => c.eum).join("")}`).length * 1.15)));
   const fullHangul = `${data.surname}${given.map((c) => c.eum).join("")}`;
   const total = Object.values(yongsin.scores).reduce((a, b) => a + b, 0);
   const lacking = data.texts.lacking;
@@ -116,9 +123,15 @@ export function ReportDocument({ data }: { data: ReportData }) {
           <h1 style={{ margin: "36px 0 0", fontSize: "64px", fontWeight: 800, letterSpacing: "0.15em" }}>
             命名書
           </h1>
-          <div style={{ margin: "70px auto", width: "80px", borderTop: `2px solid ${C.navy}` }} />
-          <p style={{ margin: 0, fontSize: "72px", fontWeight: 800, letterSpacing: "0.2em" }}>{fullHanja}</p>
-          <p style={{ margin: "18px 0 0", fontSize: "30px" }}>{fullHangul}</p>
+          <div style={{ margin: "70px auto", width: "80px", borderTop: `2px solid ${C.sea}` }} />
+          <div style={{ display: "flex", justifyContent: "center", gap: `${Math.round(coverName * 0.15)}px` }}>
+            {Array.from(fullHangul).map((ch, i) => (
+              <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <span style={{ fontSize: `${coverName}px`, fontWeight: 700, lineHeight: 1.2 }}>{ch}</span>
+                <span style={{ fontSize: `${Math.round(coverName * 0.48)}px`, lineHeight: 1.4, color: C.muted }}>{hanjaChars[i]}</span>
+              </div>
+            ))}
+          </div>
           {data.texts.registration && (
             <p style={{ margin: "18px 0 0", fontSize: "14px", color: C.muted }}>{data.texts.registration}</p>
           )}
@@ -146,7 +159,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
                 {ELEMENT_HANJA[e]}({e})
               </span>
               <div style={{ flex: 1, height: "10px", backgroundColor: C.sand }}>
-                <div style={{ width: `${pct}%`, height: "10px", backgroundColor: C.navy }} />
+                <div style={{ width: `${pct}%`, height: "10px", backgroundColor: ELEMENT_BAR[e] }} />
               </div>
               <span style={{ width: "44px", textAlign: "right", fontSize: "14px" }}>{pct}%</span>
             </div>
@@ -383,7 +396,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
               <h2 style={{ ...h2, marginTop: "34px" }}>{num("combination")}. 조합 진단(組合診斷)</h2>
               <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "15px", lineHeight: 1.8 }}>
                 {data.texts.combination!.map((x) => (
-                  <li key={x.text} style={{ color: x.tone === "weak" ? C.navy : C.muted }}>
+                  <li key={x.text} style={{ color: x.tone === "weak" ? C.ink : C.muted }}>
                     {x.tone === "weak" ? "참고 · " : ""}
                     {x.text}
                   </li>

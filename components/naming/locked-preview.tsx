@@ -33,7 +33,7 @@ export function LockedPreview({
           {FAKE_LINES[3]}
         </span>
         <span className="text-xs text-muted-foreground">{what}</span>
-        <Link href={href} className="ml-auto text-xs font-medium text-primary underline-offset-4 hover:underline">
+        <Link href={href} className="ml-auto inline-flex min-h-11 items-center text-xs font-medium text-primary underline-offset-4 hover:underline">
           {label} ›
         </Link>
       </div>

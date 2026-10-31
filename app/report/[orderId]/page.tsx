@@ -91,7 +91,7 @@ export default async function ReportPage({
     <main className="mx-auto min-h-screen max-w-4xl space-y-6 px-4 py-10">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-serif text-2xl font-bold">{fullName} 프리미엄 리포트</h1>
+          <h1 className="text-2xl font-extrabold">{fullName} 프리미엄 리포트</h1>
           <p className="text-sm text-muted-foreground">
             양가 어르신께 드리는 한문 작명 리포트 (A4 {3 + (data.texts.hanja?.some((x) => x.text) ? 1 : 0) + (data.texts.suri?.length ? 1 : 0) + (data.legalAnalysis ? 1 : 0)}쪽)
           </p>

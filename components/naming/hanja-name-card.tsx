@@ -1,10 +1,12 @@
 import Link from "next/link";
 
 import { saveName, saveSelfName } from "@/app/naming/actions";
+import { NameWithHanja } from "@/components/brand/NameWithHanja";
 import { Button } from "@/components/ui/button";
 import { NameStatsBasic } from "@/components/name-stats-basic";
 import { TierBadge } from "@/components/name-stats-chart";
 import { GradeBadge, GyeokGrid, ScoreBreakdownLine } from "@/components/naming/analysis-parts";
+import { HeartIcon } from "@/components/naming/heart-icon";
 import { LockedPreview } from "@/components/naming/locked-preview";
 import { SavedMark, type SavedNotice } from "@/components/naming/saved-status";
 import { ShareNameButton } from "@/components/share/share-name-button";
@@ -40,7 +42,7 @@ function LegalDetails({ r, p, unlocked }: { r: Recommendation; p: NamingParams; 
   }
   return (
     <details className="rounded-md border">
-      <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-primary">
+      <summary className="cursor-pointer select-none px-3 py-3 text-sm font-medium text-primary">
         자세히 보기: 법적 이름 전체 기준 (참고)
       </summary>
       <div className="space-y-2 border-t p-3 text-sm">
@@ -66,12 +68,10 @@ function LegalDetails({ r, p, unlocked }: { r: Recommendation; p: NamingParams; 
  * 이름 한자 (마이페이지 "이름 한자" 칸과 같은 모양): 글자마다 훈음·획수, 그 아래 이름 뜻 한 줄.
  * 글자별 자원오행은 "자원오행 흐름"(유료)에 들어가므로 결제 후에만 붙인다.
  * 글자 상세 풀이(hanja-detail.ts, 요약 + 풀이)도 결제 후에만 보여 준다.
- * 이름 뜻은 부모 성 함께 쓰기면 새로 고르는 글자만 보고, 문장이 없으면 그리지 않는다.
  */
-function HanjaChars({ r, p, unlocked }: { r: Recommendation; p: NamingParams; unlocked: boolean }) {
-  const m = nameMeaningOf(r.givenName.slice(p.parentSurname ? [...p.parentSurname.hanja].length : 0));
+function HanjaChars({ r, unlocked }: { r: Recommendation; unlocked: boolean }) {
   return (
-    <div className="mt-2 space-y-1 text-sm">
+    <div className="space-y-1 text-sm">
       <ul className="space-y-0.5">
         {r.givenName.map((c, i) => {
           const d = unlocked ? hanjaDetailOf(c) : null;
@@ -88,11 +88,26 @@ function HanjaChars({ r, p, unlocked }: { r: Recommendation; p: NamingParams; un
           );
         })}
       </ul>
-      {m && (
-        <p>
-          <span className="text-muted-foreground">이름 뜻 ·</span> {m.sentence}
-        </p>
-      )}
+    </div>
+  );
+}
+
+/** 이름 뜻 한 줄. 부모 성 함께 쓰기면 새로 고르는 글자만 보고, 문장이 없으면 훈음을 보여 준다 */
+function MeaningLine({ r, p }: { r: Recommendation; p: NamingParams }) {
+  const chars = r.givenName.slice(p.parentSurname ? [...p.parentSurname.hanja].length : 0);
+  const m = nameMeaningOf(chars);
+  return <p className="mt-1.5 text-sm text-ink-soft break-keep">{m ? m.sentence : chars.map(hunEum).join(", ")}</p>;
+}
+
+/** 카드에 바로 보이는 작은 칩: 흔한 정도(통계가 있을 때만)와 사주·수리 점수 */
+function SummaryChips({ r, stat }: { r: Recommendation; stat?: NameStatSummary }) {
+  const b = r.analysis.breakdown;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 text-xs">
+      {stat && <TierBadge tier={stat.tier} />}
+      <span className="rounded-full bg-secondary px-2.5 py-1 font-semibold text-ink-soft">
+        사주 {b.saju === null ? "-" : Math.round(b.saju)} · 수리 {b.suri === null ? "-" : Math.round(b.suri)}
+      </span>
     </div>
   );
 }
@@ -161,13 +176,17 @@ function OptionActions({
                 <input type="hidden" name="ge" value={eumOf(r)} />
               </>
             )}
-            <Button type="submit" size="sm" variant="secondary">
-              마이페이지에 저장
+            <Button type="submit" size="sm" variant="secondary" aria-label="이 이름을 마이페이지에 저장">
+              <HeartIcon />
+              저장
             </Button>
           </form>
         ) : (
           <Button asChild size="sm" variant="secondary">
-            <Link href={`/login?next=${encodeURIComponent(back)}`}>로그인하고 저장</Link>
+            <Link href={`/login?next=${encodeURIComponent(back)}`}>
+              <HeartIcon />
+              로그인하고 저장
+            </Link>
           </Button>
         )}
         {reportOrderId ? (
@@ -234,16 +253,9 @@ export function NameCardBody({
   return (
     <>
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="font-serif text-2xl font-bold">
-            {p.surname}
-            {g.hangul}
-            <span className="ml-2 text-lg text-muted-foreground">
-              {p.surnameHanja}
-              {hanjaOf(best)}
-            </span>
-          </p>
-          <HanjaChars r={best} p={p} unlocked={unlocked(best)} />
+        <div className="min-w-0">
+          <NameWithHanja name={`${p.surname}${g.hangul}`} hanja={`${p.surnameHanja}${hanjaOf(best)}`} nameSize={28} hanjaSize={15} />
+          <MeaningLine r={best} p={p} />
           {p.parentSurname && (
             <p className="mt-1 text-xs text-muted-foreground">
               {registrationText({
@@ -258,6 +270,15 @@ export function NameCardBody({
         <GradeBadge grade={a.grade} score={a.totalScore} />
       </div>
 
+      <SummaryChips r={best} stat={st} />
+
+      <OptionActions r={best} qs={qs} loggedIn={loggedIn} self={self} {...marks(best)} />
+
+      {/* 직접 짓기 결과는 이름이 하나뿐이라 처음부터 펼친다 */}
+      <details className="rounded-2xl border" open={self ? true : undefined}>
+        <summary className="cursor-pointer select-none px-3 py-3 text-sm font-bold text-primary">점수 근거 보기</summary>
+        <div className="space-y-3 border-t p-3">
+      <HanjaChars r={best} unlocked={unlocked(best)} />
       <ScoreBreakdownLine analysis={a} />
       {p.parentSurname && (
         <p className="text-xs text-muted-foreground">
@@ -301,19 +322,19 @@ export function NameCardBody({
             <span className="text-muted-foreground">희소성</span>
             <TierBadge tier={st.tier} />
             {st.neutral && <span className="text-muted-foreground">남녀 공용</span>}
-            <Link href={`/stats?name=${encodeURIComponent(g.hangul)}`} className="ml-auto text-primary underline">
+            <Link href={`/stats?name=${encodeURIComponent(g.hangul)}`} className="ml-auto inline-flex min-h-11 items-center text-primary underline">
               연도별 상세 통계
             </Link>
           </div>
         </div>
       )}
       <LegalDetails r={best} p={p} unlocked={unlocked(best)} />
-
-      <OptionActions r={best} qs={qs} loggedIn={loggedIn} self={self} {...marks(best)} />
+        </div>
+      </details>
 
       {others.length > 0 && (
         <details className="group rounded-md border" open={others.some((r) => savedFor(r)) || undefined}>
-          <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-primary">
+          <summary className="cursor-pointer select-none px-3 py-3 text-sm font-medium text-primary">
             <span className="group-open:hidden">다른 한자 조합 {others.length}개 보기</span>
             <span className="hidden group-open:inline">다른 한자 조합 접기</span>
           </summary>
@@ -326,7 +347,10 @@ export function NameCardBody({
                       {p.surnameHanja}
                       {hanjaOf(r)}
                     </p>
-                    <HanjaChars r={r} p={p} unlocked={unlocked(r)} />
+                    <MeaningLine r={r} p={p} />
+                    <div className="mt-2">
+                      <HanjaChars r={r} unlocked={unlocked(r)} />
+                    </div>
                   </div>
                   <GradeBadge grade={r.analysis.grade} score={r.analysis.totalScore} size="sm" />
                 </div>

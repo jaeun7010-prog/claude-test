@@ -14,6 +14,8 @@ export interface TabContent {
   intro: ReactNode;
   /** 후보가 없을 때 보여 줄 내용 */
   empty: ReactNode;
+  /** 목록 아래 안내 (리포트 등) */
+  outro?: ReactNode;
 }
 
 const TAB_LABEL: Record<NamingTab, string> = { hanja: "한자 이름", native: "순우리말 이름" };
@@ -59,7 +61,7 @@ export function NamingTabs({
 
   return (
     <div className="space-y-4">
-      <div role="tablist" aria-label="이름 종류" className="grid grid-cols-2 rounded-lg border bg-secondary p-1">
+      <div role="tablist" aria-label="이름 종류" className="flex flex-wrap gap-2">
         {TABS.map((t) => {
           const active = tab === t;
           return (
@@ -71,11 +73,11 @@ export function NamingTabs({
               aria-selected={active}
               aria-controls={`panel-${t}`}
               onClick={() => select(t)}
-              className={`rounded-md px-2 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-base ${
-                active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              className={`h-11 rounded-full border px-4 text-[15px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                active ? "border-ink bg-ink text-cream" : "border-input bg-card text-foreground hover:bg-secondary"
               }`}
             >
-              {TAB_LABEL[t]}
+              {TAB_LABEL[t]} {Math.min(content[t].items.length, content[t].limit)}
             </button>
           );
         })}
@@ -105,6 +107,7 @@ export function NamingTabs({
                   priorities={priorities.priorities}
                   rareAvailable={rareAvailable}
                 />
+                {c.outro}
               </>
             )}
           </div>

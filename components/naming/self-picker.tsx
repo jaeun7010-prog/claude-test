@@ -44,7 +44,7 @@ function Badge({ badge }: { badge: SelfBadge }) {
   if (!badge) return null;
   return (
     <span
-      className={`rounded px-1.5 py-0.5 text-xs font-semibold ${
+      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
         badge === "최고" ? "bg-primary text-primary-foreground" : "border border-primary text-primary"
       }`}
     >
@@ -235,11 +235,11 @@ export function SelfPicker({
           <p className="break-keep">{notice.text}</p>
           {notice.tone !== "good" && (
             <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-x-4">
-              <Link href={toRecommend} className="text-primary underline underline-offset-2">
+              <Link href={toRecommend} className="inline-flex min-h-11 items-center text-primary underline underline-offset-2">
                 이 사주에 맞는 다른 소리 보기
               </Link>
               {notice.suggestDolrimja && toDolrimja && (
-                <Link href={toDolrimja} className="text-primary underline underline-offset-2">
+                <Link href={toDolrimja} className="inline-flex min-h-11 items-center text-primary underline underline-offset-2">
                   &lsquo;{t.slots[0].eum}&rsquo;{josa(t.slots[0].eum, "은", "는")} 두고 둘째 글자 추천받기
                 </Link>
               )}
@@ -260,7 +260,7 @@ export function SelfPicker({
 
       {top.length > 0 && (
         <section className="space-y-2">
-          <h2 className="font-serif text-lg font-bold">추천 조합</h2>
+          <h2 className="text-lg font-extrabold">추천 조합</h2>
           <ul className="grid gap-2 sm:grid-cols-3">
             {top.map((c) => {
               const chars = c.picks.map((i, s) => t.slots[s].chars[i]);
@@ -302,7 +302,7 @@ export function SelfPicker({
         return (
           <section key={s} className="space-y-2">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-              <h2 className="font-serif text-lg font-bold">
+              <h2 className="text-lg font-extrabold">
                 {two ? `${SLOT_LABEL[s]} ` : ""}&lsquo;{slot.eum}&rsquo; 한자
               </h2>
               <span className="text-xs text-muted-foreground">{slot.chars.length}자</span>
@@ -358,7 +358,7 @@ export function SelfPicker({
               <button
                 type="button"
                 onClick={() => setShowWeak(showWeak.map((v, i) => (i === s ? !v : v)))}
-                className="text-sm text-primary underline underline-offset-2"
+                className="min-h-11 text-sm text-primary underline underline-offset-2"
               >
                 {showWeak[s] ? "뜻이 약한 한자 접기" : `뜻이 약하거나 어색한 한자 ${weak.length}자 더 보기`}
               </button>
@@ -373,7 +373,7 @@ export function SelfPicker({
           어색한 한자는 고를 수 있지만 [최고]·[추천]과 추천 조합에서는 뺐어요.
         </p>
         <p>
-          <Link href={toRecommend} className="text-primary underline underline-offset-2">
+          <Link href={toRecommend} className="inline-flex min-h-11 items-center text-primary underline underline-offset-2">
             이 사주에 맞는 다른 소리 보기
           </Link>
         </p>

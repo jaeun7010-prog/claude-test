@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 /**
- * #report-root 를 A4 PDF 로 저장한다. 브라우저에서 렌더링한 폰트(나눔명조) 그대로 출력된다.
+ * #report-root 를 A4 PDF 로 저장한다. 브라우저에서 렌더링한 폰트 그대로 출력된다.
  * autoStart: 페이지를 열자마자 한 번 내려받는다 (마이페이지 상세의 "PDF 다운로드")
  */
 export function ReportDownloadButton({ filename, autoStart = false }: { filename: string; autoStart?: boolean }) {
@@ -33,7 +33,7 @@ export function ReportDownloadButton({ filename, autoStart = false }: { filename
         margin: 0,
         filename,
         image: { type: "jpeg", quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#fdfbf7" },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#FFF9F2" },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         // 쪽마다 break-after: page(css)가 있어 after 선택자를 함께 주면 쪽 나눔이 두 번 들어가 빈 쪽이 생긴다
         pagebreak: { mode: ["css"] },

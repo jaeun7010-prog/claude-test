@@ -3,7 +3,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataSourceNote } from "@/components/data-source-note";
+import { NameWithHanja } from "@/components/brand/NameWithHanja";
 import { AddressNote } from "@/components/naming/address-note";
+import { ElementNeed } from "@/components/naming/element-need";
 import { CombinationNote } from "@/components/naming/combination-note";
 import { NameCardBody } from "@/components/naming/hanja-name-card";
 import { SajuCard } from "@/components/naming/saju-card";
@@ -88,13 +90,8 @@ export default async function SelfResultPage({ searchParams }: { searchParams: S
 
       <header className="min-w-0">
         <p className="text-sm text-muted-foreground">직접 짓기 · 고른 조합</p>
-        <h1 className="font-serif text-2xl font-bold break-keep sm:text-3xl">
-          {p.surname}
-          {r.hangul}
-          <span className="ml-2 text-xl text-muted-foreground">
-            {p.surnameHanja}
-            {fullHanja}
-          </span>
+        <h1 className="mt-1">
+          <NameWithHanja name={`${p.surname}${r.hangul}`} hanja={`${p.surnameHanja}${fullHanja}`} nameSize={32} hanjaSize={16} />
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {p.birth.year}.{p.birth.month}.{p.birth.day}
@@ -104,6 +101,8 @@ export default async function SelfResultPage({ searchParams }: { searchParams: S
           · {p.birthplace.label} 출생 · 월주 기준 절기 {chosen.saju.pillars.meta.monthTerm.ko}
         </p>
       </header>
+
+      <ElementNeed yongsin={chosen.saju.yongsin} heading="h2" meta={`${p.surname}씨 아이의 사주`} />
 
       <AddressNote />
 

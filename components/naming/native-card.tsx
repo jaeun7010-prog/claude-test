@@ -5,6 +5,8 @@ import { SavedMark, type SavedNotice } from "@/components/naming/saved-status";
 import { ShareNameButton } from "@/components/share/share-name-button";
 import { NameStatsBasic } from "@/components/name-stats-basic";
 import { TierBadge } from "@/components/name-stats-chart";
+import { NameWithHanja } from "@/components/brand/NameWithHanja";
+import { HeartIcon } from "@/components/naming/heart-icon";
 import { Button } from "@/components/ui/button";
 import { NativeCategoryBadge, NativeScoreBadge } from "@/components/naming/native-parts";
 import { CATEGORY_LABEL, NATIVE_SCORE_WEIGHTS, type NativeScore } from "@/lib/naming/native/score";
@@ -49,13 +51,17 @@ function NativeSaveAction({
     <form action={saveNativeName}>
       <input type="hidden" name="qs" value={qs} />
       <input type="hidden" name="nn" value={name} />
-      <Button type="submit" size="sm" variant="secondary">
-        마이페이지에 저장
+      <Button type="submit" size="sm" variant="secondary" aria-label="이 이름을 마이페이지에 저장">
+        <HeartIcon />
+        저장
       </Button>
     </form>
   ) : (
     <Button asChild size="sm" variant="secondary">
-      <Link href={`/login?next=${encodeURIComponent(`/naming/result?${qs}`)}`}>로그인하고 저장</Link>
+      <Link href={`/login?next=${encodeURIComponent(`/naming/result?${qs}`)}`}>
+        <HeartIcon />
+        로그인하고 저장
+      </Link>
     </Button>
   );
 }
@@ -91,37 +97,17 @@ export function NativeCardBody({
     <>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
-          <p className="font-serif text-2xl font-bold break-keep">
-            {surname}
-            {c.legalName}
-          </p>
-          <NativeCategoryBadge label={CATEGORY_LABEL[c.name.category]} />
-          <p className="text-sm break-keep">{c.name.meaning}</p>
+          <NameWithHanja name={`${surname}${c.legalName}`} nameSize={28} />
+          <div>
+            <NativeCategoryBadge label={CATEGORY_LABEL[c.name.category]} />
+          </div>
+          <p className="text-sm text-ink-soft break-keep">{c.name.meaning}</p>
           {c.usage === "rare" && <p className="text-xs text-muted-foreground">{RARE_USAGE_LABEL}</p>}
         </div>
         <NativeScoreBadge total={s.total} />
       </div>
 
-      <NativeScoreDetail score={s} globalScore={c.globalScore} />
-
-      {stat ? (
-        <div className="space-y-2 rounded-md border p-3">
-          <NameStatsBasic stat={stat} asOfDate={asOfDate} />
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-            <span className="text-muted-foreground">희소성</span>
-            <TierBadge tier={stat.tier} />
-            {stat.neutral && <span className="text-muted-foreground">남녀 공용</span>}
-            <Link href={`/stats?name=${encodeURIComponent(c.legalName)}`} className="ml-auto text-primary underline">
-              연도별 상세 통계
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <p className="text-sm">
-          <span className="text-muted-foreground">희소성</span>{" "}
-          {statsLoaded ? "상위 출생신고 목록 밖 (매우 희귀)" : "출생 통계를 준비하고 있습니다"}
-        </p>
-      )}
+      <NativeWarnings score={s} />
 
       <div className="flex flex-wrap gap-2">
         <NativeSaveAction name={c.name.name} qs={qs} loggedIn={loggedIn} savedId={savedId} saved={saved} />
@@ -135,24 +121,65 @@ export function NativeCardBody({
           }}
         />
       </div>
+
+      <details className="rounded-2xl border">
+        <summary className="cursor-pointer select-none px-3 py-3 text-sm font-bold text-primary">점수 근거 보기</summary>
+        <div className="space-y-3 border-t p-3">
+          <NativeScoreDetail score={s} globalScore={c.globalScore} hideWarnings />
+
+      {stat ? (
+        <div className="space-y-2 rounded-md border p-3">
+          <NameStatsBasic stat={stat} asOfDate={asOfDate} />
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <span className="text-muted-foreground">희소성</span>
+            <TierBadge tier={stat.tier} />
+            {stat.neutral && <span className="text-muted-foreground">남녀 공용</span>}
+            <Link href={`/stats?name=${encodeURIComponent(c.legalName)}`} className="ml-auto inline-flex min-h-11 items-center text-primary underline">
+              연도별 상세 통계
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm">
+          <span className="text-muted-foreground">희소성</span>{" "}
+          {statsLoaded ? "상위 출생신고 목록 밖 (매우 희귀)" : "출생 통계를 준비하고 있습니다"}
+        </p>
+      )}
+        </div>
+      </details>
     </>
   );
 }
 
-/** 놀림말·발음 안내, 항목별 점수 4개, 발음오행 흐름, 항목별 설명 (결과 카드·마이페이지 상세 공통) */
-export function NativeScoreDetail({ score: s, globalScore }: { score: NativeScore; globalScore: number }) {
+/** 놀림말·발음 안내는 접지 않고 카드에 바로 보여 준다 */
+function NativeWarnings({ score: s }: { score: NativeScore }) {
   const warnings = [s.teasing?.label, s.hardToSay].filter((w): w is string => !!w);
+  if (warnings.length === 0) return null;
+  return (
+    <ul className="space-y-1">
+      {warnings.map((w) => (
+        <li key={w} className="rounded-md border border-dashed px-3 py-1.5 text-xs">
+          ⚠ {w}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** 놀림말·발음 안내, 항목별 점수 4개, 발음오행 흐름, 항목별 설명 (결과 카드·마이페이지 상세 공통) */
+export function NativeScoreDetail({
+  score: s,
+  globalScore,
+  hideWarnings = false,
+}: {
+  score: NativeScore;
+  globalScore: number;
+  /** 결과 카드는 안내를 접힌 곳 밖에 따로 보여 준다 */
+  hideWarnings?: boolean;
+}) {
   return (
     <>
-      {warnings.length > 0 && (
-        <ul className="space-y-1">
-          {warnings.map((w) => (
-            <li key={w} className="rounded-md border border-dashed px-3 py-1.5 text-xs">
-              ⚠ {w}
-            </li>
-          ))}
-        </ul>
-      )}
+      {!hideWarnings && <NativeWarnings score={s} />}
 
       <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {ITEM_KEYS.map((k) => {
@@ -176,7 +203,7 @@ export function NativeScoreDetail({ score: s, globalScore }: { score: NativeScor
       </p>
 
       <details className="rounded-md border">
-        <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-primary">
+        <summary className="cursor-pointer select-none px-3 py-3 text-sm font-medium text-primary">
           항목별 설명 보기
         </summary>
         <ul className="space-y-1 border-t p-3 text-sm">

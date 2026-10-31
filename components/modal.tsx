@@ -33,7 +33,7 @@ export function Modal({
       className="w-[calc(100%-2rem)] max-w-md rounded-lg border bg-background p-0 text-foreground shadow-lg backdrop:bg-foreground/40"
     >
       <div className="max-h-[85vh] space-y-4 overflow-y-auto p-6">
-        <h2 className="font-serif text-xl font-bold">{title}</h2>
+        <h2 className="text-xl font-extrabold">{title}</h2>
         {children}
       </div>
     </dialog>

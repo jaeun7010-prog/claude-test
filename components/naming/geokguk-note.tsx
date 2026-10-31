@@ -45,7 +45,7 @@ export function GeokgukNote({
       </ul>
       {detailed && (
       <details className="text-xs text-muted-foreground">
-        <summary className="cursor-pointer">자세히 보기</summary>
+        <summary className="min-h-11 cursor-pointer leading-[44px]">자세히 보기</summary>
         <ul className="mt-2 space-y-1">
           <li>
             <span className="text-foreground">격</span> · {g.name} — {g.basis} {g.name}으로 봅니다.
